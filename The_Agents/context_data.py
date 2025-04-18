@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import os
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,8 @@ class EnhancedContextData(BaseModel):
     project_info: Optional[Dict[str, Any]] = Field(None, description="Information about the project")
     current_file: Optional[str] = Field(None, description="Currently active file")
     memory_items: List[MemoryItem] = Field(default_factory=list, description="Remembered items")
+    chat_messages: List[Tuple[str, str]] = Field(default_factory=list, description="Chat message history as (role, content) tuples")
+    max_chat_messages: int = Field(default=25, description="Maximum number of chat messages to remember")
 
     def remember_file(self, file_path: str, content: Optional[str] = None) -> None:
         file_path = os.path.normpath(os.path.join(self.working_directory, file_path))
@@ -40,6 +42,51 @@ class EnhancedContextData(BaseModel):
             item_type="command",
             metadata={"output_preview": output[:100] if output else None}
         ))
+
+    def add_chat_message(self, role: str, content: str) -> None:
+        """
+        Add a chat message to the history, maintaining the maximum chat history size.
+        
+        Args:
+            role: The role of the message sender ('user' or 'assistant')
+            content: The message content
+        """
+        self.chat_messages.append((role, content))
+        # Trim chat history if it exceeds max size
+        if len(self.chat_messages) > self.max_chat_messages:
+            self.chat_messages = self.chat_messages[-self.max_chat_messages:]
+    
+    def get_chat_history(self) -> List[Tuple[str, str]]:
+        """
+        Get the full chat history.
+        
+        Returns:
+            List of (role, content) tuples representing the chat history
+        """
+        return self.chat_messages
+    
+    def clear_chat_history(self) -> None:
+        """Clear all chat history."""
+        self.chat_messages = []
+
+    def get_chat_summary(self) -> str:
+        """
+        Get a formatted summary of the chat history.
+        
+        Returns:
+            String representation of the chat history
+        """
+        if not self.chat_messages:
+            return "No chat history available."
+        
+        result = ["Chat History:"]
+        for i, (role, content) in enumerate(self.chat_messages):
+            # Truncate long messages in the summary
+            if len(content) > 100:
+                content = content[:97] + "..."
+            result.append(f"{i+1}. {role.capitalize()}: {content}")
+        
+        return "\n".join(result)
 
     def get_recent_files(self, limit: int = 5) -> List[str]:
         files = [item.content for item in reversed(self.memory_items) if item.item_type == "file"]
@@ -72,4 +119,14 @@ class EnhancedContextData(BaseModel):
         if prs:
             parts.append("\nMentioned persons/entities:")
             parts += [f"  {i+1}. {p}" for i, p in enumerate(prs)]
+            
+        # Add chat history summary to memory summary
+        if self.chat_messages:
+            parts.append("\nRecent conversations:")
+            # Only show last few messages in summary
+            for i, (role, content) in enumerate(self.chat_messages[-3:]):
+                if len(content) > 50:
+                    content = content[:47] + "..."
+                parts.append(f"  {role.capitalize()}: {content}")
+        
         return "\n".join(parts)

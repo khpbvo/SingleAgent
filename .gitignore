@@ -5,3 +5,6 @@ __pycache__/
 /Imacvenv
 
 .DS_Store
+main.log
+singleagent.log
+tools.log

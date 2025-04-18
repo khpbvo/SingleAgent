@@ -208,9 +208,10 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
             temp_file.write(params.patch_content)
             temp_file_path = temp_file.name
         
+        apply_patch_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apply_patch.py"))
         # Run the apply_patch.py script with the patch content
         result = subprocess.run(
-            f"python apply_patch.py < {temp_file_path}",
+            f"python {apply_patch_path} < {temp_file_path}",
             shell=True,
             capture_output=True,
             text=True,
@@ -289,6 +290,18 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
     ]
     if context.current_file:
         info.append(f"Current file: {context.current_file}")
+    
+    # Add chat history to context information
+    if hasattr(context, 'chat_messages') and context.chat_messages:
+        info.append("\nRecent Chat History:")
+        # Show the last 5 messages or all if there are fewer
+        history_to_show = context.chat_messages[-5:] if len(context.chat_messages) > 5 else context.chat_messages
+        for i, (role, content) in enumerate(history_to_show):
+            # Truncate long messages in the summary
+            if len(content) > 100:
+                content = content[:97] + "..."
+            info.append(f"- {role.capitalize()}: {content}")
+    
     if params.include_details:
         info.append("\nMemory items:")
         for item in context.memory_items:

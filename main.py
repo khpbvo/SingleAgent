@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 main.py
-Entry point for the SingleAgent code assistant.
+Entry point for the SingleAgent code assistant with chat memory support.
 """
 
 import asyncio
@@ -30,6 +30,9 @@ async def main():
     root_logger.addHandler(main_handler)
     
     agent = SingleAgent()
+    print(f"{BOLD}SingleAgent with chat memory initialized.{RESET}")
+    print(f"Use {BOLD}!history{RESET} to view chat history or {BOLD}!clear{RESET} to clear it.")
+    
     # enter REPL loop
     while True:
         try:
@@ -43,7 +46,17 @@ async def main():
             print("Goodbye.")
             break
 
-        # run agent and log response
+        # Special commands for history management
+        if query.strip().lower() == "!history":
+            history_summary = agent.get_chat_history_summary()
+            print(f"\n{history_summary}\n")
+            continue
+        elif query.strip().lower() == "!clear":
+            agent.clear_chat_history()
+            print("\nChat history cleared.\n")
+            continue
+            
+        # run agent and get response
         result = await agent.run(query)
         logging.debug(json.dumps({"event": "agent_response", "response": result}))
         # print final agent output in bold red

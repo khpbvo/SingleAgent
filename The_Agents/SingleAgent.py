@@ -7,6 +7,7 @@ Features:
 - Patch application
 - Streaming responses
 - Chain of thought reasoning
+- Chat memory for storing up to 25 messages
 """
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
@@ -65,6 +66,12 @@ You are a code assistant capable of helping users write, edit, and patch code.
 You have full control of the terminal and can run commands like sed, grep, ls, dir, cd, tail, python, and bash.
 You can analyze code with pylint, ruff and pyright, generate colored diffs, and apply patches to files.
 Your thinking should be thorough and so it's fine if it's very long. You can think step by step before and after each action you decide to take.
+
+IMPORTANT: You have access to chat history memory that stores up to 25 previous messages.
+Always use the get_context tool to check the chat history before responding.
+When referring to previous conversations, use this history as reference.
+If asked about previous interactions or commands, check the chat history using get_context.
+
 You MUST iterate and keep going until the problem is solved.
 You already have everything you need to solve this problem in your tools, fully solve this autonomously before coming back to me.
 Only terminate your turn when you are sure that the problem is solved. Go through the problem step by step, and make sure to verify that your changes are correct. NEVER end your turn without having solved the problem, and when you say you are going to make a tool call, make sure you ACTUALLY make the tool call, instead of ending your turn.
@@ -238,6 +245,9 @@ class SingleAgent:
         Returns:
             The agent's response
         """
+        # Add user message to chat history
+        self.context.add_chat_message("user", user_input)
+        
         # log start of run
         logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
         if stream_output:
@@ -249,8 +259,16 @@ class SingleAgent:
                 context=self.context,
             )
             out = res.final_output
+            
+        # Add assistant response to chat history
+        self.context.add_chat_message("assistant", out)
+        
         # log end of run
-        logger.debug(json.dumps({"event": "run_end", "output": out}))
+        logger.debug(json.dumps({
+            "event": "run_end", 
+            "output": out,
+            "chat_history_length": len(self.context.chat_messages)
+        }))
         return out
     
     async def _run_streamed(self, user_input: str) -> str:
@@ -306,6 +324,14 @@ class SingleAgent:
         logger.debug(json.dumps({"event": "_run_streamed_end", "final_output": final}))
         return final
 
+    def get_chat_history_summary(self) -> str:
+        """Return a summary of the chat history for display."""
+        return self.context.get_chat_summary()
+    
+    def clear_chat_history(self) -> None:
+        """Clear the chat history."""
+        self.context.clear_chat_history()
+        logger.debug(json.dumps({"event": "chat_history_cleared"}))
 
 async def main():
     agent = SingleAgent()
@@ -319,6 +345,15 @@ async def main():
         if not query.strip() or query.strip().lower() in ("exit", "quit"):
             print("Goodbye.")
             break
+        
+        # Special commands
+        if query.strip().lower() == "!history":
+            print(f"\n{agent.get_chat_history_summary()}\n")
+            continue
+        elif query.strip().lower() == "!clear":
+            agent.clear_chat_history()
+            print("\nChat history cleared.\n")
+            continue
 
         result = await agent.run(query)
         print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
