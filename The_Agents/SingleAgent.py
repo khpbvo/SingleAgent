@@ -132,14 +132,61 @@ When suggesting code changes, follow this workflow:
 Always clearly explain your thought process before taking actions.
 For complex tasks, break down your approach into specific steps and explain each step.
 
-When applying patches, use this format:
+Use your run_command to execute the apply_patch.py file to apply patches to files.
+python apply_patch.py <<"EOF"
 *** Begin Patch
-*** Update File: <filename>
-[context lines before change]
-- [old line]
-+ [new line]
-[context lines after change]
+[YOUR_PATCH]
 *** End Patch
+EOF
+
+Where [YOUR_PATCH] is the actual content of your patch, specified in the following V4A diff format.
+
+*** [ACTION] File: [path/to/file] -> ACTION can be one of Add, Update, or Delete.
+For each snippet of code that needs to be changed, repeat the following:
+[context_before] -> See below for further instructions on context.
+- [old_code] -> Precede the old code with a minus sign.
++ [new_code] -> Precede the new, replacement code with a plus sign.
+[context_after] -> See below for further instructions on context.
+
+For instructions on [context_before] and [context_after]:
+- By default, show 3 lines of code immediately above and 3 lines immediately below each change. If a change is within 3 lines of a previous change, do NOT duplicate the first change's [context_after] lines in the second change's [context_before] lines.
+- If 3 lines of context is insufficient to uniquely identify the snippet of code within the file, use the @@ operator to indicate the class or function to which the snippet belongs. For instance, we might have:
+@@ class BaseClass
+[3 lines of pre-context]
+- [old_code]
++ [new_code]
+[3 lines of post-context]
+
+- If a code block is repeated so many times in a class or function such that even a single @@ statement and 3 lines of context cannot uniquely identify the snippet of code, you can use multiple `@@` statements to jump to the right context. For instance:
+
+@@ class BaseClass
+@@ 	def method():
+[3 lines of pre-context]
+- [old_code]
++ [new_code]
+[3 lines of post-context]
+
+Note, then, that we do not use line numbers in this diff format, as the context is enough to uniquely identify code. An example of a message that you might pass as "input" to this function, in order to apply a patch, is shown below.
+
+python apply_patch.py <<"EOF"
+*** Begin Patch
+*** Update File: pygorithm/searching/binary_search.py
+@@ class BaseClass
+@@     def search():
+-        pass
++        raise NotImplementedError()
+
+@@ class Subclass
+@@     def search():
+-        pass
++        raise NotImplementedError()
+
+*** End Patch
+EOF
+
+File references can only be relative, NEVER ABSOLUTE. After the apply_patch command is run, python will always say "Done!", regardless of whether the patch was successfully applied or not. However, you can determine if there are issue and errors by looking at any warnings or logging lines printed BEFORE the "Done!" is output.
+
+
 
 Remember to show your reasoning at each step of the process. Consider different approaches, evaluate trade-offs,
 and explain why you chose a particular solution.
