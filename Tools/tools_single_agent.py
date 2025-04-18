@@ -15,12 +15,21 @@ from pydantic import BaseModel, Field
 
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
-
-import logging
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Configure logger for tools
-logger = logging.getLogger(__name__)
+tool_logger = logging.getLogger(__name__)
+tool_logger.setLevel(logging.DEBUG)
+# rotating file handler for tools.log
+tools_handler = RotatingFileHandler('tools.log', maxBytes=10*1024*1024, backupCount=3)
+tools_handler.setLevel(logging.DEBUG)
+tools_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+tool_logger.addHandler(tools_handler)
+tool_logger.propagate = False
+# alias tool_logger as logger for use in function implementations
+logger = tool_logger
 
 
 # Models for tool parameters (no default values as required for Pydantic v2 compatibility)
@@ -83,7 +92,6 @@ class RuffParams(BaseModel):
 class GetContextParams(BaseModel):
     """Parameters for getting the context information."""
     include_details: bool = Field(
-        default=False, 
         description="Whether to include detailed information"
     )
 

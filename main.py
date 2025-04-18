@@ -9,6 +9,7 @@ import sys
 import logging
 import json
 from The_Agents.SingleAgent import SingleAgent
+from logging.handlers import RotatingFileHandler
 
 # ANSI escape codes
 GREEN = "\033[32m"
@@ -18,7 +19,16 @@ RESET = "\033[0m"
 
 async def main():
     # configure root logger for JSON logging
-    logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    # Remove default handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    main_handler = RotatingFileHandler('main.log', maxBytes=10*1024*1024, backupCount=3)
+    main_handler.setLevel(logging.DEBUG)
+    main_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+    root_logger.addHandler(main_handler)
+    
     agent = SingleAgent()
     # enter REPL loop
     while True:

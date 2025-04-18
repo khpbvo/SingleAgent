@@ -15,9 +15,16 @@ import os
 import sys
 import logging
 import json
+from logging.handlers import RotatingFileHandler
 
-# Configure logger for agent
+# Configure logger for SingleAgent
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+single_handler = RotatingFileHandler('singleagent.log', maxBytes=10*1024*1024, backupCount=3)
+single_handler.setLevel(logging.DEBUG)
+single_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+logger.addHandler(single_handler)
+logger.propagate = False
 
 # ANSI color codes for REPL
 GREEN = "\033[32m"
@@ -149,6 +156,7 @@ class SingleAgent:
         # Use EnhancedContextData so tools can store memory
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
+            model="gpt-4.1",
             instructions=AGENT_INSTRUCTIONS,
             tools=[
                 run_ruff,
@@ -239,13 +247,10 @@ class SingleAgent:
                             params = json.loads(raw_args).get('params', {})
                         except Exception:
                             params = {}
-                    print(f"\n[Tool Call] {tool}: {params}\n")
-                    logger.debug(json.dumps({"event": "tool_call", "tool": tool, "params": params}))
-                # Detect tool output
+                    # Removed printing of tool call details to console
                 elif item.type == 'tool_call_output_item':
                     output = item.output
-                    print(f"\n[Tool Output] {output[:100]}{'...' if len(output) > 100 else ''}\n")
-                    logger.debug(json.dumps({"event": "tool_output", "output": output}))
+                    # Removed printing of tool output details to console
         except MaxTurnsExceeded as e:
             print(f"\n[Error] Max turns exceeded: {e}\n")
             logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
