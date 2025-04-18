@@ -302,9 +302,7 @@ class SingleAgent:
                 # Detect tool call start
                 if item.type == 'tool_call_item':
                     raw = item.raw_item
-                    # get tool name from raw function call metadata
                     tool = getattr(raw, 'name', 'unknown_tool')
-                    # extract params safely
                     params = {}
                     raw_args = getattr(raw, 'arguments', None)
                     if raw_args:
@@ -312,10 +310,12 @@ class SingleAgent:
                             params = json.loads(raw_args).get('params', {})
                         except Exception:
                             params = {}
-                    # Removed printing of tool call details to console
+                    # print the tool invocation
+                    print(f"{tool}: {json.dumps(params)}")
                 elif item.type == 'tool_call_output_item':
-                    output = item.output
-                    # Removed printing of tool output details to console
+                    # print the tool’s output
+                    tool = getattr(item.raw_item, 'name', 'tool')  # type: ignore[attr-defined]
+                    print(f"{tool} output: {item.output}")
         except MaxTurnsExceeded as e:
             print(f"\n[Error] Max turns exceeded: {e}\n")
             logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
