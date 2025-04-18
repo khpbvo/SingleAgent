@@ -8,6 +8,7 @@ A self-contained **pure-Python 3.9+** utility for applying human-readable
 from __future__ import annotations
 
 import pathlib
+import argparse
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -516,10 +517,31 @@ def remove_file(path: str) -> None:
 def main() -> None:
     import sys
 
+    # add a --yes flag to skip interactive confirm
+    cli = argparse.ArgumentParser(description="Apply a pseudo‑diff from stdin")
+    cli.add_argument(
+        "-y", "--yes",
+        action="store_true",
+        help="apply patch without asking for confirmation"
+    )
+    args = cli.parse_args()
+
     patch_text = sys.stdin.read()
     if not patch_text:
         print("Please pass patch text through stdin", file=sys.stderr)
         return
+
+    # interactive confirmation unless --yes passed
+    if not args.yes:
+        # show the patch
+        print("About to apply this patch:\n" + patch_text)
+        try:
+            resp = input("Apply this patch? [y/N] ")
+        except EOFError:
+            resp = "n"
+        if resp.strip().lower() != "y":
+            print("Aborting.", file=sys.stderr)
+            return
     try:
         result = process_patch(patch_text, open_file, write_file, remove_file)
     except DiffError as exc:
