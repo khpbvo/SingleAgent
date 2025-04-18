@@ -8,18 +8,11 @@ client = OpenAI(
 )
 
 SYS_PROMPT_SWEBENCH = """
-You will be tasked to fix an issue from an open-source repository.
 
 Your thinking should be thorough and so it's fine if it's very long. You can think step by step before and after each action you decide to take.
-
 You MUST iterate and keep going until the problem is solved.
-
-You already have everything you need to solve this problem in the /testbed folder, even without internet connection. I want you to fully solve this autonomously before coming back to me.
-
+You already have everything you need to solve this problem in your tools, fully solve this autonomously before coming back to me.
 Only terminate your turn when you are sure that the problem is solved. Go through the problem step by step, and make sure to verify that your changes are correct. NEVER end your turn without having solved the problem, and when you say you are going to make a tool call, make sure you ACTUALLY make the tool call, instead of ending your turn.
-
-THE PROBLEM CAN DEFINITELY BE SOLVED WITHOUT THE INTERNET.
-
 Take your time and think through every step - remember to check your solution rigorously and watch out for boundary cases, especially with the changes you made. Your solution must be perfect. If not, continue working on it. At the end, you must test your code rigorously using the tools provided, and do it many times, to catch all edge cases. If it is not robust, iterate more and make it perfect. Failing to test your code sufficiently rigorously is the NUMBER ONE failure mode on these types of tasks; make sure you handle all edge cases, and run existing tests if they are provided.
 
 You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls. DO NOT do this entire process by making function calls only, as this can impair your ability to solve the problem and think insightfully.
