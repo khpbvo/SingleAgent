@@ -203,33 +203,35 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
     logger.debug(json.dumps({"tool": "apply_patch", "params": {"filename": "<patch>"}}))
     try:
-        # Create a temporary file to store the patch
-        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
-            temp_file.write(params.patch_content)
-            temp_file_path = temp_file.name
-        
-        apply_patch_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "apply_patch.py"))
-        # Run the apply_patch.py script with the patch content
-        result = subprocess.run(
-            f"python {apply_patch_path} < {temp_file_path}",
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=False
+        # write the patch content to a temp file
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".patch") as tf:
+            tf.write(params.patch_content)
+            tf.flush()
+            tmp = tf.name
+
+        apply_patch_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "apply_patch.py")
         )
-        
-        # Clean up the temporary file
-        os.unlink(temp_file_path)
-        
-        output = result.stdout
-        if result.stderr:
-            output += f"\nErrors:\n{result.stderr}"
-        
-        logger.debug(json.dumps({"tool": "apply_patch", "output": output}))
-        return output
+        # Call with the temp‐file path so input() reads your terminal
+        result = subprocess.run(
+            ["python3", apply_patch_path, tmp],
+            text=True,
+            stdout=None,  # inherit, so you see the prompt and messages
+            stderr=None
+        )
+
+        # Clean up
+        os.unlink(tmp)
+
+        # if user aborted or error, return nonzero → raise
+        if result.returncode != 0:
+            return "Patch was not applied."
+
+        # success
+        return "Patch applied."
     except Exception as e:
         logger.debug(json.dumps({"tool": "apply_patch", "error": str(e)}))
-        return f"Error applying patch: {str(e)}"
+        return f"Error applying patch: {e}"
 
 
 @function_tool

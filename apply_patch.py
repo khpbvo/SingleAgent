@@ -517,18 +517,31 @@ def remove_file(path: str) -> None:
 def main() -> None:
     import sys
 
-    # add a --yes flag to skip interactive confirm
-    cli = argparse.ArgumentParser(description="Apply a pseudo‑diff from stdin")
+    # add a --yes flag to skip interactive confirm, plus optional patch_file
+    cli = argparse.ArgumentParser(
+        description="Apply a pseudo‑diff from a file (or stdin if omitted)"
+    )
     cli.add_argument(
         "-y", "--yes",
         action="store_true",
         help="apply patch without asking for confirmation"
     )
+    cli.add_argument(
+        "patch_file",
+        nargs="?",
+        help="path to patch file; if omitted, read patch from stdin"
+    )
     args = cli.parse_args()
 
-    patch_text = sys.stdin.read()
+    # read the patch either from file or from stdin
+    if args.patch_file:
+        with open(args.patch_file, "r", encoding="utf-8") as pf:
+            patch_text = pf.read()
+    else:
+        patch_text = sys.stdin.read()
+
     if not patch_text:
-        print("Please pass patch text through stdin", file=sys.stderr)
+        print("No patch text provided", file=sys.stderr)
         return
 
     # interactive confirmation unless --yes passed
