@@ -8,10 +8,22 @@ Features:
 - Streaming responses
 - Chain of thought reasoning
 """
-
+from datetime import datetime
+from typing import List, Optional, Dict, Any, Union
 import asyncio
 import os
-from typing import List, Optional, Dict, Any
+import sys
+import logging
+import json
+
+# Configure logger for agent
+logger = logging.getLogger(__name__)
+
+# ANSI color codes for REPL
+GREEN = "\033[32m"
+RED   = "\033[31m"
+BOLD  = "\033[1m"
+RESET = "\033[0m"
 
 from agents import (
     Agent, 
@@ -33,9 +45,12 @@ from Tools.tools_single_agent import (
     create_colored_diff,
     apply_patch,
     change_dir,
-    os_command
+    os_command,
+    get_context
 )
 from utils.project_info import discover_project_info
+from agents.exceptions import MaxTurnsExceeded
+from The_Agents.context_data import EnhancedContextData
 
 # Constants
 AGENT_INSTRUCTIONS = """
@@ -123,12 +138,6 @@ Remember to show your reasoning at each step of the process. Consider different 
 and explain why you chose a particular solution.
 """
 
-class CodeAssistantContextData(BaseModel):
-    """Context data for the code assistant agent"""
-    working_directory: str = Field(description="Current working directory")
-    project_info: Optional[Dict[str, Any]] = Field(None, description="Information about the project")
-
-
 class SingleAgent:
     """
     A single agent implementation for code assistance with streaming capability 
@@ -136,8 +145,9 @@ class SingleAgent:
     """
     
     def __init__(self):
-        """Initialize the code assistant agent with all required tools."""
-        self.agent = Agent[CodeAssistantContextData](
+        """Initialize the code assistant agent with all required tools and enhanced context."""
+        # Use EnhancedContextData so tools can store memory
+        self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
             instructions=AGENT_INSTRUCTIONS,
             tools=[
@@ -149,14 +159,17 @@ class SingleAgent:
                 create_colored_diff,
                 apply_patch,
                 change_dir,
-                os_command
+                os_command,
+                get_context  # include context inspection tool
             ]
         )
         
         cwd = os.getcwd()
-        self.context = CodeAssistantContextData(
+        self.context = EnhancedContextData(
             working_directory=cwd,
-            project_info=discover_project_info(cwd)
+            project_info=discover_project_info(cwd),
+            current_file=None,
+            memory_items=[],
         )
     
     async def run(self, user_input: str, stream_output: bool = True) -> Any:
@@ -170,15 +183,20 @@ class SingleAgent:
         Returns:
             The agent's response
         """
+        # log start of run
+        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
         if stream_output:
-            return await self._run_streamed(user_input)
+            out = await self._run_streamed(user_input)
         else:
-            result = await Runner.run(
+            res = await Runner.run(
                 starting_agent=self.agent,
                 input=user_input,
                 context=self.context,
             )
-            return result.final_output
+            out = res.final_output
+        # log end of run
+        logger.debug(json.dumps({"event": "run_end", "output": out}))
+        return out
     
     async def _run_streamed(self, user_input: str) -> str:
         """
@@ -190,64 +208,68 @@ class SingleAgent:
         Returns:
             The final output from the agent
         """
+        # log start of streamed
+        logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
+        print("Starting agent with streaming output...")
+        
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=50,
+            max_turns=35,  # unlimited turns
             context=self.context,
         )
         
-        print("Starting agent with streaming output...")
-        
-        # Process stream events
-        async for event in result.stream_events():
-            # Skip raw_response_event—we'll show the final Agent output only once
-            if event.type == "raw_response_event":
-                continue
-            
-            elif event.type == "tool_call_item":
-                # grab the tool‐call item from the event payload
-                item = event.data  # type: ignore[attr-defined]
-                # get tool name
-                tool_name = (
-                    getattr(item, "name", None)
-                    or getattr(item, "tool", None)
-                    or getattr(item, "tool_name", None)
-                    or "unknown_tool"
-                )
-                # extract params from raw_item.arguments JSON
-                params = {}
-                raw = getattr(item, "raw_item", None)
-                if raw and hasattr(raw, "arguments"):
-                    try:
-                        import json
-                        params = json.loads(raw.arguments).get("params", {})
-                    except Exception:
-                        params = {}
-                print(f"\n[Tool Call] {tool_name}: {params}\n")
-            
-            elif event.type == "tool_call_output_item":
-                # grab the tool output from the event payload
-                tool_output = event.data.output  # type: ignore[attr-defined]
-                print(f"\n[Tool Output] {tool_output[:100]}{'...' if len(tool_output) > 100 else ''}\n")
-                
-                # We no longer print message_output_item to avoid duplicate output
-        
-        # Return the final result
-        return result.final_output
+        from agents.stream_events import RunItemStreamEvent
+        try:
+            async for event in result.stream_events():
+                # Only handle RunItemStreamEvent which has 'item'
+                if not isinstance(event, RunItemStreamEvent):
+                    continue
+                item = event.item
+                # Detect tool call start
+                if item.type == 'tool_call_item':
+                    raw = item.raw_item
+                    # get tool name from raw function call metadata
+                    tool = getattr(raw, 'name', 'unknown_tool')
+                    # extract params safely
+                    params = {}
+                    raw_args = getattr(raw, 'arguments', None)
+                    if raw_args:
+                        try:
+                            params = json.loads(raw_args).get('params', {})
+                        except Exception:
+                            params = {}
+                    print(f"\n[Tool Call] {tool}: {params}\n")
+                    logger.debug(json.dumps({"event": "tool_call", "tool": tool, "params": params}))
+                # Detect tool output
+                elif item.type == 'tool_call_output_item':
+                    output = item.output
+                    print(f"\n[Tool Output] {output[:100]}{'...' if len(output) > 100 else ''}\n")
+                    logger.debug(json.dumps({"event": "tool_output", "output": output}))
+        except MaxTurnsExceeded as e:
+            print(f"\n[Error] Max turns exceeded: {e}\n")
+            logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
+        # final output (Agent reply)
+        final = result.final_output
+        logger.debug(json.dumps({"event": "_run_streamed_end", "final_output": final}))
+        return final
 
 
 async def main():
-    """Example usage of SingleAgent."""
     agent = SingleAgent()
-    
-    # Example query to test the agent
-    query = "Please analyze the apply_patch.py file and suggest any improvements."
-    
-    result = await agent.run(query)
-    print("\n\nFinal Result:")
-    print(result)
+    # enter REPL loop
+    while True:
+        try:
+            query = input(f"{BOLD}{GREEN}User:{RESET} ")
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting. Goodbye.")
+            break
+        if not query.strip() or query.strip().lower() in ("exit", "quit"):
+            print("Goodbye.")
+            break
 
+        result = await agent.run(query)
+        print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

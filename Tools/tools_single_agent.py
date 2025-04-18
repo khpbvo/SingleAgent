@@ -7,12 +7,20 @@ import os
 import subprocess
 import tempfile
 import difflib
+import asyncio
 from typing import List, Optional, Union, TypedDict
 from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
 
 from agents import function_tool, RunContextWrapper
+from The_Agents.context_data import EnhancedContextData
+
+import logging
+import json
+
+# Configure logger for tools
+logger = logging.getLogger(__name__)
 
 
 # Models for tool parameters (no default values as required for Pydantic v2 compatibility)
@@ -71,21 +79,27 @@ class RuffParams(BaseModel):
     paths: List[str]
     flags: List[str] = Field(default_factory=list)
 
+
+class GetContextParams(BaseModel):
+    """Parameters for getting the context information."""
+    include_details: bool = Field(
+        default=False, 
+        description="Whether to include detailed information"
+    )
+
+
 # Tool implementations
 @function_tool
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
+    logger.debug(json.dumps({"tool": "run_ruff", "params": params.dict()}))
     cmd = ["ruff", "check", *params.paths, *params.flags, "--format=json"]
     result = subprocess.run(cmd, text=True, capture_output=True)
+    logger.debug(json.dumps({"tool": "run_ruff", "output": result.stdout or result.stderr}))
     return result.stdout or result.stderr
 
 @function_tool
 async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> str:
-    """
-    Run pylint on the specified file with the given options.
-    
-    Args:
-        params: Parameters including file path and pylint options
-    """
+    logger.debug(json.dumps({"tool": "run_pylint", "params": params.dict()}))
     cmd = ["pylint", params.file_path] + params.options
     try:
         result = subprocess.run(
@@ -94,19 +108,17 @@ async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> 
             text=True, 
             check=False
         )
-        return result.stdout if result.stdout else result.stderr
+        output = result.stdout if result.stdout else result.stderr
+        logger.debug(json.dumps({"tool": "run_pylint", "output": output}))
+        return output
     except Exception as e:
+        logger.debug(json.dumps({"tool": "run_pylint", "error": str(e)}))
         return f"Error running pylint: {str(e)}"
 
 
 @function_tool
 async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -> str:
-    """
-    Run pyright on the specified targets with the provided options.
-
-    Args:
-        params: Parameters including the targets list and extra flags.
-    """
+    logger.debug(json.dumps({"tool": "run_pyright", "params": params.dict()}))
     cmd = ["pyright", *params.targets, *params.options, "--outputjson"]
     try:
         result = subprocess.run(
@@ -116,62 +128,54 @@ async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -
             check=False
         )
         output = result.stdout if result.stdout else result.stderr
+        logger.debug(json.dumps({"tool": "run_pyright", "output": output}))
         return output
     except Exception as e:
+        logger.debug(json.dumps({"tool": "run_pyright", "error": str(e)}))
         return f"Error running pyright: {str(e)}"
 
 
 @function_tool
-async def run_command(wrapper: RunContextWrapper[None], params: CommandParams) -> str:
-    """
-    Run a shell command and return the output.
-    
-    Args:
-        params: Parameters including the command to execute and optional working directory
-    """
+async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: CommandParams) -> str:
+    logger.debug(json.dumps({"tool": "run_command", "params": params.dict()}))
     working_dir = params.working_dir if params.working_dir is not None else os.getcwd()
     try:
-        result = subprocess.run(
+        proc = await asyncio.create_subprocess_shell(
             params.command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=working_dir
+            cwd=working_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        output = result.stdout
-        if result.stderr:
-            output += f"\nSTDERR:\n{result.stderr}"
+        stdout, stderr = await proc.communicate()
+        output = stdout.decode() or ""
+        if stderr:
+            output += f"\nSTDERR:\n{stderr.decode()}"
         if not output:
             output = "Command executed successfully with no output."
+        wrapper.context.remember_command(params.command, output)
+        logger.debug(json.dumps({"tool": "run_command", "output": output}))
         return output
     except Exception as e:
+        logger.debug(json.dumps({"tool": "run_command", "error": str(e)}))
         return f"Error executing command: {str(e)}"
 
 
 @function_tool
-async def read_file(wrapper: RunContextWrapper[None], params: FileParams) -> str:
-    """
-    Read the contents of a file.
-    
-    Args:
-        params: Parameters including the file path
-    """
+async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: FileParams) -> str:
+    logger.debug(json.dumps({"tool": "read_file", "params": params.dict()}))
     try:
-        with open(params.file_path, 'r', encoding='utf-8') as file:
-            return file.read()
+        content = await asyncio.to_thread(lambda: open(params.file_path, 'r', encoding='utf-8').read())
+        wrapper.context.remember_file(params.file_path, content)
+        logger.debug(json.dumps({"tool": "read_file", "output_length": len(content)}))
+        return content
     except Exception as e:
+        logger.debug(json.dumps({"tool": "read_file", "error": str(e)}))
         return f"Error reading file: {str(e)}"
 
 
 @function_tool
 async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredDiffParams) -> str:
-    """
-    Create a colored diff between original and modified content.
-    
-    Args:
-        params: Parameters including original and modified content and filename
-    """
+    logger.debug(json.dumps({"tool": "create_colored_diff", "params": params.dict()}))
     original_lines = params.original.splitlines()
     modified_lines = params.modified.splitlines()
     
@@ -182,18 +186,14 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
         tofile=f'b/{params.filename}',
         lineterm=''
     )
-    
-    return '\n'.join(diff)
+    result = '\n'.join(diff)
+    logger.debug(json.dumps({"tool": "create_colored_diff", "diff_line_count": len(result.splitlines())}))
+    return result
 
 
 @function_tool
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
-    """
-    Apply a patch using the apply_patch.py utility.
-    
-    Args:
-        params: Parameters including the patch content
-    """
+    logger.debug(json.dumps({"tool": "apply_patch", "params": {"filename": "<patch>"}}))
     try:
         # Create a temporary file to store the patch
         with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
@@ -216,23 +216,25 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
         if result.stderr:
             output += f"\nErrors:\n{result.stderr}"
         
+        logger.debug(json.dumps({"tool": "apply_patch", "output": output}))
         return output
     except Exception as e:
+        logger.debug(json.dumps({"tool": "apply_patch", "error": str(e)}))
         return f"Error applying patch: {str(e)}"
 
 
 @function_tool
-async def change_dir(wrapper: RunContextWrapper[None], params: ChangeDirParams) -> str:
-    """
-    Change the current working directory.
-    
-    Args:
-        params: Parameters including the directory to change to
-    """
+async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
+    logger.debug(json.dumps({"tool": "change_dir", "params": params.dict()}))
     try:
         os.chdir(params.directory)
-        return f"Changed directory to: {os.getcwd()}"
+        new_dir = os.getcwd()
+        wrapper.context.working_directory = new_dir
+        wrapper.context.remember_command(f"cd {params.directory}")
+        logger.debug(json.dumps({"tool": "change_dir", "output": new_dir}))
+        return f"Changed directory to: {new_dir}"
     except Exception as e:
+        logger.debug(json.dumps({"tool": "change_dir", "error": str(e)}))
         return f"Error changing directory: {str(e)}"
 
 
@@ -244,12 +246,7 @@ class CommandResult(TypedDict):
 
 @function_tool
 async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) -> CommandResult:
-    """
-    Execute an OS command with arguments and return structured output.
-    
-    Args:
-        params: Parameters including the command and its arguments
-    """
+    logger.debug(json.dumps({"tool": "os_command", "params": params.dict()}))
     try:
         result = subprocess.run(
             [params.command] + params.args,
@@ -257,15 +254,43 @@ async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) 
             text=True,
             check=False
         )
-        return {
+        # explicitly type as CommandResult for Pylance
+        output: CommandResult = {
             "stdout": result.stdout,
             "stderr": result.stderr,
             "returncode": result.returncode
         }
+        logger.debug(json.dumps({"tool": "os_command", "output": output}))
+        return output
     except Exception as e:
-        return {
+        # match CommandResult shape on error
+        error_output: CommandResult = {
             "stdout": "",
             "stderr": f"Error executing command: {str(e)}",
             "returncode": -1
         }
+        return error_output
+
+
+@function_tool
+async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: GetContextParams) -> str:
+    logger.debug(json.dumps({"tool": "get_context", "params": params.dict()}))
+    context = wrapper.context
+    info = [
+        f"Working directory: {context.working_directory}",
+    ]
+    if context.current_file:
+        info.append(f"Current file: {context.current_file}")
+    if params.include_details:
+        info.append("\nMemory items:")
+        for item in context.memory_items:
+            ts = item.timestamp.strftime("%H:%M:%S")
+            info.append(f"- {item.item_type}: {item.content} (at {ts})")
+    else:
+        summary = context.get_memory_summary()
+        if (summary):
+            info.append(summary)
+    result = "\n".join(info)
+    logger.debug(json.dumps({"tool": "get_context", "output_length": len(result)}))
+    return result
 
