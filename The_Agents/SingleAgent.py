@@ -16,6 +16,7 @@ import os
 import sys
 import logging
 import json
+import re
 from logging.handlers import RotatingFileHandler
 
 # Configure logger for SingleAgent
@@ -205,6 +206,18 @@ class SingleAgent:
     and terminal control.
     """
     
+    def _apply_default_file_context(self, user_input: str) -> str:
+        """
+        Als de user spreekt over specifieke code-aanpassing maar geen .py noemt,
+        voeg dan automatisch het meest recent bewerkte bestand toe uit de context.
+        """
+        if re.search(r'\b(functie|method|toevoeg|wijzig|patch)\b', user_input, re.IGNORECASE) \
+           and not re.search(r'\w+\.py\b', user_input):
+            recent = self.context.get_recent_files()
+            if recent:
+                return f"{user_input} in {recent[0]}"
+        return user_input
+    
     def __init__(self):
         """Initialize the code assistant agent with all required tools and enhanced context."""
         # Use EnhancedContextData so tools can store memory
@@ -245,7 +258,9 @@ class SingleAgent:
         Returns:
             The agent's response
         """
-        # Add user message to chat history
+        # Preprocess: vul default bestand toe als geen .py genoemd wordt
+        user_input = self._apply_default_file_context(user_input)
+        # Add (mogelijk aangevulde) user message to chat history
         self.context.add_chat_message("user", user_input)
         
         # log start of run
@@ -283,7 +298,9 @@ class SingleAgent:
         """
         # log start of streamed
         logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
-        print("Starting agent with streaming output...")
+        # Preprocess ook voor streaming flow
+        user_input = self._apply_default_file_context(user_input)
+        print("Starting agent met streaming output...")
         
         result = Runner.run_streamed(
             starting_agent=self.agent,
@@ -292,30 +309,41 @@ class SingleAgent:
             context=self.context,
         )
         
-        from agents.stream_events import RunItemStreamEvent
+        from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
         try:
             async for event in result.stream_events():
-                # Only handle RunItemStreamEvent which has 'item'
+                # Skip low-level raw events
+                if isinstance(event, RawResponsesStreamEvent):
+                    continue
+                # Handle agent handoff/update events
+                if isinstance(event, AgentUpdatedStreamEvent):
+                    print(f"Agent updated: {event.new_agent.name}")
+                    continue
+                # Only process run item events
                 if not isinstance(event, RunItemStreamEvent):
                     continue
                 item = event.item
-                # Detect tool call start
+                # Tool invocation
                 if item.type == 'tool_call_item':
-                    raw = item.raw_item
+                    raw = event.raw_item
                     tool = getattr(raw, 'name', 'unknown_tool')
                     params = {}
                     raw_args = getattr(raw, 'arguments', None)
                     if raw_args:
                         try:
                             params = json.loads(raw_args).get('params', {})
-                        except Exception:
+                        except:
                             params = {}
-                    # print the tool invocation
                     print(f"{tool}: {json.dumps(params)}")
+                # Tool output
                 elif item.type == 'tool_call_output_item':
-                    # print the tool’s output
-                    tool = getattr(item.raw_item, 'name', 'tool')  # type: ignore[attr-defined]
-                    print(f"{tool} output: {item.output}")
+                    print(f"-- Tool output: {item.output}")
+                # Assistant message output
+                elif item.type == 'message_output_item':
+                    print(ItemHelpers.text_message_output(item), end='', flush=True)
+                # ignore other event item types
+                else:
+                    continue
         except MaxTurnsExceeded as e:
             print(f"\n[Error] Max turns exceeded: {e}\n")
             logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
