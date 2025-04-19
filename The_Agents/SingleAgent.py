@@ -325,25 +325,22 @@ class SingleAgent:
                 item = event.item
                 # Tool invocation
                 if item.type == 'tool_call_item':
-                    raw = event.raw_item
-                    tool = getattr(raw, 'name', 'unknown_tool')
-                    params = {}
-                    raw_args = getattr(raw, 'arguments', None)
-                    if raw_args:
-                        try:
-                            params = json.loads(raw_args).get('params', {})
-                        except:
-                            params = {}
-                    print(f"{tool}: {json.dumps(params)}")
+                    # signal that a tool was invoked (no args available on the event)
+                    tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
+                    if tool_name:
+                        print(f"-- Tool called: {tool_name}")
+                    else:
+                        print("-- Tool was called")
                 # Tool output
-                elif item.type == 'tool_call_output_item':
-                    print(f"-- Tool output: {item.output}")
+                #elif item.type == 'tool_call_output_item':
+                #    print(f"-- Tool output: {item.output}")
                 # Assistant message output
-                elif item.type == 'message_output_item':
-                    print(ItemHelpers.text_message_output(item), end='', flush=True)
+                #elif item.type == 'message_output_item':
+                #    print(ItemHelpers.text_message_output(item), end='', flush=True)
                 # ignore other event item types
-                else:
+                #else:
                     continue
+            
         except MaxTurnsExceeded as e:
             print(f"\n[Error] Max turns exceeded: {e}\n")
             logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
