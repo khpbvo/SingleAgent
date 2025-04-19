@@ -88,17 +88,17 @@ class EnhancedContextData(BaseModel):
         
         return "\n".join(result)
 
-    def get_recent_files(self, limit: int = 5) -> List[str]:
+    def get_recent_files(self, limit: int = 25) -> List[str]:
         files = [item.content for item in reversed(self.memory_items) if item.item_type == "file"]
         seen = set()
         return [x for x in files if not (x in seen or seen.add(x)) and len(seen) < limit]
 
-    def get_recent_persons(self, limit: int = 5) -> List[str]:
+    def get_recent_persons(self, limit: int = 10) -> List[str]:
         persons = [item.content for item in reversed(self.memory_items) if item.item_type == "person"]
         seen = set()
         return [x for x in persons if not (x in seen or seen.add(x)) and len(seen) < limit]
 
-    def get_recent_commands(self, limit: int = 5) -> List[str]:
+    def get_recent_commands(self, limit: int = 40) -> List[str]:
         commands = [item.content for item in reversed(self.memory_items) if item.item_type == "command"]
         seen = set()
         return [x for x in commands if not (x in seen or seen.add(x)) and len(seen) < limit]
