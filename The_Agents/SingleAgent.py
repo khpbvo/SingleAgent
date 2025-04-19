@@ -212,7 +212,7 @@ class SingleAgent:
         voeg dan automatisch het meest recent bewerkte bestand toe uit de context.
         """
         if re.search(r'\b(functie|method|toevoeg|wijzig|patch)\b', user_input, re.IGNORECASE) \
-           and not re.search(r'\w+\.py\b', user_input):
+            and not re.search(r'\w+\.py\b', user_input):
             recent = self.context.get_recent_files()
             if recent:
                 return f"{user_input} in {recent[0]}"
@@ -327,18 +327,21 @@ class SingleAgent:
                 if item.type == 'tool_call_item':
                     # signal that a tool was invoked (no args available on the event)
                     tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
+                    # Extract parameters if available
+                    tool_params = getattr(item, 'params', None) or getattr(item, 'input', None)
                     if tool_name:
-                        print(f"-- Tool called: {tool_name}")
+                        print(f"{tool_name}: {tool_params}")
                     else:
-                        print("-- Tool was called")
-                # Tool output
-                #elif item.type == 'tool_call_output_item':
-                #    print(f"-- Tool output: {item.output}")
-                # Assistant message output
-                #elif item.type == 'message_output_item':
-                #    print(ItemHelpers.text_message_output(item), end='', flush=True)
-                # ignore other event item types
-                #else:
+                        print("Tool was called")
+                # Assistant message output (don't show tool output)
+                elif item.type == 'message_output_item':
+                    # Use the helper function to extract just the text content without duplication
+                    content = ItemHelpers.text_message_output(item)
+                    # Only print non-empty content to avoid duplicates
+                    if content.strip():
+                        print(content, end='', flush=True)
+                # ignore tool output and other event types
+                else:
                     continue
             
         except MaxTurnsExceeded as e:
