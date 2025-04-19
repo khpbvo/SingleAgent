@@ -1,13 +1,10 @@
 """
-SingleAgent implementation for code assistant that follows OpenAI Agents SDK patterns.
-Features:
-- Terminal control
-- Pylint integration
-- Colored diff generation
-- Patch application
-- Streaming responses
-- Chain of thought reasoning
-- Chat memory for storing up to 25 messages
+Enhanced SingleAgent implementation with improved context management:
+- Tiktoken-based token counting
+- Entity tracking
+- Context summarization
+- Persistent storage between sessions
+- Rich context management like AgentSmith
 """
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
@@ -17,12 +14,14 @@ import sys
 import logging
 import json
 import re
+import time
 from logging.handlers import RotatingFileHandler
 
 # Configure logger for SingleAgent
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-single_handler = RotatingFileHandler('singleagent.log', maxBytes=10*1024*1024, backupCount=3)
+os.makedirs("logs", exist_ok=True)
+single_handler = RotatingFileHandler('logs/singleagent.log', maxBytes=10*1024*1024, backupCount=3)
 single_handler.setLevel(logging.DEBUG)
 single_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
 logger.addHandler(single_handler)
@@ -57,6 +56,9 @@ from agents import (
 from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
 from pydantic import BaseModel, Field
 
+# Import OpenAI for summarization
+from openai import OpenAI, AsyncOpenAI
+
 # Import tools
 from Tools.tools_single_agent import (
     run_ruff,
@@ -68,11 +70,17 @@ from Tools.tools_single_agent import (
     apply_patch,
     change_dir,
     os_command,
-    get_context
+    get_context,
+    get_context_response
 )
 from utils.project_info import discover_project_info
 from agents.exceptions import MaxTurnsExceeded
+
+# Import our enhanced context
 from The_Agents.context_data import EnhancedContextData
+
+# Path for persistent context storage
+CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".singleagent_context.json")
 
 # Constants
 AGENT_INSTRUCTIONS = """
@@ -81,10 +89,23 @@ You have full control of the terminal and can run commands like sed, grep, ls, d
 You can analyze code with pylint, ruff and pyright, generate colored diffs, and apply patches to files.
 Your thinking should be thorough and so it's fine if it's very long. You can think step by step before and after each action you decide to take.
 
-IMPORTANT: You have access to chat history memory that stores up to 25 previous messages.
-Always use the get_context tool to check the chat history before responding.
+IMPORTANT: You have access to chat history and context information.
+Always use the get_context tool to check the current context before responding.
 When referring to previous conversations, use this history as reference.
-If asked about previous interactions or commands, check the chat history using get_context.
+If asked about previous interactions or commands, check the context using get_context.
+
+# Context Management
+You will have access to:
+- Recent files the user has worked with
+- Recent commands that have been executed
+- Current project information
+- Chat history with the user
+
+# Working Directory and File Handling
+- Always be aware of the current working directory
+- Use relative paths when referring to files
+- Track which files the user is currently working with
+- Remember the content and structure of important files
 
 You MUST iterate and keep going until the problem is solved.
 You already have everything you need to solve this problem in your tools, fully solve this autonomously before coming back to me.
@@ -215,25 +236,39 @@ and explain why you chose a particular solution.
 
 class SingleAgent:
     """
-    A single agent implementation for code assistance with streaming capability 
-    and terminal control.
+    An enhanced single agent implementation for code assistance with:
+    - Improved context management
+    - Entity tracking
+    - Persistent storage between sessions
+    - Token management with tiktoken
+    - Context summarization
     """
     
     def _apply_default_file_context(self, user_input: str) -> str:
         """
-        Als de user spreekt over specifieke code-aanpassing maar geen .py noemt,
-        voeg dan automatisch het meest recent bewerkte bestand toe uit de context.
+        If user mentions code changes but doesn't specify a file,
+        automatically add the most recently edited file from context.
         """
-        if re.search(r'\b(functie|method|toevoeg|wijzig|patch)\b', user_input, re.IGNORECASE) \
-            and not re.search(r'\w+\.py\b', user_input):
-            recent = self.context.get_recent_files()
-            if recent:
-                return f"{user_input} in {recent[0]}"
+        if re.search(r'\b(functie|method|function|add|change|modify|update|patch)\b', user_input, re.IGNORECASE) \
+            and not re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
+            recent_files = self.context.get_recent_files()
+            if (recent_files):
+                return f"{user_input} in {recent_files[0]}"
         return user_input
     
     def __init__(self):
         """Initialize the code assistant agent with all required tools and enhanced context."""
-        # Use EnhancedContextData so tools can store memory
+        # Attempt to load existing context or create new one
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # no loop running → safe to run synchronously
+            asyncio.run(self._load_context())
+        else:
+            # loop already running → schedule as background task
+            loop.create_task(self._load_context())
+        
+        # Create the enhanced agent with all tools
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
             model="gpt-4.1",
@@ -248,19 +283,54 @@ class SingleAgent:
                 apply_patch,
                 change_dir,
                 os_command,
-                get_context  # include context inspection tool
+                get_context,
+                get_context_response  # Include context inspection tool
             ]
         )
         
-        cwd = os.getcwd()
-        self.context = EnhancedContextData(
-            working_directory=cwd,
-            project_info=discover_project_info(cwd),
-            current_file=None,
-            memory_items=[],
-        )
+        # Initialize the OpenAI client for summarization
+        try:
+            self.openai_client = AsyncOpenAI()
+            logger.info("OpenAI client initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize OpenAI client: {e}")
+            self.openai_client = None
     
-    async def run(self, user_input: str, stream_output: bool = True) -> Any:
+    async def _load_context(self):
+        """Load context from persistent storage or create new if not found."""
+        try:
+            # Attempt to load existing context
+            self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
+            logger.info(f"Loaded context from {CONTEXT_FILE_PATH}")
+            
+            # Update working directory to current directory
+            if self.context.working_directory != os.getcwd():
+                logger.info(f"Updating working directory from {self.context.working_directory} to {os.getcwd()}")
+                self.context.working_directory = os.getcwd()
+                
+            # Refresh project info
+            self.context.project_info = discover_project_info(os.getcwd())
+            
+        except Exception as e:
+            # If loading fails, create new context
+            logger.warning(f"Failed to load context: {e}, creating new context")
+            cwd = os.getcwd()
+            self.context = EnhancedContextData(
+                working_directory=cwd,
+                project_name=os.path.basename(cwd),
+                project_info=discover_project_info(cwd),
+                current_file=None,
+            )
+    
+    async def save_context(self):
+        """Save context to persistent storage."""
+        try:
+            await self.context.save_to_json(CONTEXT_FILE_PATH)
+            logger.info(f"Saved context to {CONTEXT_FILE_PATH}")
+        except Exception as e:
+            logger.error(f"Failed to save context: {e}")
+    
+    async def run(self, user_input: str, stream_output: bool = True) -> str:
         """
         Run the agent with the given user input.
         
@@ -271,13 +341,29 @@ class SingleAgent:
         Returns:
             The agent's response
         """
-        # Preprocess: vul default bestand toe als geen .py genoemd wordt
+        # Ensure context is loaded before running
+        if not hasattr(self, 'context'):
+            await self._load_context()
+        # Preprocess: add default file context if needed
         user_input = self._apply_default_file_context(user_input)
-        # Add (mogelijk aangevulde) user message to chat history
+        
+        # Log start of run
+        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
+        
+        # Process input for potential entities
+        self._extract_entities_from_input(user_input)
+        
+        # Add user message to chat history
         self.context.add_chat_message("user", user_input)
         
-        # log start of run
-        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
+        # Check if context should be summarized
+        if self.context.should_summarize() and self.openai_client:
+            print(f"{YELLOW}Context is large, summarizing...{RESET}")
+            was_summarized = await self.context.summarize_if_needed(self.openai_client)
+            if was_summarized:
+                print(f"{GREEN}Context summarized successfully{RESET}")
+        
+        # Run the agent
         if stream_output:
             out = await self._run_streamed(user_input)
         else:
@@ -287,17 +373,55 @@ class SingleAgent:
                 context=self.context,
             )
             out = res.final_output
-            
+        
         # Add assistant response to chat history
         self.context.add_chat_message("assistant", out)
         
-        # log end of run
+        # Save context after each run
+        await self.save_context()
+        
+        # Log end of run
         logger.debug(json.dumps({
             "event": "run_end", 
             "output": out,
-            "chat_history_length": len(self.context.chat_messages)
+            "chat_history_length": len(self.context.chat_messages),
+            "token_count": self.context.token_count
         }))
+        
         return out
+    
+    def _extract_entities_from_input(self, user_input: str):
+        """
+        Extract and track potential entities from user input.
+        
+        Args:
+            user_input: The user's query or request
+        """
+        # Extract potential file references
+        file_matches = re.findall(r'\b[\w\/\.-]+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input)
+        for match in file_matches:
+            self.context.track_entity("file", match)
+        
+        # Extract potential URLs
+        url_matches = re.findall(r'https?://[^\s]+', user_input)
+        for match in url_matches:
+            self.context.track_entity("url", match)
+        
+        # Extract potential command references
+        if user_input.startswith('!') or user_input.startswith('$'):
+            command = user_input[1:].strip()
+            self.context.track_entity("command", command)
+        
+        # Extract potential search queries
+        if re.match(r'^(search|find|look for)\s+', user_input, re.IGNORECASE):
+            query = re.sub(r'^(search|find|look for)\s+', '', user_input, flags=re.IGNORECASE)
+            self.context.track_entity("search_query", query)
+            
+        # Set active task if detected
+        task_match = re.search(r'(implement|create|fix|debug|optimize|refactor)\s+([^\.]+)', user_input, re.IGNORECASE)
+        if task_match:
+            task = task_match.group(0)
+            self.context.set_state("active_task", task)
     
     async def _run_streamed(self, user_input: str) -> str:
         """
@@ -309,16 +433,18 @@ class SingleAgent:
         Returns:
             The final output from the agent
         """
-        # log start of streamed
+        # Log start of streamed run
         logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
-        # Preprocess ook voor streaming flow
-        user_input = self._apply_default_file_context(user_input)
         print(f"{CYAN}Starting agent...{RESET}")
         
+        # Create enhanced context with current state
+        context_summary = self.context.get_context_summary()
+        
+        # Run the agent with streaming
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=35,  # unlimited turns
+            max_turns=35,  # Increased for complex tasks
             context=self.context,
         )
         
@@ -368,16 +494,27 @@ class SingleAgent:
                 if isinstance(event, AgentUpdatedStreamEvent):
                     print(f"\n{handoff_status} Handoff to {event.new_agent.name}", flush=True)
                     continue
+                    
                 # Only process run item events
                 if not isinstance(event, RunItemStreamEvent):
                     continue
+                    
                 item = event.item
-                # Tool invocation
+                
+                # Track tool calls for entity tracking
                 if item.type == 'tool_call_item':
-                    # signal that a tool was invoked (no args available on the event)
+                    # Extract tool name and parameters
                     tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
-                    # Extract parameters if available
                     tool_params = getattr(item, 'params', None) or getattr(item, 'input', None)
+                    
+                    # Track commands, file reads, etc. as entities
+                    if tool_name and tool_params:
+                        if tool_name == "os_command" or tool_name == "run_command":
+                            if isinstance(tool_params, dict) and "command" in tool_params:
+                                self.context.track_entity("command", tool_params["command"])
+                        elif tool_name == "read_file":
+                            if isinstance(tool_params, dict) and "file_path" in tool_params:
+                                self.context.track_entity("file", tool_params["file_path"])
                     
                     # Format tool parameters for display
                     params_str = ""
@@ -402,6 +539,15 @@ class SingleAgent:
                         if hasattr(item, 'output'):
                             output = item.output
                             
+                            # Track file content from read_file as metadata
+                            if isinstance(output, dict):
+                                if 'file_path' in output and 'content' in output:
+                                    self.context.track_entity(
+                                        "file", 
+                                        output['file_path'], 
+                                        {"content_preview": output['content'][:100] if output['content'] else None}
+                                    )
+                            
                             # Build a concise summary for general display
                             if isinstance(output, dict):
                                 if 'error' in output:
@@ -423,13 +569,15 @@ class SingleAgent:
                     if output_summary:
                         print(f"⮑ {output_summary}", flush=True)
                 
-                # Assistant message output (don't show tool output)
+                # Assistant message output (don't show separately if already shown via streaming)
                 elif item.type == 'message_output_item':
                     # Use the helper function to extract just the text content without duplication
                     content = ItemHelpers.text_message_output(item)
                     # Only print non-empty content if no raw streaming occurred to avoid duplicates
                     if content.strip() and not output_text_buffer:
                         print(content, end='', flush=True)
+                        output_text_buffer = content
+                
                 # Handle other event types if needed
                 else:
                     continue
@@ -444,14 +592,31 @@ class SingleAgent:
         # Print a newline at the end to ensure clean formatting
         print("")
         
-        # final output (Agent reply)
+        # Final output (Agent reply)
         final = result.final_output
-        logger.debug(json.dumps({"event": "_run_streamed_end", "final_output": final}))
+        
+        # Count tokens for the agent's response
+        response_tokens = self.context.count_tokens(final)
+        logger.info(f"Response size: ~{response_tokens} tokens")
+        
+        # Update context with token count from response
+        self.context.update_token_count(response_tokens)
+        
+        logger.debug(json.dumps({
+            "event": "_run_streamed_end", 
+            "final_output": final,
+            "token_count": self.context.token_count
+        }))
+        
         return final
 
     def get_chat_history_summary(self) -> str:
         """Return a summary of the chat history for display."""
         return self.context.get_chat_summary()
+    
+    def get_context_summary(self) -> str:
+        """Return a full summary of the current context."""
+        return self.context.get_context_summary()
     
     def clear_chat_history(self) -> None:
         """Clear the chat history."""
@@ -459,29 +624,88 @@ class SingleAgent:
         logger.debug(json.dumps({"event": "chat_history_cleared"}))
 
 async def main():
+    """Main function to run the SingleAgent REPL."""
+    print(f"{GREEN}Initializing SingleAgent...{RESET}")
     agent = SingleAgent()
-    # enter REPL loop
+    print(f"{GREEN}SingleAgent ready.{RESET}")
+    print(f"Type {BOLD}!help{RESET} for command list or enter a query.")
+    
+    # Display context summary on startup
+    print(f"\n{CYAN}Current context:{RESET}")
+    print(agent.get_context_summary())
+    print()
+    
+    # Enter REPL loop
     while True:
         try:
             query = input(f"{BOLD}{GREEN}User:{RESET} ")
         except (EOFError, KeyboardInterrupt):
             print("\nExiting. Goodbye.")
+            # Save context before exit
+            await agent.save_context()
             break
-        if not query.strip() or query.strip().lower() in ("exit", "quit"):
+            
+        if not query.strip():
+            continue
+            
+        if query.strip().lower() in ("exit", "quit"):
             print("Goodbye.")
+            # Save context before exit
+            await agent.save_context()
             break
         
         # Special commands
-        if query.strip().lower() == "!history":
+        if query.strip().lower() == "!help":
+            print(f"""
+{BOLD}SingleAgent Commands:{RESET}
+!help       - Show this help message
+!history    - Show chat history
+!context    - Show full context summary
+!clear      - Clear chat history
+!save       - Manually save context
+!entity     - List tracked entities
+exit/quit   - Exit the program
+""")
+            continue
+        elif query.strip().lower() == "!history":
             print(f"\n{agent.get_chat_history_summary()}\n")
+            continue
+        elif query.strip().lower() == "!context":
+            print(f"\n{agent.get_context_summary()}\n")
             continue
         elif query.strip().lower() == "!clear":
             agent.clear_chat_history()
             print("\nChat history cleared.\n")
             continue
+        elif query.strip().lower() == "!save":
+            await agent.save_context()
+            print("\nContext saved.\n")
+            continue
+        elif query.strip().lower() == "!entity":
+            entities = agent.context.active_entities
+            if not entities:
+                print("\nNo tracked entities.\n")
+                continue
+                
+            print(f"\n{BOLD}Tracked Entities:{RESET}")
+            for entity_type in ["file", "command", "url", "search_query"]:
+                type_entities = [e for e in entities.values() if e.entity_type == entity_type]
+                if type_entities:
+                    print(f"\n{BOLD}{entity_type.capitalize()}s:{RESET}")
+                    # Sort by access count (most frequent first)
+                    type_entities.sort(key=lambda e: e.access_count, reverse=True)
+                    for i, entity in enumerate(type_entities[:10]):  # Show top 10
+                        print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
+            print()
+            continue
 
-        result = await agent.run(query)
-        print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
+        # Run the agent with the query
+        try:
+            result = await agent.run(query)
+            print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
+        except Exception as e:
+            logger.error(f"Error running agent: {e}", exc_info=True)
+            print(f"\n{RED}Error running agent: {e}{RESET}\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

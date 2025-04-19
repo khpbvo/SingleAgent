@@ -8,3 +8,4 @@ __pycache__/
 main.log
 singleagent.log
 tools.log
+logs/context.log

@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import difflib
 import asyncio
-from typing import List, Optional, Union, TypedDict
+from typing import List, Optional, Union, TypedDict, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
@@ -31,6 +31,27 @@ tool_logger.propagate = False
 # alias tool_logger as logger for use in function implementations
 logger = tool_logger
 
+# Integration: track entities for enhanced context
+def track_file_entity(ctx, file_path, content):
+    """
+    Track a file entity in the agent's context and set it as current file.
+    """
+    ctx.track_entity(
+        entity_type="file",
+        value=file_path,
+        metadata={"content_preview": content[:100] if content else None}
+    )
+    ctx.current_file = file_path
+
+def track_command_entity(ctx, command, output):
+    """
+    Track a command entity in the agent's context.
+    """
+    ctx.track_entity(
+        entity_type="command",
+        value=command,
+        metadata={"output_preview": output[:100] if output else None}
+    )
 
 # Models for tool parameters (no default values as required for Pydantic v2 compatibility)
 
@@ -95,6 +116,49 @@ class GetContextParams(BaseModel):
         description="Whether to include detailed information"
     )
 
+class GetContextResponse(BaseModel):
+    """Response model for the get_context_response tool."""
+    chat_history: str = Field(description="Summary of recent chat history")
+    context_summary: str = Field(description="Summary of current context")
+    recent_files: list = Field(description="List of recently accessed files")
+    recent_commands: list = Field(description="List of recently executed commands")
+    token_usage: int = Field(description="Current token usage")
+    max_tokens: int = Field(description="Maximum token limit")
+
+@function_tool
+def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) -> GetContextResponse:
+    """
+    Get the current context information including:
+    - Chat history
+    - Recent files
+    - Recent commands
+    - Context summary
+    - Token usage
+
+    Use this to understand the conversation context and project state.
+    
+    Returns:
+        Context information
+    """
+    # pull the actual context out of the wrapper
+    ctx = wrapper.context
+
+    # Get recent entities
+    recent_files = [e.value for e in ctx.get_recent_entities(entity_type="file", limit=5)]
+    recent_commands = [e.value for e in ctx.get_recent_entities(entity_type="command", limit=5)]
+    
+    # Get token usage information
+    token_usage = ctx.token_count
+    max_tokens = ctx.max_tokens
+    
+    return GetContextResponse(
+        chat_history=ctx.get_chat_summary(),
+        context_summary=ctx.get_context_summary(),
+        recent_files=recent_files,
+        recent_commands=recent_commands,
+        token_usage=token_usage,
+        max_tokens=max_tokens
+    )
 
 # Tool implementations
 @function_tool
@@ -167,6 +231,8 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: C
         if not output:
             output = "Command executed successfully with no output."
         wrapper.context.remember_command(params.command, output)
+        # Track command entity in context
+        track_command_entity(wrapper.context, params.command, output)
         logger.debug(json.dumps({"tool": "run_command", "output": output}))
         return output
     except Exception as e:
@@ -180,6 +246,8 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
     try:
         content = await asyncio.to_thread(lambda: open(params.file_path, 'r', encoding='utf-8').read())
         wrapper.context.remember_file(params.file_path, content)
+        # Track file entity in context
+        track_file_entity(wrapper.context, params.file_path, content)
         logger.debug(json.dumps({"tool": "read_file", "output_length": len(content)}))
         return content
     except Exception as e:
@@ -273,6 +341,8 @@ async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) 
             "stderr": stderr.decode(),
             "returncode": rc
         }
+        # Track command entity in context (stdout preview)
+        track_command_entity(wrapper.context, params.command, output["stdout"])
         logger.debug(json.dumps({"tool": "os_command", "output": output}))
         return output
     except Exception as e:
@@ -298,10 +368,23 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
     # Add chat history to context information
     if hasattr(context, 'chat_messages') and context.chat_messages:
         info.append("\nRecent Chat History:")
-        # Show the last 5 messages or all if there are fewer
-        history_to_show = context.chat_messages[-5:] if len(context.chat_messages) > 5 else context.chat_messages
-        for i, (role, content) in enumerate(history_to_show):
-            # Truncate long messages in the summary
+        # Show the last 5 messages or all if fewer
+        history_to_show = (
+            context.chat_messages[-5:]
+            if len(context.chat_messages) > 5
+            else context.chat_messages
+        )
+        for msg in history_to_show:
+            # support both simple tuples and richer objects
+            if isinstance(msg, tuple) and len(msg) >= 2:
+                # tell the type‐checker this is a 2‑tuple so msg[0]/msg[1] is OK
+                tmsg = cast(Tuple[Any, Any], msg)
+                role = tmsg[0]
+                content = tmsg[1]
+            else:
+                role = getattr(msg, 'role', 'unknown')
+                content = getattr(msg, 'content', str(msg))
+            # truncate long messages
             if len(content) > 100:
                 content = content[:97] + "..."
             info.append(f"- {role.capitalize()}: {content}")
@@ -313,8 +396,9 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
             info.append(f"- {item.item_type}: {item.content} (at {ts})")
     else:
         summary = context.get_memory_summary()
-        if (summary):
+        if summary:
             info.append(summary)
+
     result = "\n".join(info)
     logger.debug(json.dumps({"tool": "get_context", "output_length": len(result)}))
     return result
