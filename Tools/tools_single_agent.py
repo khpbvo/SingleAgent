@@ -100,7 +100,7 @@ class GetContextParams(BaseModel):
 @function_tool
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
     logger.debug(json.dumps({"tool": "run_ruff", "params": params.model_dump()}))
-    cmd = ["ruff", "check", *params.paths, *params.flags, "--format=json"]
+    cmd = ["ruff", "check", *params.paths, *params.flags]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -236,13 +236,13 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
 
 
 @function_tool
-async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
-    logger.debug(json.dumps({"tool": "change_dir", "params": params.model_dump()}))
+async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], directory: str) -> str:
+    logger.debug(json.dumps({"tool": "change_dir", "params": {"directory": directory}}))
     try:
-        os.chdir(params.directory)
+        os.chdir(directory)
         new_dir = os.getcwd()
         wrapper.context.working_directory = new_dir
-        wrapper.context.remember_command(f"cd {params.directory}")
+        wrapper.context.remember_command(f"cd {directory}")
         logger.debug(json.dumps({"tool": "change_dir", "output": new_dir}))
         return f"Changed directory to: {new_dir}"
     except Exception as e:
