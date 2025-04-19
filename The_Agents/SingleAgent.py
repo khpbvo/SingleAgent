@@ -31,8 +31,20 @@ logger.propagate = False
 # ANSI color codes for REPL
 GREEN = "\033[32m"
 RED   = "\033[31m"
+YELLOW = "\033[33m"
+BLUE  = "\033[34m" 
+CYAN  = "\033[36m"
 BOLD  = "\033[1m"
 RESET = "\033[0m"
+
+# Import OpenAI ResponseTextDeltaEvent for streaming
+try:
+    from openai.types.responses import ResponseTextDeltaEvent
+except ImportError:
+    # Define a placeholder class for older OpenAI versions
+    class ResponseTextDeltaEvent:
+        def __init__(self, delta=""):
+            self.delta = delta
 
 from agents import (
     Agent, 
@@ -42,6 +54,7 @@ from agents import (
     RunContextWrapper,
     StreamEvent
 )
+from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
 from pydantic import BaseModel, Field
 
 # Import tools
@@ -300,7 +313,7 @@ class SingleAgent:
         logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
         # Preprocess ook voor streaming flow
         user_input = self._apply_default_file_context(user_input)
-        print("Starting agent met streaming output...")
+        print(f"{CYAN}Starting agent...{RESET}")
         
         result = Runner.run_streamed(
             starting_agent=self.agent,
@@ -309,15 +322,51 @@ class SingleAgent:
             context=self.context,
         )
         
-        from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
+        # Status indicators
+        tool_status = f"{YELLOW}⚙{RESET}"  # Tool execution
+        thinking_chars = ["⋮", "⋰", "⋯", "⋱"]  # Rotating dots pattern
+        handoff_status = f"{BLUE}→{RESET}"  # Handoff to another agent
+        
+        # Animation variables
+        thinking_index = 0
+        last_animation_time = asyncio.get_event_loop().time()
+        animation_interval = 0.2  # seconds between animation frames
+        
+        # Output buffer for collecting the response
+        output_text_buffer = ""
+        
+        # Print initial thinking indicator
+        print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
+        
         try:
             async for event in result.stream_events():
-                # Skip low-level raw events
+                # Animate the thinking indicator while waiting
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_animation_time > animation_interval:
+                    if not output_text_buffer:  # Only animate if no output yet
+                        # Clear the current indicator
+                        print("\r", end="", flush=True)
+                        # Update the animation
+                        thinking_index = (thinking_index + 1) % len(thinking_chars)
+                        print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
+                        last_animation_time = current_time
+                
+                # Process raw response events for token-by-token streaming
                 if isinstance(event, RawResponsesStreamEvent):
-                    continue
+                    if hasattr(event, 'data') and isinstance(event.data, ResponseTextDeltaEvent):
+                        # Clear thinking indicator if this is first text
+                        if not output_text_buffer:
+                            print("\r" + " " * 10 + "\r", end="", flush=True)  # Clear indicator
+                        
+                        # Print text deltas in real-time
+                        delta = event.data.delta
+                        print(delta, end="", flush=True)
+                        output_text_buffer += delta
+                    continue  # Continue to next event after processing
+                
                 # Handle agent handoff/update events
                 if isinstance(event, AgentUpdatedStreamEvent):
-                    print(f"Agent updated: {event.new_agent.name}")
+                    print(f"\n{handoff_status} Handoff to {event.new_agent.name}", flush=True)
                     continue
                 # Only process run item events
                 if not isinstance(event, RunItemStreamEvent):
@@ -329,24 +378,72 @@ class SingleAgent:
                     tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
                     # Extract parameters if available
                     tool_params = getattr(item, 'params', None) or getattr(item, 'input', None)
+                    
+                    # Format tool parameters for display
+                    params_str = ""
+                    if tool_params:
+                        if isinstance(tool_params, dict):
+                            params_keys = list(tool_params.keys())
+                            if len(params_keys) > 2:
+                                params_str = f"({params_keys[0]}=..., +{len(params_keys)-1} more)"
+                            else:
+                                params_str = f"({', '.join(params_keys)})"
+                    
                     if tool_name:
-                        print(f"{tool_name}: {tool_params}")
+                        print(f"\n{tool_status} {tool_name}{params_str}", flush=True)
                     else:
-                        print("Tool was called")
+                        print(f"\n{tool_status} Tool was called", flush=True)
+                
+                # Tool output
+                elif item.type == 'tool_call_output_item':
+                    # Handle output from tool calls
+                    output_summary = ""
+                    try:
+                        if hasattr(item, 'output'):
+                            output = item.output
+                            
+                            # Build a concise summary for general display
+                            if isinstance(output, dict):
+                                if 'error' in output:
+                                    output_summary = f"Error: {str(output['error'])[:50]}..."
+                                else:
+                                    keys = list(output.keys())
+                                    output_summary = f"{len(keys)} fields: {', '.join(keys[:3])}"
+                                    if len(keys) > 3:
+                                        output_summary += f", +{len(keys)-3} more"
+                            elif isinstance(output, list):
+                                output_summary = f"{len(output)} items"
+                            else:
+                                output_str = str(output)
+                                output_summary = output_str[:47] + "..." if len(output_str) > 50 else output_str
+                    except Exception as e:
+                        logger.warning(f"Could not summarize tool output: {str(e)}")
+                    
+                    # Show output summary if available
+                    if output_summary:
+                        print(f"⮑ {output_summary}", flush=True)
+                
                 # Assistant message output (don't show tool output)
                 elif item.type == 'message_output_item':
                     # Use the helper function to extract just the text content without duplication
                     content = ItemHelpers.text_message_output(item)
-                    # Only print non-empty content to avoid duplicates
-                    if content.strip():
+                    # Only print non-empty content if no raw streaming occurred to avoid duplicates
+                    if content.strip() and not output_text_buffer:
                         print(content, end='', flush=True)
-                # ignore tool output and other event types
+                # Handle other event types if needed
                 else:
                     continue
             
         except MaxTurnsExceeded as e:
             print(f"\n[Error] Max turns exceeded: {e}\n")
             logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
+        except Exception as e:
+            logger.error(f"Error handling streamed response: {str(e)}", exc_info=True)
+            print(f"\nError handling response: {str(e)}")
+            
+        # Print a newline at the end to ensure clean formatting
+        print("")
+        
         # final output (Agent reply)
         final = result.final_output
         logger.debug(json.dumps({"event": "_run_streamed_end", "final_output": final}))

@@ -57,10 +57,10 @@ async def main():
             continue
             
         # run agent and get response
-        result = await agent.run(query)
-        logging.debug(json.dumps({"event": "agent_response", "response": result}))
-        # print final agent output in bold red
-        print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
+        result = await agent.run(query, stream_output=True)
+        # If we streamed, the reply is already on-screen; skip the extra print.
+        if not True:  
+            print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

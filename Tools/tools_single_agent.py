@@ -99,7 +99,7 @@ class GetContextParams(BaseModel):
 # Tool implementations
 @function_tool
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
-    logger.debug(json.dumps({"tool": "run_ruff", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "run_ruff", "params": params.model_dump()}))
     cmd = ["ruff", "check", *params.paths, *params.flags, "--format=json"]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -113,7 +113,7 @@ async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
 
 @function_tool
 async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> str:
-    logger.debug(json.dumps({"tool": "run_pylint", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "run_pylint", "params": params.model_dump()}))
     cmd = ["pylint", params.file_path] + params.options
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -132,7 +132,7 @@ async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> 
 
 @function_tool
 async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -> str:
-    logger.debug(json.dumps({"tool": "run_pyright", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "run_pyright", "params": params.model_dump()}))
     cmd = ["pyright", *params.targets, *params.options, "--outputjson"]
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -151,7 +151,7 @@ async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -
 
 @function_tool
 async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: CommandParams) -> str:
-    logger.debug(json.dumps({"tool": "run_command", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "run_command", "params": params.model_dump()}))
     working_dir = params.working_dir if params.working_dir is not None else os.getcwd()
     try:
         proc = await asyncio.create_subprocess_shell(
@@ -176,7 +176,7 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: C
 
 @function_tool
 async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: FileParams) -> str:
-    logger.debug(json.dumps({"tool": "read_file", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "read_file", "params": params.model_dump()}))
     try:
         content = await asyncio.to_thread(lambda: open(params.file_path, 'r', encoding='utf-8').read())
         wrapper.context.remember_file(params.file_path, content)
@@ -189,7 +189,7 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
 
 @function_tool
 async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredDiffParams) -> str:
-    logger.debug(json.dumps({"tool": "create_colored_diff", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "create_colored_diff", "params": params.model_dump()}))
     original_lines = params.original.splitlines()
     modified_lines = params.modified.splitlines()
     
@@ -237,7 +237,7 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
 
 @function_tool
 async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
-    logger.debug(json.dumps({"tool": "change_dir", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "change_dir", "params": params.model_dump()}))
     try:
         os.chdir(params.directory)
         new_dir = os.getcwd()
@@ -258,7 +258,7 @@ class CommandResult(TypedDict):
 
 @function_tool
 async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) -> CommandResult:
-    logger.debug(json.dumps({"tool": "os_command", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "os_command", "params": params.model_dump()}))
     try:
         proc = await asyncio.create_subprocess_exec(
             params.command, *params.args,
@@ -287,7 +287,7 @@ async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) 
 
 @function_tool
 async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: GetContextParams) -> str:
-    logger.debug(json.dumps({"tool": "get_context", "params": params.dict()}))
+    logger.debug(json.dumps({"tool": "get_context", "params": params.model_dump()}))
     context = wrapper.context
     info = [
         f"Working directory: {context.working_directory}",
