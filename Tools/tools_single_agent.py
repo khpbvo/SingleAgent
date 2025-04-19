@@ -101,22 +101,28 @@ class GetContextParams(BaseModel):
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
     logger.debug(json.dumps({"tool": "run_ruff", "params": params.dict()}))
     cmd = ["ruff", "check", *params.paths, *params.flags, "--format=json"]
-    result = subprocess.run(cmd, text=True, capture_output=True)
-    logger.debug(json.dumps({"tool": "run_ruff", "output": result.stdout or result.stderr}))
-    return result.stdout or result.stderr
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    output = stdout.decode() or stderr.decode()
+    logger.debug(json.dumps({"tool": "run_ruff", "output": output}))
+    return output
 
 @function_tool
 async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> str:
     logger.debug(json.dumps({"tool": "run_pylint", "params": params.dict()}))
     cmd = ["pylint", params.file_path] + params.options
     try:
-        result = subprocess.run(
-            cmd, 
-            capture_output=True, 
-            text=True, 
-            check=False
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        output = result.stdout if result.stdout else result.stderr
+        stdout, stderr = await proc.communicate()
+        output = stdout.decode() if stdout else stderr.decode()
         logger.debug(json.dumps({"tool": "run_pylint", "output": output}))
         return output
     except Exception as e:
@@ -129,13 +135,13 @@ async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -
     logger.debug(json.dumps({"tool": "run_pyright", "params": params.dict()}))
     cmd = ["pyright", *params.targets, *params.options, "--outputjson"]
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        output = result.stdout if result.stdout else result.stderr
+        stdout, stderr = await proc.communicate()
+        output = stdout.decode() if stdout else stderr.decode()
         logger.debug(json.dumps({"tool": "run_pyright", "output": output}))
         return output
     except Exception as e:
@@ -213,21 +219,16 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
             os.path.join(os.path.dirname(__file__), "..", "apply_patch.py")
         )
         # Call with the temp‐file path so input() reads your terminal
-        result = subprocess.run(
-            ["python3", apply_patch_path, tmp],
-            text=True,
-            stdout=None,  # inherit, so you see the prompt and messages
-            stderr=None
+        proc = await asyncio.create_subprocess_exec(
+            "python3", apply_patch_path, tmp
         )
+        returncode = await proc.wait()
 
         # Clean up
         os.unlink(tmp)
 
-        # if user aborted or error, return nonzero → raise
-        if result.returncode != 0:
+        if returncode != 0:
             return "Patch was not applied."
-
-        # success
         return "Patch applied."
     except Exception as e:
         logger.debug(json.dumps({"tool": "apply_patch", "error": str(e)}))
@@ -259,17 +260,18 @@ class CommandResult(TypedDict):
 async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) -> CommandResult:
     logger.debug(json.dumps({"tool": "os_command", "params": params.dict()}))
     try:
-        result = subprocess.run(
-            [params.command] + params.args,
-            capture_output=True,
-            text=True,
-            check=False
+        proc = await asyncio.create_subprocess_exec(
+            params.command, *params.args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        # explicitly type as CommandResult for Pylance
+        stdout, stderr = await proc.communicate()
+        # ensure returncode is int, not None
+        rc = proc.returncode if proc.returncode is not None else -1
         output: CommandResult = {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode
+            "stdout": stdout.decode(),
+            "stderr": stderr.decode(),
+            "returncode": rc
         }
         logger.debug(json.dumps({"tool": "os_command", "output": output}))
         return output
