@@ -249,11 +249,16 @@ class SingleAgent:
         If user mentions code changes but doesn't specify a file,
         automatically add the most recently edited file from context.
         """
-        if re.search(r'\b(functie|method|function|add|change|modify|update|patch)\b', user_input, re.IGNORECASE) \
-            and not re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
-            recent_files = self.context.get_recent_files()
-            if (recent_files):
-                return f"{user_input} in {recent_files[0]}"
+        if not re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
+            # 2. Does it *sound* like code work?
+            if re.search(
+                r'\b(add|append|insert|remove|delete|change|modify|update|refactor|rename|patch|test|log(?:ging)?)\b',
+                user_input, re.IGNORECASE
+            ):
+                # Prefer the actively tracked file ⇢ fall back to recents
+                target = self.context.current_file or next(iter(self.context.get_recent_files()), None)
+                if target:
+                    return f"{user_input} in {target}""
         return user_input
     
     def __init__(self):
@@ -398,9 +403,13 @@ class SingleAgent:
             user_input: The user's query or request
         """
         # Extract potential file references
-        file_matches = re.findall(r'\b[\w\/\.-]+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input)
-        for match in file_matches:
-            self.context.track_entity("file", match)
+        # Capture full match (file name), *not* only the extension group
+        file_matches = re.findall(r'([\w\/\.-]+\.(?:py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php))', user_input, re.IGNORECASE)
+        for file_path in file_matches:
+            self.context.track_entity("file", file_path)
+            # **Promote first explicit mention this turn to current file**
+            if not self.context.current_file:
+                self.context.current_file = file_path
         
         # Extract potential URLs
         url_matches = re.findall(r'https?://[^\s]+', user_input)
