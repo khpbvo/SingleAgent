@@ -258,7 +258,7 @@ class SingleAgent:
                 # Prefer the actively tracked file ⇢ fall back to recents
                 target = self.context.current_file or next(iter(self.context.get_recent_files()), None)
                 if target:
-                    return f"{user_input} in {target}""
+                    return f"{user_input} in {target}"
         return user_input
     
     def __init__(self):
