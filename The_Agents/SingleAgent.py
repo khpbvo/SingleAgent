@@ -249,16 +249,33 @@ class SingleAgent:
         If user mentions code changes but doesn't specify a file,
         automatically add the most recently edited file from context.
         """
-        if not re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
-            # 2. Does it *sound* like code work?
-            if re.search(
-                r'\b(add|append|insert|remove|delete|change|modify|update|refactor|rename|patch|test|log(?:ging)?)\b',
-                user_input, re.IGNORECASE
-            ):
-                # Prefer the actively tracked file ⇢ fall back to recents
-                target = self.context.current_file or next(iter(self.context.get_recent_files()), None)
-                if target:
-                    return f"{user_input} in {target}"
+        # 1. Skip if the input already mentions a file
+        if re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
+            return user_input
+    
+        # 2. Skip for common commands that aren't file operations
+        command_patterns = [
+            r'\b(cd|chdir|change\s+dir|change\s+directory|directory|switch\s+dir|mkdir)\b',
+            r'\b(ls|dir|list)\b',
+            r'\binstall\b',
+            r'\b(!|help|clear|exit|quit|context|history|save|entity)\b',
+        ]
+    
+        for pattern in command_patterns:
+            if re.search(pattern, user_input, re.IGNORECASE):
+                return user_input
+    
+        # 3. Only apply for specific code operation contexts
+        if re.search(
+            r'\b(add|append|insert|remove|delete|modify|update|refactor|rename|patch|fix|debug|implement|create)\b.{0,15}'
+            r'(code|function|class|method|bug|issue|error|variable|import|module|feature)\b',
+            user_input, 
+            re.IGNORECASE
+        ):
+            # Prefer the actively tracked file ⇢ fall back to recents
+            target = self.context.current_file or next(iter(self.context.get_recent_files()), None)
+            if target:
+                return f"{user_input} in {target}"
         return user_input
     
     def __init__(self):
@@ -272,6 +289,12 @@ class SingleAgent:
         else:
             # loop already running → schedule as background task
             loop.create_task(self._load_context())
+    
+        # Safety measure: Reset current_file if user explicitly starts a new session
+        # (This helps avoid file fixation issues even if context was loaded)
+        if hasattr(self, 'context') and self.context.current_file:
+            logger.info(f"Safely clearing current_file ({self.context.current_file}) for new session")
+            self.context.current_file = None
         
         # Create the enhanced agent with all tools
         self.agent = Agent[EnhancedContextData](
@@ -307,15 +330,20 @@ class SingleAgent:
             # Attempt to load existing context
             self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
             logger.info(f"Loaded context from {CONTEXT_FILE_PATH}")
-            
+        
             # Update working directory to current directory
             if self.context.working_directory != os.getcwd():
                 logger.info(f"Updating working directory from {self.context.working_directory} to {os.getcwd()}")
                 self.context.working_directory = os.getcwd()
-                
-            # Refresh project info
-            self.context.project_info = discover_project_info(os.getcwd())
             
+                # Reset current_file when working directory changes to prevent file fixation
+                if self.context.current_file:
+                    logger.info(f"Resetting current_file from {self.context.current_file} to None due to directory change")
+                    self.context.current_file = None
+            
+                # Refresh project info
+                self.context.project_info = discover_project_info(os.getcwd())
+        
         except Exception as e:
             # If loading fails, create new context
             logger.warning(f"Failed to load context: {e}, creating new context")
