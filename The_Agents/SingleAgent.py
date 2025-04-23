@@ -665,7 +665,7 @@ async def main():
     print(f"{GREEN}Initializing SingleAgent...{RESET}")
     agent = SingleAgent()
     print(f"{GREEN}SingleAgent ready.{RESET}")
-    print(f"Type {BOLD}!help{RESET} for command list or enter a query.")
+    print(f"Use main.py to access the full agent system with all commands.")
     
     # Display context summary on startup
     print(f"\n{CYAN}Current context:{RESET}")
@@ -691,49 +691,9 @@ async def main():
             await agent.save_context()
             break
         
-        # Special commands
-        if query.strip().lower() == "!help":
-            print(f"""
-{BOLD}SingleAgent Commands:{RESET}
-!help       - Show this help message
-!history    - Show chat history
-!context    - Show full context summary
-!clear      - Clear chat history
-!save       - Manually save context
-!entity     - List tracked entities
-exit/quit   - Exit the program
-""")
-            continue
-        elif query.strip().lower() == "!history":
-            print(f"\n{agent.get_chat_history_summary()}\n")
-            continue
-        elif query.strip().lower() == "!context":
-            print(f"\n{agent.get_context_summary()}\n")
-            continue
-        elif query.strip().lower() == "!clear":
-            agent.clear_chat_history()
-            print("\nChat history cleared.\n")
-            continue
-        elif query.strip().lower() == "!save":
-            await agent.save_context()
-            print("\nContext saved.\n")
-            continue
-        elif query.strip().lower() == "!entity":
-            entities = agent.context.active_entities
-            if not entities:
-                print("\nNo tracked entities.\n")
-                continue
-                
-            print(f"\n{BOLD}Tracked Entities:{RESET}")
-            for entity_type in ["file", "command", "url", "search_query"]:
-                type_entities = [e for e in entities.values() if e.entity_type == entity_type]
-                if type_entities:
-                    print(f"\n{BOLD}{entity_type.capitalize()}s:{RESET}")
-                    # Sort by access count (most frequent first)
-                    type_entities.sort(key=lambda e: e.access_count, reverse=True)
-                    for i, entity in enumerate(type_entities[:10]):  # Show top 10
-                        print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
-            print()
+        # Simple note about commands being in main.py
+        if query.strip().startswith("!"):
+            print(f"\n{YELLOW}Note: Please use main.py for full command support.{RESET}\n")
             continue
 
         # Run the agent with the query
@@ -743,6 +703,3 @@ exit/quit   - Exit the program
         except Exception as e:
             logger.error(f"Error running agent: {e}", exc_info=True)
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
-
-if __name__ == "__main__":
-    asyncio.run(main())
