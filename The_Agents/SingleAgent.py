@@ -279,6 +279,14 @@ class SingleAgent:
         return user_input
     
     def __init__(self):
+        # ensure we always have a context attribute before async loading
+        cwd = os.getcwd()
+        self.context = EnhancedContextData(
+            working_directory=cwd,
+            project_name=os.path.basename(cwd),
+            project_info=discover_project_info(cwd),
+            current_file=None,
+        )
         """Initialize the code assistant agent with all required tools and enhanced context."""
         # Attempt to load existing context or create new one
         try:
@@ -481,7 +489,7 @@ class SingleAgent:
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=35,  # Increased for complex tasks
+            max_turns=999,  # Increased for complex tasks
             context=self.context,
         )
         
