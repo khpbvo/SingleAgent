@@ -20,6 +20,9 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
 
+# Import spaCy singleton
+from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
+
 # Import both agents
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
@@ -51,6 +54,10 @@ class AgentMode:
 
 async def main():
     """Main function to run the dual-agent system with mode switching support."""
+    # Initialize spaCy model at startup
+    print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
+    await nlp_singleton.initialize(model_name="en_core_web_lg", disable=["parser"])
+    
     # Start in code agent mode by default
     current_mode = AgentMode.CODE
     code_agent = SingleAgent()
@@ -92,6 +99,15 @@ async def main():
             # Use prompt_toolkit session for input with auto-suggest
             query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
             logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
+            
+            # Process input with spaCy for entity recognition
+            # This allows the agent to have entities available before processing
+            try:
+                entities = await nlp_singleton.extract_entities(query)
+                mapped_entities = await nlp_singleton.map_entity_types(entities)
+                logging.debug(json.dumps({"event": "entity_extraction", "entities": mapped_entities}))
+            except Exception as e:
+                logging.error(f"Error extracting entities: {e}", exc_info=True)
         except (EOFError, KeyboardInterrupt):
             print("\nExiting. Goodbye.")
             break
