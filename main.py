@@ -13,6 +13,13 @@ import os
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
+# Add these imports for prompt_toolkit
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.styles import Style
+from prompt_toolkit.formatted_text import HTML
+
 # Import both agents
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
@@ -69,16 +76,26 @@ async def main():
     display_mode_banner()
     print(f"\n{get_current_agent().get_context_summary()}\n")
     
+    # Set up prompt_toolkit session for CLI with history auto-suggest
+    style = Style.from_dict({
+        'auto-suggestion': 'fg:#888888 italic'
+    })
+    session = PromptSession(
+        history=InMemoryHistory(),
+        auto_suggest=AutoSuggestFromHistory(),
+        style=style
+    )
+
     # enter REPL loop
     while True:
         try:
-            # read user input and log it
-            query = input(f"{BOLD}{GREEN}User:{RESET} ")
+            # Use prompt_toolkit session for input with auto-suggest
+            query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
             logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
         except (EOFError, KeyboardInterrupt):
             print("\nExiting. Goodbye.")
             break
-        
+
         if not query.strip():
             continue
             

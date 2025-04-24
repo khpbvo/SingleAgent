@@ -14,7 +14,7 @@ from typing import List, Optional, Union, TypedDict, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
-
+import os
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
 import json
@@ -98,9 +98,8 @@ class ApplyPatchParams(BaseModel):
 
 
 class ChangeDirParams(BaseModel):
-    """Parameters for changing the working directory."""
-    directory: str = Field(description="Directory to change to")
-
+    """Params for changing the working directory."""
+    directory: str = Field(description="Path to the directory to switch into")
 
 class OSCommandParams(BaseModel):
     """Parameters for OS command execution."""
@@ -134,37 +133,14 @@ class AddManualContextParams(BaseModel):
 
 @function_tool
 def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) -> GetContextResponse:
-    """
-    Get the current context information including:
-    - Chat history
-    - Recent files
-    - Recent commands
-    - Context summary
-    - Token usage
-
-    Use this to understand the conversation context and project state.
-    
-    Returns:
-        Context information
-    """
-    # pull the actual context out of the wrapper
     ctx = wrapper.context
-
-    # Get recent entities
-    recent_files = [e.value for e in ctx.get_recent_entities(entity_type="file", limit=5)]
-    recent_commands = [e.value for e in ctx.get_recent_entities(entity_type="command", limit=5)]
-    
-    # Get token usage information
-    token_usage = ctx.token_count
-    max_tokens = ctx.max_tokens
-    
     return GetContextResponse(
-        chat_history=ctx.get_chat_summary(),
+        chat_history="\n".join(f"{m['role']}: {m['content']}" for m in ctx.get_chat_history()),
         context_summary=ctx.get_context_summary(),
-        recent_files=recent_files,
-        recent_commands=recent_commands,
-        token_usage=token_usage,
-        max_tokens=max_tokens
+        recent_files=[r.value for r in ctx.get_recent_entities("file")],
+        recent_commands=[r.value for r in ctx.get_recent_entities("command")],
+        token_usage=ctx.token_count,
+        max_tokens=ctx.max_tokens
     )
 
 # Tool implementations
@@ -248,18 +224,57 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: C
 
 
 @function_tool
-async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: FileParams) -> str:
+async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: FileParams) -> dict:
     logger.debug(json.dumps({"tool": "read_file", "params": params.model_dump()}))
     try:
-        content = await asyncio.to_thread(lambda: open(params.file_path, 'r', encoding='utf-8').read())
-        wrapper.context.remember_file(params.file_path, content)
-        # Track file entity in context
-        track_file_entity(wrapper.context, params.file_path, content)
-        logger.debug(json.dumps({"tool": "read_file", "output_length": len(content)}))
-        return content
+        # Normalize path
+        file_path = params.file_path
+        if not os.path.isabs(file_path):
+            file_path = os.path.abspath(os.path.join(os.getcwd(), file_path))
+            logger.info(f"Converted relative path to absolute: {file_path}")
+        file_path = os.path.normpath(file_path)
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return {"error": f"Path not found: {file_path}"}
+        if not os.path.isfile(file_path):
+            return {"error": f"Not a file (possibly a directory): {file_path}."}
+        # Get file stats
+        file_stats = os.stat(file_path)
+        file_size = file_stats.st_size
+        if file_size > 5 * 1024 * 1024:
+            return {"error": f"File too large ({file_size / 1024 / 1024:.2f} MB). Maximum size is 5 MB."}
+        # Read file
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            return {"error": f"Could not decode file as text: {file_path}. This may be a binary file."}
+        except PermissionError:
+            return {"error": f"Permission denied when reading file: {file_path}"}
+        # Get file extension
+        _, file_extension = os.path.splitext(file_path)
+        file_extension = file_extension.lower()
+        # Track file in context
+        track_file_entity(wrapper.context, file_path, content)
+        # Create metadata
+        metadata = {
+            "file_path": file_path,
+            "file_name": os.path.basename(file_path),
+            "file_size": file_size,
+            "file_extension": file_extension,
+            "last_modified": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+            "token_count": wrapper.context.count_tokens(content),
+            "line_count": content.count('\n') + 1
+        }
+        result = {
+            "content": content,
+            "metadata": metadata
+        }
+        logger.debug(json.dumps({"tool": "read_file", "result_size": len(content)}))
+        return result
     except Exception as e:
         logger.debug(json.dumps({"tool": "read_file", "error": str(e)}))
-        return f"Error reading file: {str(e)}"
+        return {"error": f"Error reading file: {str(e)}"}
 
 
 @function_tool
@@ -311,18 +326,17 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
 
 
 @function_tool
-async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], directory: str) -> str:
-    logger.debug(json.dumps({"tool": "change_dir", "params": {"directory": directory}}))
+async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
+    """
+    Change the agent's working directory.
+    """
     try:
-        os.chdir(directory)
-        new_dir = os.getcwd()
-        wrapper.context.working_directory = new_dir
-        wrapper.context.remember_command(f"cd {directory}")
-        logger.debug(json.dumps({"tool": "change_dir", "output": new_dir}))
-        return f"Changed directory to: {new_dir}"
+        os.chdir(params.directory)
+        # update your context so get_context_summary stays in sync
+        wrapper.context.working_directory = params.directory
+        return f"✅ Working directory changed to {params.directory}"
     except Exception as e:
-        logger.debug(json.dumps({"tool": "change_dir", "error": str(e)}))
-        return f"Error changing directory: {str(e)}"
+        return f"❌ Error changing directory: {e}"
 
 
 class CommandResult(TypedDict):
