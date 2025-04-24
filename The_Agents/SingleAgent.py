@@ -17,17 +17,6 @@ import re
 import time
 from logging.handlers import RotatingFileHandler
 
-# Import prompt_toolkit components
-from prompt_toolkit import PromptSession
-from prompt_toolkit.layout import Layout, HSplit, VSplit, Window, FormattedTextControl
-from prompt_toolkit.layout.controls import BufferControl
-from prompt_toolkit.layout.dimension import D
-from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.application import Application
-from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.styles import Style
-
 # Configure logger for SingleAgent
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -388,42 +377,112 @@ class SingleAgent:
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
     
-    def _prepare_context_for_agent(self):
+    def _prepare_context_for_agent(self) -> None:
         """
-        Prepares the system prompt by injecting the latest context summary
-        so the LLM actually “remembers” previous turns.
+        Prepare the agent's context by updating instructions with manual context info if needed.
+        This ensures the agent is aware of all manually added context items.
         """
-        # If you’ve initialized an OpenAI client, compress old history when needed
-        if getattr(self, "openai_client", None):
-            # note: make this method async if you uncomment the next line
-            # await self.context.summarize_if_needed(self.openai_client)
-            pass
-
-        # Get a human‑readable summary of our EnhancedContextData
-        summary = self.context.get_context_summary()
-
-        # Prepend it to your existing instructions
-        instr = (
-            AGENT_INSTRUCTIONS
-            + "\n\n--- CONTEXT ---\n"
-            + summary
-            + "\n----------------\n"
-        )
-
-        # Rebuild the Agent with the updated prompt, matching your original model
+        # Check if we have manual context items to include
+        if not hasattr(self.context, 'manual_context_items') or not self.context.manual_context_items:
+            return
+            
+        # Create a brief summary of available manual context
+        context_items = []
+        for item in self.context.manual_context_items:
+            context_items.append(f"- {item.label} (from: {item.source})")
+            
+        # Update the agent's instructions if needed
+        original_instructions = AGENT_INSTRUCTIONS
+        context_header = "# Available Manual Context Items:"
+        context_items_str = "\n".join(context_items)
+        context_footer = "\nUse get_context tool to view details and access this information."
+        
+        # Update agent with instructions that include context summary
+        with_manual_context = f"{original_instructions}\n\n{context_header}\n{context_items_str}\n{context_footer}"
+        
+        # Update agent's instructions
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
-            model="gpt-4.1",           # ← use the same model string as in __init__
-            instructions=instr,
-            tools=self.agent.tools
+            model="gpt-4.1",
+            instructions=with_manual_context,
+            tools=[
+                run_ruff,
+                run_pylint,
+                run_pyright,
+                run_command,
+                read_file,
+                create_colored_diff,
+                apply_patch,
+                change_dir,
+                os_command,
+                get_context,
+                get_context_response,
+                add_manual_context
+            ]
         )
-
-    async def run(self, user_input: str, stream_output: bool = True):
-        self._prepare_context_for_agent()
+    
+    async def run(self, user_input: str, stream_output: bool = True) -> str:
+        """
+        Run the agent with the given user input.
+        
+        Args:
+            user_input: The user's query or request
+            stream_output: Whether to stream the output or wait for completion
+            
+        Returns:
+            The agent's response
+        """
+        # Ensure context is loaded before running
+        if not hasattr(self, 'context'):
+            await self._load_context()
+        # Preprocess: add default file context if needed
+        user_input = self._apply_default_file_context(user_input)
+        
+        # Log start of run
+        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
+        
+        # Process input for potential entities
+        await self._extract_entities_from_input(user_input)
+        
+        # Add user message to chat history
         self.context.add_chat_message("user", user_input)
-        result = await self.agent.run(user_input, context=self.context, stream=stream_output)
-        self.context.add_chat_message("assistant", result.final_output)
-        return result.final_output
+        
+        # Check if context should be summarized
+        if self.context.should_summarize() and self.openai_client:
+            print(f"{YELLOW}Context is large, summarizing...{RESET}")
+            was_summarized = await self.context.summarize_if_needed(self.openai_client)
+            if was_summarized:
+                print(f"{GREEN}Context summarized successfully{RESET}")
+        
+        # Update agent with manual context info if available
+        self._prepare_context_for_agent()
+        
+        # Run the agent
+        if stream_output:
+            out = await self._run_streamed(user_input)
+        else:
+            res = await Runner.run(
+                starting_agent=self.agent,
+                input=user_input,
+                context=self.context,
+            )
+            out = res.final_output
+        
+        # Add assistant response to chat history
+        self.context.add_chat_message("assistant", out)
+        
+        # Save context after each run
+        await self.save_context()
+        
+        # Log end of run
+        logger.debug(json.dumps({
+            "event": "run_end", 
+            "output": out,
+            "chat_history_length": len(self.context.chat_messages),
+            "token_count": self.context.token_count
+        }))
+        
+        return out
     
     async def _extract_entities_from_input(self, user_input: str):
         """
