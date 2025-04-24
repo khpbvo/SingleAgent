@@ -14,7 +14,7 @@ from typing import List, Optional, Union, TypedDict, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
-import os
+
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
 import json
@@ -98,8 +98,9 @@ class ApplyPatchParams(BaseModel):
 
 
 class ChangeDirParams(BaseModel):
-    """Params for changing the working directory."""
-    directory: str = Field(description="Path to the directory to switch into")
+    """Parameters for changing the working directory."""
+    directory: str = Field(description="Directory to change to")
+
 
 class OSCommandParams(BaseModel):
     """Parameters for OS command execution."""
@@ -133,14 +134,37 @@ class AddManualContextParams(BaseModel):
 
 @function_tool
 def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) -> GetContextResponse:
+    """
+    Get the current context information including:
+    - Chat history
+    - Recent files
+    - Recent commands
+    - Context summary
+    - Token usage
+
+    Use this to understand the conversation context and project state.
+    
+    Returns:
+        Context information
+    """
+    # pull the actual context out of the wrapper
     ctx = wrapper.context
+
+    # Get recent entities
+    recent_files = [e.value for e in ctx.get_recent_entities(entity_type="file", limit=5)]
+    recent_commands = [e.value for e in ctx.get_recent_entities(entity_type="command", limit=5)]
+    
+    # Get token usage information
+    token_usage = ctx.token_count
+    max_tokens = ctx.max_tokens
+    
     return GetContextResponse(
-        chat_history="\n".join(f"{m['role']}: {m['content']}" for m in ctx.get_chat_history()),
+        chat_history=ctx.get_chat_summary(),
         context_summary=ctx.get_context_summary(),
-        recent_files=[r.value for r in ctx.get_recent_entities("file")],
-        recent_commands=[r.value for r in ctx.get_recent_entities("command")],
-        token_usage=ctx.token_count,
-        max_tokens=ctx.max_tokens
+        recent_files=recent_files,
+        recent_commands=recent_commands,
+        token_usage=token_usage,
+        max_tokens=max_tokens
     )
 
 # Tool implementations
@@ -287,17 +311,18 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
 
 
 @function_tool
-async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
-    """
-    Change the agent's working directory.
-    """
+async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], directory: str) -> str:
+    logger.debug(json.dumps({"tool": "change_dir", "params": {"directory": directory}}))
     try:
-        os.chdir(params.directory)
-        # update your context so get_context_summary stays in sync
-        wrapper.context.working_directory = params.directory
-        return f"✅ Working directory changed to {params.directory}"
+        os.chdir(directory)
+        new_dir = os.getcwd()
+        wrapper.context.working_directory = new_dir
+        wrapper.context.remember_command(f"cd {directory}")
+        logger.debug(json.dumps({"tool": "change_dir", "output": new_dir}))
+        return f"Changed directory to: {new_dir}"
     except Exception as e:
-        return f"❌ Error changing directory: {e}"
+        logger.debug(json.dumps({"tool": "change_dir", "error": str(e)}))
+        return f"Error changing directory: {str(e)}"
 
 
 class CommandResult(TypedDict):
