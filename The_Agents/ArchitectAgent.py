@@ -1,11 +1,10 @@
 """
-Enhanced ArchitectAgent implementation with AST-based project insights:
-- Python AST module for code structure analysis
-- Project architecture planning
-- Generating TODO lists for the CodeAgent
-- Dependency mapping and visualization
-- Code pattern recognition
-- Shared context with SingleAgent
+Enhanced ArchitectAgent implementation with architectural analysis capabilities:
+- Analyzes project structure
+- Identifies design patterns
+- Suggests architectural improvements
+- Provides high-level architectural insights
+- Maintains architecture entities in context
 """
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
@@ -17,16 +16,15 @@ import json
 import re
 import time
 from logging.handlers import RotatingFileHandler
-import ast
 
 # Configure logger for ArchitectAgent
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 os.makedirs("logs", exist_ok=True)
-arch_handler = RotatingFileHandler('logs/architectagent.log', maxBytes=10*1024*1024, backupCount=3)
-arch_handler.setLevel(logging.DEBUG)
-arch_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-logger.addHandler(arch_handler)
+architect_handler = RotatingFileHandler('logs/architectagent.log', maxBytes=10*1024*1024, backupCount=3)
+architect_handler.setLevel(logging.DEBUG)
+architect_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+logger.addHandler(architect_handler)
 logger.propagate = False
 
 # ANSI color codes for REPL
@@ -50,16 +48,12 @@ except ImportError:
 from agents import (
     Agent, 
     Runner, 
-    ItemHelpers, 
-    function_tool,
-    RunContextWrapper,
-    StreamEvent
+    RunItemStreamEvent, 
+    RawResponsesStreamEvent,
+    AgentUpdatedStreamEvent,
+    RunContextWrapper
 )
-from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
-from pydantic import BaseModel, Field
 
-# Import OpenAI for summarization
-from openai import OpenAI, AsyncOpenAI
 
 # Import architect tools
 from Tools.architect_tools import (
@@ -69,151 +63,37 @@ from Tools.architect_tools import (
     analyze_dependencies,
     detect_code_patterns,
     get_context,
-    get_context_response
+    get_context_response,
+    read_file,
+    read_directory,
+    add_manual_context
 )
-from utils.project_info import discover_project_info
-from agents.exceptions import MaxTurnsExceeded
 
-# Import our enhanced context
+# Import custom context data model
 from The_Agents.context_data import EnhancedContextData
 
-# Path for persistent context storage
-CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".architectagent_context.json")
-
-# Constants
-AGENT_INSTRUCTIONS = """
-You are an AI software architect assistant, specialized in analyzing codebases and planning software projects.
-You excel at understanding existing code structures through AST analysis, detecting code patterns, mapping dependencies,
-and creating comprehensive TODO lists for implementation.
-
-You can analyze Python projects to reveal their structure, dependencies, and architectural patterns.
-You have a deep understanding of software design principles, patterns, anti-patterns, and best practices.
-You can provide strategic guidance on software architecture decisions.
-
-IMPORTANT: You have access to chat history and context information.
-Always use the get_context tool to check the current context before responding.
-When referring to previous conversations, use this history as reference.
-If asked about previous interactions or commands, check the context using get_context.
-
-# Analysis Capabilities
-- AST Analysis: Analyze Python code structure at the abstract syntax tree level
-- Project Structure: Map out directories and files to understand project organization
-- Dependency Analysis: Identify module dependencies and potential issues
-- Code Pattern Detection: Recognize design patterns and anti-patterns
-- Task Planning: Generate structured TODO lists for implementation
-
-# Software Architecture Skills
-- Design Pattern Recognition and Application
-- Modular Design Principles
-- Component Coupling Analysis
-- Cohesion Optimization
-- Technical Debt Identification
-- Scalability Planning
-- Maintainability Assessment
-
-# Context Management
-You will have access to:
-- Recent files the user has worked with
-- Recent commands that have been executed
-- Current project information
-- Chat history with the user
-
-# Working with the Code Agent
-When creating TODO lists, structure them in a way that's clear for the Code Agent to implement:
-1. Break down large features into specific, manageable tasks
-2. Specify dependencies between tasks
-3. Prioritize tasks by importance and implementation order
-4. Include clear acceptance criteria for each task
-5. Tag tasks with appropriate categories (setup, core, testing, etc.)
-
-# Planning Guidelines
-When creating plans:
-1. Start with high-level architecture decisions
-2. Identify core components and their relationships
-3. Consider proper abstractions and separation of concerns
-4. Factor in error handling, logging, and diagnostics
-5. Think about future extensibility and maintenance
-
-# Code Analysis Guidelines
-When analyzing code:
-1. Look for design patterns and anti-patterns
-2. Assess module cohesion and coupling
-3. Identify opportunities for refactoring
-4. Evaluate naming conventions and code clarity
-5. Check for potential performance issues
-
-You should always approach problems systematically, breaking them down into architectural components
-and implementation steps. Provide clear rationales for your design decisions and recommendations.
-"""
 
 class ArchitectAgent:
     """
-    An enhanced architect agent implementation for code analysis and project planning with:
-    - Python AST module for code structure analysis
-    - Project architecture planning
-    - Generating TODO lists for the CodeAgent
-    - Dependency mapping and visualization
-    - Code pattern recognition
-    - Shared context with SingleAgent
+    Architecture-focused agent with specialized tools and capabilities
+    for analyzing and suggesting improvements to project structure and design.
     """
     
-    def _apply_default_file_context(self, user_input: str) -> str:
+    def __init__(self, openai_client=None):
         """
-        If user mentions code analysis but doesn't specify a file,
-        automatically add the most recently edited file from context.
-        """
-        # 1. Skip if the input already mentions a file
-        if re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
-            return user_input
-    
-        # 2. Skip for common commands that aren't file operations
-        command_patterns = [
-            r'\b(cd|chdir|change\s+dir|change\s+directory|directory|switch\s+dir|mkdir)\b',
-            r'\b(ls|dir|list)\b',
-            r'\b(install|todo)\b',
-            r'\b(!|help|clear|exit|quit|context|history|save|entity)\b',
-        ]
-    
-        for pattern in command_patterns:
-            if re.search(pattern, user_input, re.IGNORECASE):
-                return user_input
-    
-        # 3. Only apply for specific architecture analysis contexts
-        if re.search(
-            r'\b(analyze|understand|review|examine|explain|check|diagram|visualize|map|structure)\b.{0,15}'
-            r'(code|architecture|project|module|class|inheritance|function|method|pattern|dependency)\b',
-            user_input, 
-            re.IGNORECASE
-        ):
-            # Prefer the actively tracked file ⇢ fall back to recents
-            target = self.context.current_file or next(iter(self.context.get_recent_files()), None)
-            if target:
-                return f"{user_input} in {target}"
-        return user_input
-    
-    def __init__(self):
-        """Initialize the architect agent with all required tools and shared context."""
-        # Attempt to load existing context or create new one
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # no loop running → safe to run synchronously
-            asyncio.run(self._load_context())
-        else:
-            # loop already running → schedule as background task
-            loop.create_task(self._load_context())
-    
-        # Safety measure: Reset current_file if user explicitly starts a new session
-        # (This helps avoid file fixation issues even if context was loaded)
-        if hasattr(self, 'context') and self.context.current_file:
-            logger.info(f"Safely clearing current_file ({self.context.current_file}) for new session")
-            self.context.current_file = None
+        Initialize the architect agent with default configuration.
         
-        # Create the enhanced agent with all tools
+        Args:
+            openai_client: Optional OpenAI client for API calls
+        """
+        self.openai_client = openai_client
+        self.instructions = self._get_default_instructions()
+        
+        # Create agent
         self.agent = Agent[EnhancedContextData](
-            name="ArchitectAssistant",
+            name="ArchitectAgent",
             model="gpt-4.1",
-            instructions=AGENT_INSTRUCTIONS,
+            instructions=self.instructions,
             tools=[
                 analyze_ast,
                 analyze_project_structure,
@@ -221,60 +101,172 @@ class ArchitectAgent:
                 analyze_dependencies,
                 detect_code_patterns,
                 get_context,
-                get_context_response
+                get_context_response,
+                read_file,
+                read_directory,
+                add_manual_context
             ]
         )
         
-        # Initialize the OpenAI client for summarization
-        try:
-            self.openai_client = AsyncOpenAI()
-            logger.info("OpenAI client initialized successfully")
-        except Exception as e:
-            logger.warning(f"Failed to initialize OpenAI client: {e}")
-            self.openai_client = None
-    
+        logger.debug("ArchitectAgent initialized")
+        # Initialize context with default state
+        cwd = os.getcwd()
+        self.context = EnhancedContextData(
+            working_directory=cwd,
+            project_name=os.path.basename(cwd)
+        )
+        
     async def _load_context(self):
-        """Load context from persistent storage or create new if not found."""
-        try:
-            # Attempt to load existing context - Use the same context file as SingleAgent
-            self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
-            logger.info(f"Loaded context from {CONTEXT_FILE_PATH}")
+        """
+        Load context data from persistent storage if available.
+        """
+        self.context = EnhancedContextData()  # Initialize empty context
         
-            # Update working directory to current directory
-            if self.context.working_directory != os.getcwd():
-                logger.info(f"Updating working directory from {self.context.working_directory} to {os.getcwd()}")
-                self.context.working_directory = os.getcwd()
+        # Try to load persisted context 
+        context_file = "architect_context.json"
+        if os.path.exists(context_file):
+            try:
+                with open(context_file, 'r') as f:
+                    data = json.load(f)
+                    # Convert raw dict to EnhancedContextData
+                    self.context = EnhancedContextData.from_dict(data)
+                logger.debug(f"Loaded context from {context_file}")
+            except Exception as e:
+                logger.error(f"Error loading context: {e}")
+                # Continue with empty context on error
+        else:
+            logger.debug("No saved context found, starting fresh")
             
-                # Reset current_file when working directory changes to prevent file fixation
-                if self.context.current_file:
-                    logger.info(f"Resetting current_file from {self.context.current_file} to None due to directory change")
-                    self.context.current_file = None
+        # Ensure context has required state
+        if not hasattr(self.context, 'chat_messages'):
+            self.context.chat_messages = []
             
-                # Refresh project info
-                self.context.project_info = discover_project_info(os.getcwd())
-        
-        except Exception as e:
-            # If loading fails, create new context
-            logger.warning(f"Failed to load context: {e}, creating new context")
-            cwd = os.getcwd()
-            self.context = EnhancedContextData(
-                working_directory=cwd,
-                project_name=os.path.basename(cwd),
-                project_info=discover_project_info(cwd),
-                current_file=None,
-            )
+        if not hasattr(self.context, 'entities'):
+            self.context.entities = {}
+            
+        logger.debug(f"Context initialized with {len(self.context.chat_messages)} messages")
     
     async def save_context(self):
-        """Save context to persistent storage."""
+        """
+        Save context data to persistent storage.
+        """
         try:
-            await self.context.save_to_json(CONTEXT_FILE_PATH)
-            logger.info(f"Saved context to {CONTEXT_FILE_PATH}")
+            context_file = "architect_context.json"
+            # Convert context object to serializable dictionary
+            data = self.context.to_dict()
+            
+            with open(context_file, 'w') as f:
+                json.dump(data, f)
+                
+            logger.debug(f"Context saved to {context_file}")
         except Exception as e:
-            logger.error(f"Failed to save context: {e}")
+            logger.error(f"Error saving context: {e}")
+    
+    def _get_default_instructions(self):
+        """
+        Create default instructions for the architect agent.
+        
+        Returns:
+            String with detailed instruction set
+        """
+        return """You are an Architecture Expert Assistant specialized in software design, architecture analysis, 
+and code organization. Your purpose is to help developers understand, design, and implement 
+better software architectures.
+
+CAPABILITIES:
+- Analyze project structures and suggest organizational improvements
+- Identify design patterns or recommend appropriate patterns for specific problems
+- Provide guidance on architecture styles (microservices, monoliths, etc.)
+- Help with dependency management and code coupling issues
+- Offer refactoring suggestions to improve code organization
+- Teach architectural concepts and principles
+
+AVAILABLE TOOLS:
+- analyze_project_structure: Get a high-level view of the project organization
+- analyze_ast: Analyze code at the abstract syntax tree level
+- detect_code_patterns: Find common design patterns in the codebase
+- analyze_dependencies: Identify dependencies between modules
+- generate_todo_list: Create a prioritized list of architectural improvements
+- read_file: Read the contents of specific files
+- read_directory: List the contents of directories
+
+PRINCIPLES TO FOLLOW:
+1. Focus on architectural concerns rather than implementation details
+2. Explain the reasoning behind your suggestions
+3. Consider trade-offs between different architectural approaches
+4. Respect existing architecture when suggesting changes
+5. Consider maintainability, scalability, and extensibility in your recommendations
+6. When suggesting patterns, explain how they solve the specific problem
+
+When asked about code or architecture, first use appropriate tools to analyze the current state
+before making recommendations. Always explain architectural concepts in an educational way when they come up.
+"""
+    
+    def _prepare_context_for_agent(self):
+        """
+        Prepare context with enhanced information for the agent.
+        """
+        # Enhanced instruction with context summary 
+        context_header = f"\n\n--- CURRENT CONTEXT ---\n"
+        
+        # Add current file if available
+        context_items = []
+        if hasattr(self.context, 'current_file') and self.context.current_file:
+            context_items.append(f"Current file: {self.context.current_file}")
+        
+        # Add active architecture task if available
+        active_task = self.context.get_state("active_task")
+        if active_task:
+            context_items.append(f"Active task: {active_task}")
+        
+        # Add tracked entities summary if available
+        if hasattr(self.context, 'entities') and self.context.entities:
+            entity_counts = {}
+            for entity_type, entities in self.context.entities.items():
+                entity_counts[entity_type] = len(entities)
+            context_items.append(f"Tracked entities: {json.dumps(entity_counts)}")
+        
+        # Add design pattern insights if available
+        design_patterns = self.context.get_state("design_patterns", [])
+        if design_patterns:
+            context_items.append(f"Design patterns detected: {', '.join(design_patterns)}")
+            
+        # Add architecture concepts if available
+        architecture_concepts = self.context.get_state("architecture_concepts", [])
+        if architecture_concepts:
+            context_items.append(f"Architecture concepts discussed: {', '.join(architecture_concepts)}")
+        
+        # Format as string
+        context_items_str = '\n'.join([f"- {item}" for item in context_items])
+        context_footer = "\n----------------------\n"
+        
+        original_instructions = self._get_default_instructions()
+        
+        # Update agent with instructions that include context summary
+        with_manual_context = f"{original_instructions}\n\n{context_header}\n{context_items_str}\n{context_footer}"
+        
+        # Update agent's instructions
+        self.agent = Agent[EnhancedContextData](
+            name="ArchitectAgent",
+            model="gpt-4.1",
+            instructions=with_manual_context,
+            tools=[
+                analyze_ast,
+                analyze_project_structure,
+                generate_todo_list,
+                analyze_dependencies,
+                detect_code_patterns,
+                get_context,
+                get_context_response,
+                read_file,
+                read_directory,
+                add_manual_context
+            ]
+        )
     
     async def run(self, user_input: str, stream_output: bool = True) -> str:
         """
-        Run the architect agent with the given user input.
+        Run the agent with the given user input.
         
         Args:
             user_input: The user's query or request
@@ -286,15 +278,12 @@ class ArchitectAgent:
         # Ensure context is loaded before running
         if not hasattr(self, 'context'):
             await self._load_context()
-            
-        # Preprocess: add default file context if needed
-        user_input = self._apply_default_file_context(user_input)
         
         # Log start of run
         logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
         
         # Process input for potential entities
-        self._extract_entities_from_input(user_input)
+        await self._extract_entities_from_input(user_input)
         
         # Add user message to chat history
         self.context.add_chat_message("user", user_input)
@@ -305,6 +294,9 @@ class ArchitectAgent:
             was_summarized = await self.context.summarize_if_needed(self.openai_client)
             if was_summarized:
                 print(f"{GREEN}Context summarized successfully{RESET}")
+        
+        # Update agent with manual context info if available
+        self._prepare_context_for_agent()
         
         # Run the agent
         if stream_output:
@@ -333,53 +325,194 @@ class ArchitectAgent:
         
         return out
     
-    def _extract_entities_from_input(self, user_input: str):
+    async def _extract_entities_from_input(self, user_input: str):
         """
-        Extract and track potential entities from user input.
+        Extract and track potential entities from user input using our enhanced async entity recognition.
         
         Args:
             user_input: The user's query or request
         """
-        # Extract potential file references
-        file_matches = re.findall(r'([\w\/\.-]+\.(?:py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php))', user_input, re.IGNORECASE)
+        # Import here to avoid circular imports
+        from The_Agents.entity_recognizer import extract_entities
+        
+        try:
+            # Process the text with our async entity recognizer
+            entities = await extract_entities(user_input)
+            
+            # Track all detected entities
+            for entity_type, matches in entities.items():
+                # Sort by confidence (highest first)
+                matches.sort(key=lambda x: x["confidence"], reverse=True)
+                
+                # Log count of entities found per type
+                entity_count = len(matches)
+                if entity_count > 0:
+                    logger.debug(f"Found {entity_count} entities of type {entity_type}")
+                
+                # Track each entity
+                for match_data in matches:
+                    entity_value = match_data["value"]
+                    metadata = match_data.get("metadata", {})
+                    
+                    # Track in context with confidence level
+                    confidence = match_data.get("confidence", 0.0)
+                    if "confidence" not in metadata:
+                        metadata["confidence"] = confidence
+                        
+                    # Add timestamp of when entity was detected
+                    if "detected_at" not in metadata:
+                        metadata["detected_at"] = datetime.now().isoformat()
+                    
+                    # Track in context
+                    self.context.track_entity(entity_type, entity_value, metadata)
+                    
+                    # Special handling based on entity type
+                    if entity_type == "file" and not self.context.current_file and confidence > 0.7:
+                        # Promote high-confidence file mention to current file if it exists
+                        if os.path.exists(entity_value):
+                            self.context.current_file = entity_value
+                            logger.debug(f"Setting current file to {entity_value}")
+                    
+                    elif entity_type == "task":
+                        # Set active task
+                        self.context.set_state("active_task", entity_value)
+                        logger.debug(f"Setting active task to {entity_value}")
+                    
+                    elif entity_type == "programming_language" and confidence > 0.8:
+                        # Track current programming language
+                        self.context.set_state("current_language", entity_value)
+                        logger.debug(f"Setting current language to {entity_value}")
+                        
+                    # Architecture-specific entity handling
+                    elif entity_type == "design_pattern" and confidence > 0.75:
+                        patterns = self.context.get_state("design_patterns", [])
+                        if entity_value not in patterns:
+                            patterns.append(entity_value)
+                            self.context.set_state("design_patterns", patterns)
+                            
+                    elif entity_type == "architecture_concept" and confidence > 0.75:
+                        concepts = self.context.get_state("architecture_concepts", [])
+                        if entity_value not in concepts:
+                            concepts.append(entity_value)
+                            self.context.set_state("architecture_concepts", concepts)
+            
+            # Detailed logging for debugging
+            logger.debug(f"Extracted entities summary: {json.dumps({k: len(v) for k, v in entities.items()})}")
+            
+        except Exception as e:
+            # Fallback to regex approach if async extraction fails
+            logger.error(f"Async entity extraction failed: {e}. Falling back to regex.")
+            self._extract_entities_fallback(user_input)
+    
+    def _extract_entities_fallback(self, user_input: str):
+        """
+        Fallback method using basic regex for entity extraction if async method fails.
+        This version focuses on architecture-related patterns.
+        
+        Args:
+            user_input: The user's query or request
+        """
+        logger.debug("Using fallback entity extraction for ArchitectAgent")
+        current_time = datetime.now().isoformat()
+        
+        # Extract potential file references (with more extensions)
+        file_matches = re.findall(r'([\w\/\.-]+\.(?:py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php|md|json|yaml|yml|toml|xml))', user_input, re.IGNORECASE)
         for file_path in file_matches:
-            self.context.track_entity("file", file_path)
-            # **Promote first explicit mention this turn to current file**
-            if not self.context.current_file:
-                self.context.current_file = file_path
+            metadata = {
+                "confidence": 0.7,
+                "detected_at": current_time,
+                "method": "fallback_regex"
+            }
+            
+            if os.path.exists(file_path):
+                metadata["exists"] = True
+                metadata["confidence"] = 0.9
+                
+                # Promote existing file to current file
+                if not self.context.current_file:
+                    self.context.current_file = file_path
+                    logger.debug(f"Fallback: Setting current file to {file_path}")
+            
+            self.context.track_entity("file", file_path, metadata)
         
         # Extract potential URLs
         url_matches = re.findall(r'https?://[^\s]+', user_input)
         for match in url_matches:
-            self.context.track_entity("url", match)
+            self.context.track_entity("url", match, {
+                "confidence": 0.85,
+                "detected_at": current_time,
+                "method": "fallback_regex"
+            })
         
         # Extract potential command references
         if user_input.startswith('!') or user_input.startswith('$'):
             command = user_input[1:].strip()
-            self.context.track_entity("command", command)
+            self.context.track_entity("command", command, {
+                "confidence": 0.9,
+                "detected_at": current_time,
+                "method": "fallback_regex"
+            })
         
         # Extract potential search queries
-        if re.match(r'^(search|find|look for)\s+', user_input, re.IGNORECASE):
-            query = re.sub(r'^(search|find|look for)\s+', '', user_input, flags=re.IGNORECASE)
-            self.context.track_entity("search_query", query)
+        search_match = re.match(r'^(search|find|look for)\s+(.*?)(?:\?|\.|$)', user_input, re.IGNORECASE)
+        if search_match:
+            query = search_match.group(2).strip()
+            self.context.track_entity("search_query", query, {
+                "confidence": 0.8,
+                "detected_at": current_time,
+                "method": "fallback_regex"
+            })
             
-        # Set active task if detected
-        task_match = re.search(r'(analyze|design|architect|plan|review|refactor)\s+([^\.]+)', user_input, re.IGNORECASE)
+        # Set active task if detected (architecture-focused)
+        task_match = re.search(r'(analyze|design|architect|plan|review|refactor|model|structure)\s+([^\.]+)(?:\.|$)', user_input, re.IGNORECASE)
         if task_match:
             task = task_match.group(0)
             self.context.set_state("active_task", task)
+            self.context.track_entity("task", task, {
+                "confidence": 0.8,
+                "detected_at": current_time,
+                "method": "fallback_regex"
+            })
+            logger.debug(f"Fallback: Setting active task to {task}")
         
         # Look for specific architecture-related entities
-        pattern_match = re.search(r'(pattern|singleton|factory|observer|decorator)\b', user_input, re.IGNORECASE)
-        if pattern_match:
-            pattern = pattern_match.group(0)
-            self.context.track_entity("design_pattern", pattern)
+        design_patterns = ['singleton', 'factory', 'observer', 'decorator', 'strategy', 'facade', 
+                        'adapter', 'composite', 'command', 'iterator', 'mediator', 'template', 
+                        'visitor', 'state', 'bridge', 'flyweight']
+        
+        for pattern in design_patterns:
+            if re.search(fr'\b{pattern}\b', user_input, re.IGNORECASE):
+                self.context.track_entity("design_pattern", pattern, {
+                    "confidence": 0.85,
+                    "detected_at": current_time,
+                    "method": "fallback_regex"
+                })
+                patterns = self.context.get_state("design_patterns", [])
+                if pattern not in patterns:
+                    patterns.append(pattern)
+                    self.context.set_state("design_patterns", patterns)
             
-        # Track architecture concepts
-        arch_concepts = ['module', 'component', 'service', 'architecture', 'dependency', 'coupling', 'cohesion']
+        # Track architecture concepts (expanded list)
+        arch_concepts = ['module', 'component', 'service', 'microservice', 'architecture',
+                        'dependency', 'coupling', 'cohesion', 'solid', 'dry', 'interface',
+                        'abstraction', 'inheritance', 'composition', 'domain', 'bounded context',
+                        'clean architecture', 'hexagonal', 'mvc', 'mvvm']
+                        
         for concept in arch_concepts:
             if re.search(fr'\b{concept}\b', user_input, re.IGNORECASE):
-                self.context.track_entity("architecture_concept", concept)
+                self.context.track_entity("architecture_concept", concept, {
+                    "confidence": 0.85,
+                    "detected_at": current_time,
+                    "method": "fallback_regex"
+                })
+                
+                concepts = self.context.get_state("architecture_concepts", [])
+                if concept not in concepts:
+                    concepts.append(concept)
+                    self.context.set_state("architecture_concepts", concepts)
+                    
+        # Log fallback results
+        logger.debug("Fallback architecture entity extraction complete")
     
     async def _run_streamed(self, user_input: str) -> str:
         """
@@ -399,7 +532,7 @@ class ArchitectAgent:
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=35,  # Increased for complex tasks
+            max_turns=999,  # Increased for complex tasks
             context=self.context,
         )
         
@@ -450,205 +583,34 @@ class ArchitectAgent:
                     print(f"\n{handoff_status} Handoff to {event.new_agent.name}", flush=True)
                     continue
                     
-                # Only process run item events
-                if not isinstance(event, RunItemStreamEvent):
+                # Only process RunItemStreamEvent generically (details handled elsewhere)
+                if isinstance(event, RunItemStreamEvent):
                     continue
-                    
-                item = event.item
                 
-                # Track tool calls for entity tracking
-                if item.type == 'tool_call_item':
-                    # Extract tool name and parameters
-                    tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
-                    tool_params = getattr(item, 'params', None) or getattr(item, 'input', None)
-                    
-                    # Format tool parameters for display
-                    params_str = ""
-                    if tool_params:
-                        if isinstance(tool_params, dict):
-                            params_keys = list(tool_params.keys())
-                            if len(params_keys) > 2:
-                                params_str = f"({params_keys[0]}=..., +{len(params_keys)-1} more)"
-                            else:
-                                params_str = f"({', '.join(params_keys)})"
-                    
-                    if tool_name:
-                        print(f"\n{tool_status} {tool_name}{params_str}", flush=True)
-                    else:
-                        print(f"\n{tool_status} Tool was called", flush=True)
-                
-                # Tool output
-                elif item.type == 'tool_call_output_item':
-                    # Handle output from tool calls
-                    output_summary = ""
-                    try:
-                        if hasattr(item, 'output'):
-                            output = item.output
-                            
-                            # Build a concise summary for general display
-                            if isinstance(output, dict):
-                                if 'error' in output:
-                                    output_summary = f"Error: {str(output['error'])[:50]}..."
-                                else:
-                                    keys = list(output.keys())
-                                    output_summary = f"{len(keys)} fields: {', '.join(keys[:3])}"
-                                    if len(keys) > 3:
-                                        output_summary += f", +{len(keys)-3} more"
-                            elif isinstance(output, list):
-                                output_summary = f"{len(output)} items"
-                            else:
-                                output_str = str(output)
-                                output_summary = output_str[:47] + "..." if len(output_str) > 50 else output_str
-                    except Exception as e:
-                        logger.warning(f"Could not summarize tool output: {str(e)}")
-                    
-                    # Show output summary if available
-                    if output_summary:
-                        print(f"⮑ {output_summary}", flush=True)
-                
-                # Assistant message output (don't show separately if already shown via streaming)
-                elif item.type == 'message_output_item':
-                    # Use the helper function to extract just the text content without duplication
-                    content = ItemHelpers.text_message_output(item)
-                    # Only print non-empty content if no raw streaming occurred to avoid duplicates
-                    if content.strip() and not output_text_buffer:
-                        print(content, end='', flush=True)
-                        output_text_buffer = content
-                
-                # Handle other event types if needed
-                else:
-                    continue
-            
-        except MaxTurnsExceeded as e:
-            print(f"\n[Error] Max turns exceeded: {e}\n")
-            logger.debug(json.dumps({"event": "max_turns_exceeded", "error": str(e)}))
         except Exception as e:
-            logger.error(f"Error handling streamed response: {str(e)}", exc_info=True)
-            print(f"\nError handling response: {str(e)}")
+            logger.error(f"Error in streaming run: {e}")
+            print(f"\n{RED}Error: {e}{RESET}")
+            return f"Error occurred: {e}"
             
-        # Print a newline at the end to ensure clean formatting
-        print("")
+        # Print a newline at the end
+        print()
         
-        # Final output (Agent reply)
-        final = result.final_output
-        
-        # Count tokens for the agent's response
-        response_tokens = self.context.count_tokens(final)
-        logger.info(f"Response size: ~{response_tokens} tokens")
-        
-        # Update context with token count from response
-        self.context.update_token_count(response_tokens)
-        
+        # Log end of streamed run
         logger.debug(json.dumps({
-            "event": "_run_streamed_end", 
-            "final_output": final,
-            "token_count": self.context.token_count
+            "event": "_run_streamed_end",
+            "output_length": len(output_text_buffer)
         }))
         
-        return final
+        return output_text_buffer
+
+    def get_context_summary(self) -> str:
+        """Return a summary of the current context."""
+        return self.context.get_context_summary()
 
     def get_chat_history_summary(self) -> str:
-        """Return a summary of the chat history for display."""
+        """Return a summary of the chat history."""
         return self.context.get_chat_summary()
-    
-    def get_context_summary(self) -> str:
-        """Return a full summary of the current context."""
-        return self.context.get_context_summary()
-    
+
     def clear_chat_history(self) -> None:
-        """Clear the chat history."""
+        """Clear the chat history and reset tokens."""
         self.context.clear_chat_history()
-        logger.debug(json.dumps({"event": "chat_history_cleared"}))
-
-async def main():
-    """Main function to run the ArchitectAgent REPL."""
-    print(f"{GREEN}Initializing ArchitectAgent...{RESET}")
-    agent = ArchitectAgent()
-    print(f"{GREEN}ArchitectAgent ready.{RESET}")
-    print(f"Type {BOLD}!help{RESET} for command list or enter a query.")
-    
-    # Display context summary on startup
-    print(f"\n{CYAN}Current context:{RESET}")
-    print(agent.get_context_summary())
-    print()
-    
-    # Enter REPL loop
-    while True:
-        try:
-            query = input(f"{BOLD}{GREEN}User:{RESET} ")
-        except (EOFError, KeyboardInterrupt):
-            print("\nExiting. Goodbye.")
-            # Save context before exit
-            await agent.save_context()
-            break
-            
-        if not query.strip():
-            continue
-            
-        if query.strip().lower() in ("exit", "quit"):
-            print("Goodbye.")
-            # Save context before exit
-            await agent.save_context()
-            break
-        
-        # Special commands
-        if query.strip().lower() == "!help":
-            print(f"""
-{BOLD}ArchitectAgent Commands:{RESET}
-!help       - Show this help message
-!history    - Show chat history
-!context    - Show full context summary
-!clear      - Clear chat history
-!save       - Manually save context
-!entity     - List tracked entities
-!code       - Switch to Code Agent mode
-exit/quit   - Exit the program
-""")
-            continue
-        elif query.strip().lower() == "!history":
-            print(f"\n{agent.get_chat_history_summary()}\n")
-            continue
-        elif query.strip().lower() == "!context":
-            print(f"\n{agent.get_context_summary()}\n")
-            continue
-        elif query.strip().lower() == "!clear":
-            agent.clear_chat_history()
-            print("\nChat history cleared.\n")
-            continue
-        elif query.strip().lower() == "!save":
-            await agent.save_context()
-            print("\nContext saved.\n")
-            continue
-        elif query.strip().lower() == "!entity":
-            entities = agent.context.active_entities
-            if not entities:
-                print("\nNo tracked entities.\n")
-                continue
-                
-            print(f"\n{BOLD}Tracked Entities:{RESET}")
-            for entity_type in ["file", "command", "url", "search_query", "design_pattern", "architecture_concept"]:
-                type_entities = [e for e in entities.values() if e.entity_type == entity_type]
-                if type_entities:
-                    print(f"\n{BOLD}{entity_type.capitalize()}s:{RESET}")
-                    # Sort by access count (most frequent first)
-                    type_entities.sort(key=lambda e: e.access_count, reverse=True)
-                    for i, entity in enumerate(type_entities[:10]):  # Show top 10
-                        print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
-            print()
-            continue
-        elif query.strip().lower() == "!code":
-            print("\nSwitching to Code Agent mode. Please use main.py to continue.\n")
-            # Save context before switching
-            await agent.save_context()
-            break
-
-        # Run the agent with the query
-        try:
-            result = await agent.run(query)
-            print(f"\n{BOLD}{RED}Agent:{RESET} {result}\n")
-        except Exception as e:
-            logger.error(f"Error running agent: {e}", exc_info=True)
-            print(f"\n{RED}Error running agent: {e}{RESET}\n")
-
-if __name__ == "__main__":
-    asyncio.run(main())

@@ -10,6 +10,7 @@ import sys
 import logging
 import json
 import os
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 # Import both agents
@@ -115,8 +116,21 @@ async def main():
 !clear      - Clear chat history
 !save       - Manually save context
 !entity     - List tracked entities
+!manualctx  - List all manually added context items
+!delctx:label  - Remove manual context item by label
 !code       - Switch to Code Agent mode
 !architect  - Switch to Architect Agent mode
+
+{BOLD}Special Commands:{RESET}
+code:read:path - Add file at path to persistent context
+arch:readfile:path - Read and analyze a file with Architect Agent
+arch:readdir:path - Analyze directory structure with Architect Agent
+  Parameters for arch:readdir:
+   - directory_path: Directory to analyze (required)
+   - max_depth: How deep to scan (default: 3)
+   - include: File patterns to include (default: ['*.py', '*.md', etc.])
+   - exclude: File patterns to exclude (default: ['__pycache__', '*.pyc', etc.])
+
 exit/quit   - Exit the program
 """)
             continue
@@ -157,6 +171,188 @@ exit/quit   - Exit the program
                         print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
             print()
             continue
+        elif query.strip().lower() == "!manualctx":
+            current_agent = get_current_agent()
+            if not hasattr(current_agent.context, 'manual_context_items') or not current_agent.context.manual_context_items:
+                print("\nNo manual context items available.\n")
+                continue
+                
+            manual_items = current_agent.context.manual_context_items
+            
+            print(f"\n{BOLD}Manual Context Items:{RESET}")
+            print(f"\nTotal items: {len(manual_items)}")
+            
+            for i, item in enumerate(manual_items):
+                time_str = datetime.fromtimestamp(item.timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                content_preview = item.content[:50].replace('\n', ' ') + "..." if len(item.content) > 50 else item.content.replace('\n', ' ')
+                print(f"\n{i+1}. {BOLD}{item.label}{RESET}")
+                print(f"   Source: {item.source}")
+                print(f"   Added: {time_str}")
+                print(f"   Size: {item.token_count} tokens")
+                print(f"   Preview: {content_preview}")
+                
+            print()
+            continue
+        
+        # Check for command to delete context item
+        if query.startswith("!delctx:"):
+            try:
+                # Extract label
+                label = query[len("!delctx:"):]
+                label = label.strip()
+                
+                # Get current agent
+                current_agent = get_current_agent()
+                
+                # Check if context item exists
+                if not hasattr(current_agent.context, 'manual_context_items'):
+                    print(f"{RED}No manual context items exist.{RESET}")
+                    continue
+                
+                found = False
+                for item in current_agent.context.manual_context_items:
+                    if item.label == label:
+                        found = True
+                        break
+                
+                if not found:
+                    print(f"{RED}No context item found with label '{label}'.{RESET}")
+                    print(f"{YELLOW}Use !manualctx to list available context items.{RESET}")
+                    continue
+                
+                # Remove item
+                removed = current_agent.context.remove_manual_context(label)
+                
+                # Save context
+                await current_agent.save_context()
+                
+                if removed:
+                    print(f"{GREEN}Successfully removed context item '{label}'.{RESET}")
+                else:
+                    print(f"{RED}Failed to remove context item '{label}'.{RESET}")
+                
+                continue
+            except Exception as e:
+                print(f"{RED}Error removing context item: {str(e)}{RESET}")
+                continue
+        
+        # Check for arch:readfile command
+        if query.startswith("arch:readfile:"):
+            try:
+                # Make sure we're in architect mode
+                if current_mode != AgentMode.ARCHITECT:
+                    print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
+                    current_mode = AgentMode.ARCHITECT
+                    
+                # Extract file path
+                file_path = query[len("arch:readfile:"):]
+                file_path = file_path.strip()
+                
+                # Skip if path is empty
+                if not file_path:
+                    print(f"{RED}Error: No file path provided. Usage: arch:readfile:path/to/file{RESET}")
+                    continue
+                
+                # Create modified query for the agent
+                modified_query = f"Read and analyze the file at '{file_path}'. Provide a detailed summary of its content, structure, and purpose."
+                
+                # Get current agent and run 
+                current_agent = get_current_agent()
+                print(f"{BLUE}Processing with Architect Agent...{RESET}")
+                await current_agent.run(modified_query, stream_output=True)
+                
+                # Save context after interaction
+                await current_agent.save_context()
+                continue
+                
+            except Exception as e:
+                print(f"{RED}Error reading file: {str(e)}{RESET}")
+                continue
+        
+        # Check for arch:readdir command
+        if query.startswith("arch:readdir:"):
+            try:
+                # Make sure we're in architect mode
+                if current_mode != AgentMode.ARCHITECT:
+                    print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
+                    current_mode = AgentMode.ARCHITECT
+                
+                # Extract directory path
+                dir_path = query[len("arch:readdir:"):]
+                dir_path = dir_path.strip()
+                
+                # Skip if path is empty
+                if not dir_path:
+                    print(f"{RED}Error: No directory path provided. Usage: arch:readdir:path/to/directory{RESET}")
+                    continue
+                
+                # Create modified query for the agent
+                modified_query = f"Read and analyze the directory structure at '{dir_path}'. Provide a comprehensive overview of the project structure, files, and potential architecture."
+                
+                # Get current agent and run
+                current_agent = get_current_agent()
+                print(f"{BLUE}Processing with Architect Agent...{RESET}")
+                await current_agent.run(modified_query, stream_output=True)
+                
+                # Save context after interaction
+                await current_agent.save_context()
+                continue
+                
+            except Exception as e:
+                print(f"{RED}Error reading directory: {str(e)}{RESET}")
+                continue
+        
+        # Check for special code:read command pattern
+        if query.startswith("code:read:"):
+            try:
+                # Extract file path
+                file_path = query[len("code:read:"):]
+                file_path = file_path.strip()
+                
+                # Get absolute path if relative
+                if not os.path.isabs(file_path):
+                    file_path = os.path.abspath(os.path.join(os.getcwd(), file_path))
+                
+                # Check if file exists
+                if not os.path.exists(file_path):
+                    print(f"{RED}Error: File not found at {file_path}{RESET}")
+                    continue
+                
+                # Get agent and add context
+                current_agent = get_current_agent()
+                
+                # Generate a label based on filename
+                label = f"file:{os.path.basename(file_path)}"
+                
+                # Add to context
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Add to context using the internal method directly
+                added_label = current_agent.context.add_manual_context(
+                    content=content,
+                    source=file_path,
+                    label=label
+                )
+                
+                # Track as file entity as well
+                current_agent.context.track_entity(
+                    entity_type="file",
+                    value=file_path,
+                    metadata={"content_preview": content[:100] if content else None}
+                )
+                
+                # Save context
+                await current_agent.save_context()
+                
+                # Show success message
+                tokens = current_agent.context.count_tokens(content)
+                print(f"{GREEN}Successfully added context from {file_path} with label '{added_label}' ({tokens} tokens){RESET}")
+                continue
+            
+            except Exception as e:
+                print(f"{RED}Error adding context: {str(e)}{RESET}")
+                continue
         
         # Run the appropriate agent with the query
         try:
