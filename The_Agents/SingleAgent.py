@@ -71,8 +71,7 @@ from Tools.tools_single_agent import (
     change_dir,
     os_command,
     get_context,
-    get_context_response,
-    add_manual_context
+    get_context_response
 )
 from utils.project_info import discover_project_info
 from agents.exceptions import MaxTurnsExceeded
@@ -101,10 +100,6 @@ You will have access to:
 - Recent commands that have been executed
 - Current project information
 - Chat history with the user
-- Manual context items added by the user (via 'code:read:path/to/file')
-
-To see all context including manually added items, use the get_context tool.
-You can also add new context items using the add_manual_context tool.
 
 # Working Directory and File Handling
 - Always be aware of the current working directory
@@ -284,14 +279,6 @@ class SingleAgent:
         return user_input
     
     def __init__(self):
-        # ensure we always have a context attribute before async loading
-        cwd = os.getcwd()
-        self.context = EnhancedContextData(
-            working_directory=cwd,
-            project_name=os.path.basename(cwd),
-            project_info=discover_project_info(cwd),
-            current_file=None,
-        )
         """Initialize the code assistant agent with all required tools and enhanced context."""
         # Attempt to load existing context or create new one
         try:
@@ -325,8 +312,7 @@ class SingleAgent:
                 change_dir,
                 os_command,
                 get_context,
-                get_context_response,
-                add_manual_context
+                get_context_response  # Include context inspection tool
             ]
         )
         
@@ -377,50 +363,6 @@ class SingleAgent:
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
     
-    def _prepare_context_for_agent(self) -> None:
-        """
-        Prepare the agent's context by updating instructions with manual context info if needed.
-        This ensures the agent is aware of all manually added context items.
-        """
-        # Check if we have manual context items to include
-        if not hasattr(self.context, 'manual_context_items') or not self.context.manual_context_items:
-            return
-            
-        # Create a brief summary of available manual context
-        context_items = []
-        for item in self.context.manual_context_items:
-            context_items.append(f"- {item.label} (from: {item.source})")
-            
-        # Update the agent's instructions if needed
-        original_instructions = AGENT_INSTRUCTIONS
-        context_header = "# Available Manual Context Items:"
-        context_items_str = "\n".join(context_items)
-        context_footer = "\nUse get_context tool to view details and access this information."
-        
-        # Update agent with instructions that include context summary
-        with_manual_context = f"{original_instructions}\n\n{context_header}\n{context_items_str}\n{context_footer}"
-        
-        # Update agent's instructions
-        self.agent = Agent[EnhancedContextData](
-            name="CodeAssistant",
-            model="gpt-4.1",
-            instructions=with_manual_context,
-            tools=[
-                run_ruff,
-                run_pylint,
-                run_pyright,
-                run_command,
-                read_file,
-                create_colored_diff,
-                apply_patch,
-                change_dir,
-                os_command,
-                get_context,
-                get_context_response,
-                add_manual_context
-            ]
-        )
-    
     async def run(self, user_input: str, stream_output: bool = True) -> str:
         """
         Run the agent with the given user input.
@@ -442,7 +384,7 @@ class SingleAgent:
         logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
         
         # Process input for potential entities
-        await self._extract_entities_from_input(user_input)
+        self._extract_entities_from_input(user_input)
         
         # Add user message to chat history
         self.context.add_chat_message("user", user_input)
@@ -453,9 +395,6 @@ class SingleAgent:
             was_summarized = await self.context.summarize_if_needed(self.openai_client)
             if was_summarized:
                 print(f"{GREEN}Context summarized successfully{RESET}")
-        
-        # Update agent with manual context info if available
-        self._prepare_context_for_agent()
         
         # Run the agent
         if stream_output:
@@ -484,177 +423,42 @@ class SingleAgent:
         
         return out
     
-    async def _extract_entities_from_input(self, user_input: str):
+    def _extract_entities_from_input(self, user_input: str):
         """
-        Extract and track potential entities from user input using our enhanced async entity recognition.
+        Extract and track potential entities from user input.
         
         Args:
             user_input: The user's query or request
         """
-        # Import here to avoid circular imports
-        from The_Agents.entity_recognizer import extract_entities
-        
-        try:
-            # Process the text with our async entity recognizer
-            entities = await extract_entities(user_input)
-            
-            # Track all detected entities
-            for entity_type, matches in entities.items():
-                # Sort by confidence (highest first)
-                matches.sort(key=lambda x: x["confidence"], reverse=True)
-                
-                # Log count of entities found per type
-                entity_count = len(matches)
-                if entity_count > 0:
-                    logger.debug(f"Found {entity_count} entities of type {entity_type}")
-                
-                # Track each entity
-                for match_data in matches:
-                    entity_value = match_data["value"]
-                    metadata = match_data.get("metadata", {})
-                    
-                    # Track in context with confidence level
-                    confidence = match_data.get("confidence", 0.0)
-                    if "confidence" not in metadata:
-                        metadata["confidence"] = confidence
-                        
-                    # Add timestamp of when entity was detected
-                    if "detected_at" not in metadata:
-                        metadata["detected_at"] = datetime.now().isoformat()
-                    
-                    # Track in context
-                    self.context.track_entity(entity_type, entity_value, metadata)
-                    
-                    # Special handling based on entity type
-                    if entity_type == "file" and not self.context.current_file and confidence > 0.7:
-                        # Promote high-confidence file mention to current file if it exists
-                        if os.path.exists(entity_value):
-                            self.context.current_file = entity_value
-                            logger.debug(f"Setting current file to {entity_value}")
-                    
-                    elif entity_type == "task":
-                        # Set active task
-                        self.context.set_state("active_task", entity_value)
-                        logger.debug(f"Setting active task to {entity_value}")
-                    
-                    elif entity_type == "programming_language" and confidence > 0.8:
-                        # Track current programming language
-                        self.context.set_state("current_language", entity_value)
-                        logger.debug(f"Setting current language to {entity_value}")
-                    
-                    elif entity_type == "framework" and confidence > 0.8:
-                        # Track current framework
-                        self.context.set_state("current_framework", entity_value)
-                        logger.debug(f"Setting current framework to {entity_value}")
-                    
-                    elif entity_type == "api_endpoint":
-                        # Track API endpoints being discussed
-                        endpoints = self.context.get_state("api_endpoints", [])
-                        if entity_value not in [e["value"] for e in endpoints]:
-                            endpoints.append({
-                                "value": entity_value,
-                                "metadata": metadata
-                            })
-                            self.context.set_state("api_endpoints", endpoints)
-                    
-                    elif entity_type == "error_message":
-                        # Track error messages being addressed
-                        self.context.set_state("current_error", entity_value)
-                        logger.debug(f"Setting current error to {entity_value}")
-            
-            # Detailed logging for debugging
-            logger.debug(f"Extracted entities summary: {json.dumps({k: len(v) for k, v in entities.items()})}")
-            
-        except Exception as e:
-            # Fallback to regex approach if async extraction fails
-            logger.error(f"Async entity extraction failed: {e}. Falling back to regex.")
-            self._extract_entities_fallback(user_input)
-    
-    def _extract_entities_fallback(self, user_input: str):
-        """
-        Fallback method using basic regex for entity extraction if async method fails.
-        This is simpler than the full async recognizer but covers essential entity types.
-        
-        Args:
-            user_input: The user's query or request
-        """
-        logger.debug("Using fallback entity extraction")
-        current_time = datetime.now().isoformat()
-        
-        # Extract potential file references (with more extensions)
-        file_matches = re.findall(r'([\w\/\.-]+\.(?:py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php|md|json|yaml|yml|toml|xml))', user_input, re.IGNORECASE)
+        # Extract potential file references
+        # Capture full match (file name), *not* only the extension group
+        file_matches = re.findall(r'([\w\/\.-]+\.(?:py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php))', user_input, re.IGNORECASE)
         for file_path in file_matches:
-            metadata = {
-                "confidence": 0.7,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            }
-            
-            if os.path.exists(file_path):
-                metadata["exists"] = True
-                metadata["confidence"] = 0.9
-                
-                # Promote existing file to current file
-                if not self.context.current_file:
-                    self.context.current_file = file_path
-                    logger.debug(f"Fallback: Setting current file to {file_path}")
-            
-            self.context.track_entity("file", file_path, metadata)
+            self.context.track_entity("file", file_path)
+            # **Promote first explicit mention this turn to current file**
+            if not self.context.current_file:
+                self.context.current_file = file_path
         
         # Extract potential URLs
         url_matches = re.findall(r'https?://[^\s]+', user_input)
         for match in url_matches:
-            self.context.track_entity("url", match, {
-                "confidence": 0.85,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            })
+            self.context.track_entity("url", match)
         
         # Extract potential command references
         if user_input.startswith('!') or user_input.startswith('$'):
             command = user_input[1:].strip()
-            self.context.track_entity("command", command, {
-                "confidence": 0.9,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            })
+            self.context.track_entity("command", command)
         
         # Extract potential search queries
-        search_match = re.match(r'^(search|find|look for)\s+(.*?)(?:\?|\.|$)', user_input, re.IGNORECASE)
-        if search_match:
-            query = search_match.group(2).strip()
-            self.context.track_entity("search_query", query, {
-                "confidence": 0.8,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            })
+        if re.match(r'^(search|find|look for)\s+', user_input, re.IGNORECASE):
+            query = re.sub(r'^(search|find|look for)\s+', '', user_input, flags=re.IGNORECASE)
+            self.context.track_entity("search_query", query)
             
         # Set active task if detected
-        task_match = re.search(r'(implement|create|fix|debug|optimize|refactor|add|build|develop)\s+([^\.]+)(?:\.|$)', user_input, re.IGNORECASE)
+        task_match = re.search(r'(implement|create|fix|debug|optimize|refactor)\s+([^\.]+)', user_input, re.IGNORECASE)
         if task_match:
             task = task_match.group(0)
             self.context.set_state("active_task", task)
-            self.context.track_entity("task", task, {
-                "confidence": 0.8,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            })
-            logger.debug(f"Fallback: Setting active task to {task}")
-            
-        # Extract programming languages
-        lang_matches = re.findall(r'\b(Python|JavaScript|TypeScript|Java|C\+\+|Go|Rust)\b', user_input)
-        if lang_matches:
-            lang = lang_matches[0]
-            self.context.set_state("current_language", lang)
-            self.context.track_entity("programming_language", lang, {
-                "confidence": 0.85,
-                "detected_at": current_time,
-                "method": "fallback_regex"
-            })
-            logger.debug(f"Fallback: Setting current language to {lang}")
-            
-        # Log fallback results
-        logger.debug("Fallback entity extraction complete")
     
     async def _run_streamed(self, user_input: str) -> str:
         """
@@ -677,7 +481,7 @@ class SingleAgent:
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=999,  # Increased for complex tasks
+            max_turns=35,  # Increased for complex tasks
             context=self.context,
         )
         

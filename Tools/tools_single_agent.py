@@ -8,8 +8,6 @@ import subprocess
 import tempfile
 import difflib
 import asyncio
-import time
-from datetime import datetime
 from typing import List, Optional, Union, TypedDict, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
 
@@ -126,11 +124,6 @@ class GetContextResponse(BaseModel):
     recent_commands: list = Field(description="List of recently executed commands")
     token_usage: int = Field(description="Current token usage")
     max_tokens: int = Field(description="Maximum token limit")
-
-class AddManualContextParams(BaseModel):
-    """Parameters for manually adding content to the context."""
-    file_path: str = Field(description="Path to the file to read and add to context")
-    label: Optional[str] = Field(None, description="Optional label for this context item")
 
 @function_tool
 def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) -> GetContextResponse:
@@ -363,54 +356,6 @@ async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) 
 
 
 @function_tool
-async def add_manual_context(wrapper: RunContextWrapper[EnhancedContextData], params: AddManualContextParams) -> str:
-    """
-    Add manual context from a file that will be persisted across sessions.
-    
-    This tool reads a file and adds its content to the agent's context. The content
-    will be available to the agent in future sessions, allowing you to build up a
-    persistent knowledge base.
-    
-    Args:
-        file_path: Path to the file to read and add to context
-        label: Optional label for this context item. If not provided, one will be generated from the file name
-        
-    Returns:
-        Summary of the added context
-    """
-    logger.debug(json.dumps({"tool": "add_manual_context", "params": params.model_dump()}))
-    
-    try:
-        # Verify file exists
-        if not os.path.isfile(params.file_path):
-            return f"Error: File not found at {params.file_path}"
-            
-        # Read file content
-        with open(params.file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            
-        if not content:
-            return f"Error: Empty file at {params.file_path}"
-            
-        # Add to context
-        label = wrapper.context.add_manual_context(
-            content=content,
-            source=params.file_path,
-            label=params.label
-        )
-        
-        # Track as file entity as well
-        track_file_entity(wrapper.context, params.file_path, content)
-        
-        # Return success message
-        tokens = wrapper.context.count_tokens(content)
-        return f"Successfully added context from {params.file_path} with label '{label}' ({tokens} tokens)"
-    
-    except Exception as e:
-        logger.error(f"Error adding manual context: {str(e)}", exc_info=True)
-        return f"Error adding context: {str(e)}"
-
-@function_tool
 async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: GetContextParams) -> str:
     logger.debug(json.dumps({"tool": "get_context", "params": params.model_dump()}))
     context = wrapper.context
@@ -443,16 +388,6 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
             if len(content) > 100:
                 content = content[:97] + "..."
             info.append(f"- {role.capitalize()}: {content}")
-    
-    # Add manual context items
-    if hasattr(context, 'manual_context_items') and context.manual_context_items:
-        info.append("\nManual Context Items:")
-        for i, item in enumerate(context.manual_context_items):
-            # Format timestamp
-            time_str = datetime.fromtimestamp(item.timestamp).strftime("%Y-%m-%d %H:%M:%S")
-            # Create a preview of the content
-            content_preview = item.content[:50] + "..." if len(item.content) > 50 else item.content
-            info.append(f"- {item.label} ({time_str}, {item.token_count} tokens): {content_preview}")
     
     if params.include_details:
         info.append("\nMemory items:")

@@ -58,15 +58,6 @@ class MemoryItem(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional information")
 
 
-class ManualContextItem(BaseModel):
-    """Model for manually added context items."""
-    content: str = Field(description="The content of the context item")
-    label: str = Field(description="Label or identifier for this context item")
-    source: str = Field(description="Source of the context item (e.g., file path)")
-    timestamp: float = Field(default_factory=time.time, description="When this item was added")
-    token_count: int = Field(default=0, description="Number of tokens in this context item")
-
-
 class EnhancedContextData(BaseModel):
     """
     Enhanced context data with:
@@ -76,7 +67,6 @@ class EnhancedContextData(BaseModel):
     - Conversation history with roles
     - Summarization capabilities
     - Persistence through JSON
-    - Manual context additions
     """
     # Basic project info
     working_directory: str = Field(description="Current working directory")
@@ -85,7 +75,7 @@ class EnhancedContextData(BaseModel):
     
     # Token management
     token_count: int = Field(default=0, description="Current token count")
-    max_tokens: int = Field(default=900000, description="Maximum tokens before summarization")
+    max_tokens: int = Field(default=180000, description="Maximum tokens before summarization")
     summarization_threshold: float = Field(default=0.8, description="Threshold ratio for summarization")
     summaries: List[ContextSummary] = Field(default_factory=list, description="History of context summaries")
     
@@ -96,9 +86,6 @@ class EnhancedContextData(BaseModel):
     # Entity tracking
     active_entities: Dict[str, EntityReference] = Field(default_factory=dict, description="Currently tracked entities")
     current_file: Optional[str] = Field(None, description="Currently active file")
-    
-    # Manual context items that persist across sessions
-    manual_context_items: List[ManualContextItem] = Field(default_factory=list, description="Manually added context items")
     
     # Session state (for temporary context info)
     session_state: Dict[str, Any] = Field(default_factory=dict, description="Temporary state information")
@@ -600,13 +587,6 @@ class EnhancedContextData(BaseModel):
         active_task = self.get_state("active_task")
         if active_task:
             summary_parts.append(f"Current task: {active_task}")
-            
-        # Add manual context items information
-        if self.manual_context_items:
-            context_str = ", ".join([f"'{item.label}'" for item in self.manual_context_items[:5]])
-            if len(self.manual_context_items) > 5:
-                context_str += f" (+{len(self.manual_context_items) - 5} more)"
-            summary_parts.append(f"Manual context: {context_str}")
         
         # Add token usage info
         token_usage = f"Tokens: {self.token_count}/{self.max_tokens} ({int(self.token_count/self.max_tokens*100)}%)"
@@ -659,7 +639,6 @@ class EnhancedContextData(BaseModel):
                 "active_entities": {
                     k: v.model_dump() for k, v in self.active_entities.items()
                 },
-                "manual_context_items": [item.model_dump() for item in self.manual_context_items],
                 "session_state": self.session_state,
                 "current_file": self.current_file
             }
@@ -741,11 +720,6 @@ class EnhancedContextData(BaseModel):
             for entity_id, entity_data in entities_data.items():
                 context.active_entities[entity_id] = EntityReference(**entity_data)
                 
-            # Load manual context items
-            manual_context_data = data.get("manual_context_items", [])
-            for item_data in manual_context_data:
-                context.manual_context_items.append(ManualContextItem(**item_data))
-                
             # Load session state
             context.session_state = data.get("session_state", {})
             
@@ -823,125 +797,3 @@ class EnhancedContextData(BaseModel):
     def get_memory_summary(self) -> str:
         """Legacy method for getting memory summary."""
         return self.get_context_summary()
-        
-    # Methods for manual context management
-    def add_manual_context(self, content: str, source: str, label: Optional[str] = None) -> str:
-        """
-        Add a manual context item that persists across sessions.
-        
-        Args:
-            content: The content to add to context
-            source: Source of the content (e.g., file path)
-            label: Optional label for the context item
-            
-        Returns:
-            Label of the added context item
-        """
-        if not content:
-            return "Error: Empty content"
-            
-        # Generate a label if none provided
-        if not label:
-            # Use filename if source is a file path
-            if os.path.isfile(source):
-                label = f"file:{os.path.basename(source)}"
-            else:
-                # Generate a unique label based on first few words and timestamp
-                first_words = " ".join(content.split()[:3])
-                timestamp = int(time.time())
-                label = f"context:{first_words}:{timestamp}"
-        
-        # Count tokens
-        token_count = self.count_tokens(content)
-        
-        # Create the manual context item
-        context_item = ManualContextItem(
-            content=content,
-            label=label,
-            source=source,
-            timestamp=time.time(),
-            token_count=token_count
-        )
-        
-        # Check for duplicate labels and update if needed
-        existing_labels = [item.label for item in self.manual_context_items]
-        if label in existing_labels:
-            # Remove old item with the same label
-            self.manual_context_items = [item for item in self.manual_context_items if item.label != label]
-            
-        # Add to manual context items
-        self.manual_context_items.append(context_item)
-        
-        # Update token count
-        self.update_token_count(token_count)
-        
-        # Add a system message about the context addition
-        self.add_chat_message(
-            role="system",
-            content=f"Added manual context: {label} from {source}",
-            extra_metadata={
-                "manual_context": True,
-                "label": label,
-                "source": source
-            }
-        )
-        
-        return label
-        
-    def get_manual_context(self, label: Optional[str] = None) -> Union[Optional[ManualContextItem], List[ManualContextItem]]:
-        """
-        Get a manual context item by label or all items if no label provided.
-        
-        Args:
-            label: Optional label to retrieve a specific context item
-            
-        Returns:
-            The context item or list of all items
-        """
-        if label:
-            for item in self.manual_context_items:
-                if item.label == label:
-                    return item
-            return None
-        else:
-            return self.manual_context_items
-            
-    def remove_manual_context(self, label: str) -> bool:
-        """
-        Remove a manual context item by label.
-        
-        Args:
-            label: Label of the context item to remove
-            
-        Returns:
-            Whether the item was removed
-        """
-        initial_count = len(self.manual_context_items)
-        
-        # Find the item to get its token count
-        item_to_remove = None
-        for item in self.manual_context_items:
-            if item.label == label:
-                item_to_remove = item
-                break
-                
-        if item_to_remove:
-            # Adjust token count
-            self.token_count = max(0, self.token_count - item_to_remove.token_count)
-            
-            # Remove the item
-            self.manual_context_items = [item for item in self.manual_context_items if item.label != label]
-            
-            # Add system message about removal
-            self.add_chat_message(
-                role="system",
-                content=f"Removed manual context: {label}",
-                extra_metadata={
-                    "manual_context_removal": True,
-                    "label": label
-                }
-            )
-            
-            return True
-        
-        return False
