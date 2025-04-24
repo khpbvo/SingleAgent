@@ -218,129 +218,29 @@ For TODO lists:
 """
     
     def _prepare_context_for_agent(self):
-        """
-        Prepare context with enhanced information for the agent.
-        """
-        # Enhanced instruction with context summary 
-        context_header = f"\n\n--- CURRENT CONTEXT ---\n"
-
-        # Add current file if available
-        context_items = []
-        if hasattr(self.context, 'current_file') and self.context.current_file:
-            context_items.append(f"Current file: {self.context.current_file}")
-
-        # Add active architecture task if available
-        active_task = self.context.get_state("active_task")
-        if active_task:
-            context_items.append(f"Active task: {active_task}")
-
-        # Add tracked entities summary if available
-        if hasattr(self.context, 'entities') and self.context.entities:
-            entity_counts = {}
-            for entity_type, entities in self.context.entities.items():
-                entity_counts[entity_type] = len(entities)
-            context_items.append(f"Tracked entities: {json.dumps(entity_counts)}")
-
-        # Add design pattern insights if available
-        design_patterns = self.context.get_state("design_patterns", [])
-        if design_patterns:
-            context_items.append(f"Design patterns detected: {', '.join(design_patterns)}")
-
-        # Add architecture concepts if available
-        architecture_concepts = self.context.get_state("architecture_concepts", [])
-        if architecture_concepts:
-            context_items.append(f"Architecture concepts discussed: {', '.join(architecture_concepts)}")
-
-        # Format as string
-        context_items_str = '\n'.join([f"- {item}" for item in context_items])
-        context_footer = "\n----------------------\n"
-
-        original_instructions = self._get_default_instructions()
-
-        # Update agent with instructions that include context summary
-        with_manual_context = f"{original_instructions}\n\n{context_header}\n{context_items_str}\n{context_footer}"
-
-        # Update agent's instructions
+        # 1) Get a fresh summary
+        summary = self.context.get_context_summary()
+        # 2) Prepend it to your instructions
+        instr = self._get_default_instructions()
+        instr += "\n\n--- CURRENT CONTEXT ---\n" + summary + "\n-----------------------\n"
+        # 3) Re-create agent with new instructions
         self.agent = Agent[EnhancedContextData](
             name="ArchitectAgent",
             model="gpt-4.1",
-            instructions=with_manual_context,
-            tools=[
-                analyze_ast,
-                analyze_project_structure,
-                generate_todo_list,
-                analyze_dependencies,
-                detect_code_patterns,
-                get_context,
-                get_context_response,
-                read_file,
-                read_directory,
-                add_manual_context,
-                run_command,  # Added run_command tool
-                write_file    # Added write_file tool
-            ]
+            instructions=instr,
+            tools=self.agent.tools
         )
-    
+
     async def run(self, user_input: str, stream_output: bool = True) -> str:
-        """
-        Run the agent with the given user input.
-        
-        Args:
-            user_input: The user's query or request
-            stream_output: Whether to stream the output or wait for completion
-            
-        Returns:
-            The agent's response
-        """
-        # Ensure context is loaded before running
-        if not hasattr(self, 'context'):
-            await self._load_context()
-        
-        # Log start of run
-        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
-        
-        # Process input for potential entities
-        await self._extract_entities_from_input(user_input)
-        
-        # Add user message to chat history
-        self.context.add_chat_message("user", user_input)
-        
-        # Check if context should be summarized
-        if self.context.should_summarize() and self.openai_client:
-            print(f"{YELLOW}Context is large, summarizing...{RESET}")
-            was_summarized = await self.context.summarize_if_needed(self.openai_client)
-            if was_summarized:
-                print(f"{GREEN}Context summarized successfully{RESET}")
-        
-        # Update agent with manual context info if available
+        # always refresh prompt with latest context
         self._prepare_context_for_agent()
-        
-        # Run the agent
-        if stream_output:
-            out = await self._run_streamed(user_input)
-        else:
-            res = await Runner.run(
-                starting_agent=self.agent,
-                input=user_input,
-                context=self.context,
-            )
-            out = res.final_output
-        
-        # Add assistant response to chat history
-        self.context.add_chat_message("assistant", out)
-        
-        # Save context after each run
-        await self.save_context()
-        
-        # Log end of run
-        logger.debug(json.dumps({
-            "event": "run_end", 
-            "output": out,
-            "chat_history_length": len(self.context.chat_messages),
-            "token_count": self.context.token_count
-        }))
-        
-        return out
+        # add the user turn to context
+        self.context.add_chat_message("user", user_input)
+        # actually call the model
+        result = await self.agent.run(user_input, context=self.context, stream=stream_output)
+        # record the assistant reply
+        self.context.add_chat_message("assistant", result.final_output)
+        return result.final_output
     
     async def _extract_entities_from_input(self, user_input: str):
         """
