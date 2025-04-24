@@ -4,6 +4,7 @@ Contains various tools according to OpenAI Agents SDK specs with Pydantic v2 com
 """
 
 import os
+import sys  # Required for stdin/stdout handling
 import subprocess
 import tempfile
 import difflib
@@ -14,6 +15,15 @@ from typing import List, Optional, Union, TypedDict, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
 
 from pydantic import BaseModel, Field
+
+# ANSI color codes for colored output
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+CYAN = "\033[36m"
+RESET = "\033[0m"
+
 import os
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
@@ -297,8 +307,62 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
 
 @function_tool
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
+    """
+    Apply a patch to modify files after showing the changes and getting confirmation.
+    
+    This tool first displays a colored diff of the changes that would be made,
+    then prompts the user to confirm before actually applying the changes.
+    
+    Args:
+        patch_content: The patch content in the specified format
+        
+    Returns:
+        Result of the patch operation
+    """
     logger.debug(json.dumps({"tool": "apply_patch", "params": {"filename": "<patch>"}}))
+    
     try:
+        # Import prompt_toolkit components only when needed for this function
+        from prompt_toolkit import print_formatted_text, HTML
+        from prompt_toolkit.formatted_text import FormattedText
+        from prompt_toolkit import PromptSession
+        
+        # First, extract and show the changes without applying them
+        print_formatted_text(HTML("<yellow>Review the following changes before applying:</yellow>\n"))
+        
+        # Display the formatted patch content with color highlighting
+        lines = params.patch_content.splitlines()
+        formatted_lines = []
+        for line in lines:
+            if line.startswith('+'):
+                print_formatted_text(HTML(f"<ansigreen>{line}</ansigreen>"))
+            elif line.startswith('-'):
+                print_formatted_text(HTML(f"<ansired>{line}</ansired>"))
+            elif line.startswith('***'):
+                print_formatted_text(HTML(f"<ansiblue>{line}</ansiblue>"))
+            elif line.startswith('@@ '):
+                print_formatted_text(HTML(f"<ansicyan>{line}</ansicyan>"))
+            else:
+                print_formatted_text(line)
+        
+        # Create a prompt session for the confirmation
+        session = PromptSession()
+        
+        # Prompt for confirmation using prompt_toolkit's async prompt
+        # Use a synchronous fallback that's safe in this context
+        try:
+            # Try synchronous prompt first, which is safer in this context
+            print("\nApply these changes? [y/N] ", end="", flush=True)
+            response = input().lower()
+        except Exception:
+            # If that fails for some reason, fall back to a basic input
+            print("\nApply these changes? [y/N] ", end="", flush=True)
+            response = input().lower()
+        
+        # If not confirmed, abort
+        if response != 'y':
+            return "Patch operation cancelled by user."
+
         # write the patch content to a temp file
         with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".patch") as tf:
             tf.write(params.patch_content)
@@ -318,11 +382,11 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
         os.unlink(tmp)
 
         if returncode != 0:
-            return "Patch was not applied."
-        return "Patch applied."
+            return "Patch was not applied due to errors."
+        return "Patch successfully applied."
     except Exception as e:
-        logger.debug(json.dumps({"tool": "apply_patch", "error": str(e)}))
-        return f"Error applying patch: {e}"
+        logger.error(f"Error in apply_patch: {str(e)}", exc_info=True)
+        return f"Error applying patch: {str(e)}"
 
 
 @function_tool

@@ -19,6 +19,8 @@ from typing import (
     Tuple,
     Union,
 )
+import asyncio
+import aiofiles  # You'll need to install this: pip install aiofiles
 
 
 # --------------------------------------------------------------------------- #
@@ -451,70 +453,69 @@ def identify_files_added(text: str) -> List[str]:
 # --------------------------------------------------------------------------- #
 #  File-system helpers
 # --------------------------------------------------------------------------- #
-def load_files(paths: List[str], open_fn: Callable[[str], str]) -> Dict[str, str]:
-    return {path: open_fn(path) for path in paths}
+async def load_files(paths: List[str], open_fn: Callable[[str], asyncio.coroutine]) -> Dict[str, str]:
+    results = {}
+    for path in paths:
+        results[path] = await open_fn(path)
+    return results
 
-
-def apply_commit(
+async def apply_commit(
     commit: Commit,
-    write_fn: Callable[[str, str], None],
-    remove_fn: Callable[[str], None],
+    write_fn: Callable[[str, str], asyncio.coroutine],
+    remove_fn: Callable[[str], asyncio.coroutine],
 ) -> None:
     for path, change in commit.changes.items():
         if change.type is ActionType.DELETE:
-            remove_fn(path)
+            await remove_fn(path)
         elif change.type is ActionType.ADD:
             if change.new_content is None:
                 raise DiffError(f"ADD change for {path} has no content")
-            write_fn(path, change.new_content)
+            await write_fn(path, change.new_content)
         elif change.type is ActionType.UPDATE:
             if change.new_content is None:
                 raise DiffError(f"UPDATE change for {path} has no new content")
             target = change.move_path or path
-            write_fn(target, change.new_content)
+            await write_fn(target, change.new_content)
             if change.move_path:
-                remove_fn(path)
+                await remove_fn(path)
 
-
-def process_patch(
+async def process_patch(
     text: str,
-    open_fn: Callable[[str], str],
-    write_fn: Callable[[str, str], None],
-    remove_fn: Callable[[str], None],
+    open_fn: Callable[[str], asyncio.coroutine],
+    write_fn: Callable[[str, str], asyncio.coroutine],
+    remove_fn: Callable[[str], asyncio.coroutine],
 ) -> str:
     if not text.startswith("*** Begin Patch"):
         raise DiffError("Patch text must start with *** Begin Patch")
     paths = identify_files_needed(text)
-    orig = load_files(paths, open_fn)
+    orig = await load_files(paths, open_fn)
     patch, _fuzz = text_to_patch(text, orig)
     commit = patch_to_commit(patch, orig)
-    apply_commit(commit, write_fn, remove_fn)
+    await apply_commit(commit, write_fn, remove_fn)
     return "Done!"
 
 
 # --------------------------------------------------------------------------- #
 #  Default FS helpers
 # --------------------------------------------------------------------------- #
-def open_file(path: str) -> str:
-    with open(path, "rt", encoding="utf-8") as fh:
-        return fh.read()
+async def open_file(path: str) -> str:
+    async with aiofiles.open(path, "r", encoding="utf-8") as fh:
+        return await fh.read()
 
-
-def write_file(path: str, content: str) -> None:
+async def write_file(path: str, content: str) -> None:
     target = pathlib.Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    with target.open("wt", encoding="utf-8") as fh:
-        fh.write(content)
+    async with aiofiles.open(str(target), "w", encoding="utf-8") as fh:
+        await fh.write(content)
 
-
-def remove_file(path: str) -> None:
-    pathlib.Path(path).unlink(missing_ok=True)
+async def remove_file(path: str) -> None:
+    pathlib.Path(path).unlink(missing_ok=True)  # file deletion is fast, can stay synchronous
 
 
 # --------------------------------------------------------------------------- #
 #  CLI entry-point
 # --------------------------------------------------------------------------- #
-def main() -> None:
+async def async_main() -> None:
     import sys
 
     # add a --yes flag to skip interactive confirm, plus optional patch_file
@@ -535,9 +536,10 @@ def main() -> None:
 
     # read the patch either from file or from stdin
     if args.patch_file:
-        with open(args.patch_file, "r", encoding="utf-8") as pf:
-            patch_text = pf.read()
+        async with aiofiles.open(args.patch_file, "r", encoding="utf-8") as pf:
+            patch_text = await pf.read()
     else:
+        # stdin is trickier in async - we'll read it synchronously
         patch_text = sys.stdin.read()
 
     if not patch_text:
@@ -549,19 +551,18 @@ def main() -> None:
         # show the patch
         print("About to apply this patch:\n" + patch_text)
         try:
-            resp = input("Apply this patch? [y/N] ")
+            resp = input("Apply this patch? [y/N] ")  # input stays synchronous
         except EOFError:
             resp = "n"
         if resp.strip().lower() != "y":
             print("Aborting.", file=sys.stderr)
             return
     try:
-        result = process_patch(patch_text, open_file, write_file, remove_file)
+        result = await process_patch(patch_text, open_file, write_file, remove_file)
     except DiffError as exc:
         print(exc, file=sys.stderr)
         return
     print(result)
 
-
-if __name__ == "__main__":
-    main()
+def main() -> None:
+    asyncio.run(async_main())
