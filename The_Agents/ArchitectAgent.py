@@ -399,7 +399,7 @@ class ArchitectAgent:
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
-            max_turns=999,  # Increased for complex tasks
+            max_turns=35,  # Increased for complex tasks
             context=self.context,
         )
         
