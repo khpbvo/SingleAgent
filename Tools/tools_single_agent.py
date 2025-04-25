@@ -307,87 +307,95 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
 
 @function_tool
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
-    """
-    Apply a patch to modify files after showing the changes and getting confirmation.
+    """Apply a patch to files using the apply_patch.py script with colored diff preview."""
+    logger.debug(json.dumps({"tool": "apply_patch", "params": params.model_dump()}))
     
-    This tool first displays a colored diff of the changes that would be made,
-    then prompts the user to confirm before actually applying the changes.
+    # First, show the patch content for preview
+    print(f"\n{BLUE}=== Patch Preview ==={RESET}")
     
-    Args:
-        patch_content: The patch content in the specified format
-        
-    Returns:
-        Result of the patch operation
-    """
-    logger.debug(json.dumps({"tool": "apply_patch", "params": {"filename": "<patch>"}}))
+    # Split the patch into sections by file
+    patch_lines = params.patch_content.splitlines()
+    current_file = None
+    file_sections = {}
+    current_section = []
     
-    try:
-        # Import prompt_toolkit components only when needed for this function
-        from prompt_toolkit import print_formatted_text, HTML
-        from prompt_toolkit.formatted_text import FormattedText
-        from prompt_toolkit import PromptSession
-        
-        # First, extract and show the changes without applying them
-        print_formatted_text(HTML("<yellow>Review the following changes before applying:</yellow>\n"))
-        
-        # Display the formatted patch content with color highlighting
-        lines = params.patch_content.splitlines()
-        formatted_lines = []
-        for line in lines:
-            if line.startswith('+'):
-                print_formatted_text(HTML(f"<ansigreen>{line}</ansigreen>"))
-            elif line.startswith('-'):
-                print_formatted_text(HTML(f"<ansired>{line}</ansired>"))
-            elif line.startswith('***'):
-                print_formatted_text(HTML(f"<ansiblue>{line}</ansiblue>"))
-            elif line.startswith('@@ '):
-                print_formatted_text(HTML(f"<ansicyan>{line}</ansicyan>"))
-            else:
-                print_formatted_text(line)
-        
-        # Create a prompt session for the confirmation
-        session = PromptSession()
-        
-        # Prompt for confirmation using prompt_toolkit's async prompt
-        # Use a synchronous fallback that's safe in this context
-        try:
-            # Try synchronous prompt first, which is safer in this context
-            print("\nApply these changes? [y/N] ", end="", flush=True)
-            response = input().lower()
-        except Exception:
-            # If that fails for some reason, fall back to a basic input
-            print("\nApply these changes? [y/N] ", end="", flush=True)
-            response = input().lower()
-        
-        # If not confirmed, abort
-        if response != 'y':
-            return "Patch operation cancelled by user."
-
-        # write the patch content to a temp file
-        with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".patch") as tf:
-            tf.write(params.patch_content)
-            tf.flush()
-            tmp = tf.name
-
-        apply_patch_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "apply_patch.py")
-        )
-        # Call with the temp‐file path so input() reads your terminal
-        proc = await asyncio.create_subprocess_exec(
-            "python3", apply_patch_path, tmp
-        )
-        returncode = await proc.wait()
-
-        # Clean up
-        os.unlink(tmp)
-
-        if returncode != 0:
-            return "Patch was not applied due to errors."
-        return "Patch successfully applied."
-    except Exception as e:
-        logger.error(f"Error in apply_patch: {str(e)}", exc_info=True)
-        return f"Error applying patch: {str(e)}"
-
+    for line in patch_lines:
+        if line.startswith("*** Add File:") or line.startswith("*** Update File:") or line.startswith("*** Delete File:"):
+            if current_file and current_section:
+                file_sections[current_file] = current_section
+            current_file = line
+            current_section = [line]
+        elif current_file:
+            current_section.append(line)
+    
+    # Add the last section
+    if current_file and current_section:
+        file_sections[current_file] = current_section
+    
+    # Print each section with colored formatting
+    for file_header, section in file_sections.items():
+        if "Add File" in file_header:
+            print(f"\n{GREEN}{file_header}{RESET}")
+            for line in section[1:]:  # Skip the header
+                if line.startswith("+"):
+                    print(f"{GREEN}{line}{RESET}")
+                elif line == "*** End of File":
+                    continue
+                else:
+                    print(line)
+        elif "Delete File" in file_header:
+            print(f"\n{RED}{file_header}{RESET}")
+            for line in section[1:]:  # Skip the header
+                if line.startswith("-"):
+                    print(f"{RED}{line}{RESET}")
+                elif line == "*** End of File":
+                    continue
+                else:
+                    print(line)
+        elif "Update File" in file_header:
+            print(f"\n{YELLOW}{file_header}{RESET}")
+            for line in section[1:]:  # Skip the header
+                if line.startswith("+"):
+                    print(f"{GREEN}{line}{RESET}")
+                elif line.startswith("-"):
+                    print(f"{RED}{line}{RESET}")
+                elif line == "*** End of File":
+                    continue
+                else:
+                    print(line)
+    
+    # Ask for confirmation
+    print(f"\n{YELLOW}Apply these changes? [y/N]{RESET} ", end="", flush=True)
+    user_input = input().strip().lower()
+    if user_input != "y":
+        return "Patch application cancelled by user."
+    
+    # User confirmed, proceed with applying the patch
+    # Get the path to the apply_patch.py script
+    apply_patch_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "apply_patch.py")
+    
+    # Create subprocess with PIPE for stdin/stdout/stderr
+    proc = await asyncio.create_subprocess_exec(
+        "python3", apply_patch_path,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    # Send the patch content to stdin of apply_patch.py
+    stdout, stderr = await proc.communicate(params.patch_content.encode('utf-8'))
+    
+    # Handle output
+    if stderr:
+        error_msg = stderr.decode('utf-8').strip()
+        logger.error(f"Error applying patch: {error_msg}")
+        return f"Error applying patch: {error_msg}"
+    
+    output = stdout.decode('utf-8').strip()
+    logger.debug(f"Apply patch output: {output}")
+    track_command_entity(wrapper.context, f"apply_patch", output) if hasattr(wrapper.context, 'track_entity') else None
+    
+    return f"{GREEN}✓ Patch applied successfully!{RESET}"
 
 @function_tool
 async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:

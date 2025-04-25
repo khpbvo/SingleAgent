@@ -8,7 +8,6 @@ A self-contained **pure-Python 3.9+** utility for applying human-readable
 from __future__ import annotations
 
 import pathlib
-import argparse
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -19,8 +18,6 @@ from typing import (
     Tuple,
     Union,
 )
-import asyncio
-import aiofiles  # You'll need to install this: pip install aiofiles
 
 
 # --------------------------------------------------------------------------- #
@@ -453,116 +450,83 @@ def identify_files_added(text: str) -> List[str]:
 # --------------------------------------------------------------------------- #
 #  File-system helpers
 # --------------------------------------------------------------------------- #
-async def load_files(paths: List[str], open_fn: Callable[[str], asyncio.coroutine]) -> Dict[str, str]:
-    results = {}
-    for path in paths:
-        results[path] = await open_fn(path)
-    return results
+def load_files(paths: List[str], open_fn: Callable[[str], str]) -> Dict[str, str]:
+    return {path: open_fn(path) for path in paths}
 
-async def apply_commit(
+
+def apply_commit(
     commit: Commit,
-    write_fn: Callable[[str, str], asyncio.coroutine],
-    remove_fn: Callable[[str], asyncio.coroutine],
+    write_fn: Callable[[str, str], None],
+    remove_fn: Callable[[str], None],
 ) -> None:
     for path, change in commit.changes.items():
         if change.type is ActionType.DELETE:
-            await remove_fn(path)
+            remove_fn(path)
         elif change.type is ActionType.ADD:
             if change.new_content is None:
                 raise DiffError(f"ADD change for {path} has no content")
-            await write_fn(path, change.new_content)
+            write_fn(path, change.new_content)
         elif change.type is ActionType.UPDATE:
             if change.new_content is None:
                 raise DiffError(f"UPDATE change for {path} has no new content")
             target = change.move_path or path
-            await write_fn(target, change.new_content)
+            write_fn(target, change.new_content)
             if change.move_path:
-                await remove_fn(path)
+                remove_fn(path)
 
-async def process_patch(
+
+def process_patch(
     text: str,
-    open_fn: Callable[[str], asyncio.coroutine],
-    write_fn: Callable[[str, str], asyncio.coroutine],
-    remove_fn: Callable[[str], asyncio.coroutine],
+    open_fn: Callable[[str], str],
+    write_fn: Callable[[str, str], None],
+    remove_fn: Callable[[str], None],
 ) -> str:
     if not text.startswith("*** Begin Patch"):
         raise DiffError("Patch text must start with *** Begin Patch")
     paths = identify_files_needed(text)
-    orig = await load_files(paths, open_fn)
+    orig = load_files(paths, open_fn)
     patch, _fuzz = text_to_patch(text, orig)
     commit = patch_to_commit(patch, orig)
-    await apply_commit(commit, write_fn, remove_fn)
+    apply_commit(commit, write_fn, remove_fn)
     return "Done!"
 
 
 # --------------------------------------------------------------------------- #
 #  Default FS helpers
 # --------------------------------------------------------------------------- #
-async def open_file(path: str) -> str:
-    async with aiofiles.open(path, "r", encoding="utf-8") as fh:
-        return await fh.read()
+def open_file(path: str) -> str:
+    with open(path, "rt", encoding="utf-8") as fh:
+        return fh.read()
 
-async def write_file(path: str, content: str) -> None:
+
+def write_file(path: str, content: str) -> None:
     target = pathlib.Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    async with aiofiles.open(str(target), "w", encoding="utf-8") as fh:
-        await fh.write(content)
+    with target.open("wt", encoding="utf-8") as fh:
+        fh.write(content)
 
-async def remove_file(path: str) -> None:
-    pathlib.Path(path).unlink(missing_ok=True)  # file deletion is fast, can stay synchronous
+
+def remove_file(path: str) -> None:
+    pathlib.Path(path).unlink(missing_ok=True)
 
 
 # --------------------------------------------------------------------------- #
 #  CLI entry-point
 # --------------------------------------------------------------------------- #
-async def async_main() -> None:
+def main() -> None:
     import sys
 
-    # add a --yes flag to skip interactive confirm, plus optional patch_file
-    cli = argparse.ArgumentParser(
-        description="Apply a pseudo‑diff from a file (or stdin if omitted)"
-    )
-    cli.add_argument(
-        "-y", "--yes",
-        action="store_true",
-        help="apply patch without asking for confirmation"
-    )
-    cli.add_argument(
-        "patch_file",
-        nargs="?",
-        help="path to patch file; if omitted, read patch from stdin"
-    )
-    args = cli.parse_args()
-
-    # read the patch either from file or from stdin
-    if args.patch_file:
-        async with aiofiles.open(args.patch_file, "r", encoding="utf-8") as pf:
-            patch_text = await pf.read()
-    else:
-        # stdin is trickier in async - we'll read it synchronously
-        patch_text = sys.stdin.read()
-
+    patch_text = sys.stdin.read()
     if not patch_text:
-        print("No patch text provided", file=sys.stderr)
+        print("Please pass patch text through stdin", file=sys.stderr)
         return
-
-    # interactive confirmation unless --yes passed
-    if not args.yes:
-        # show the patch
-        print("About to apply this patch:\n" + patch_text)
-        try:
-            resp = input("Apply this patch? [y/N] ")  # input stays synchronous
-        except EOFError:
-            resp = "n"
-        if resp.strip().lower() != "y":
-            print("Aborting.", file=sys.stderr)
-            return
     try:
-        result = await process_patch(patch_text, open_file, write_file, remove_file)
+        result = process_patch(patch_text, open_file, write_file, remove_file)
     except DiffError as exc:
         print(exc, file=sys.stderr)
         return
     print(result)
 
-def main() -> None:
-    asyncio.run(async_main())
+
+if __name__ == "__main__":
+    main()

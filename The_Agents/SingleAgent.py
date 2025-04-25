@@ -193,6 +193,7 @@ For complex tasks, break down your approach into specific steps and explain each
 Use your run_command to execute the apply_patch.py file to apply patches to files.
 python apply_patch.py <<"EOF"
 *** Begin Patch
+*** Add File: pygorithm/searching/binary_search.py
 [YOUR_PATCH]
 *** End Patch
 EOF
