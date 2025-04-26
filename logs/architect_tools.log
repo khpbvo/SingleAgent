@@ -99,3 +99,42 @@ TypeError: 'FunctionTool' object is not callable
 2025-04-24 04:47:18,109 DEBUG {"tool": "read_file", "result_size": 72873}
 2025-04-24 04:47:36,857 DEBUG {"tool": "write_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/functions-todo.md", "mode": "w"}}
 2025-04-24 04:47:36,860 DEBUG {"tool": "write_file", "output": "File written: /Users/kevinvanosch/Documents/TopV3/functions-todo.md, size: 544 bytes"}
+2025-04-26 14:32:35,592 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 2, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-26 14:32:35,594 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-26 14:32:35,604 DEBUG {"tool": "read_directory", "result_size": 15155}
+2025-04-26 14:32:36,912 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "imports"}}
+2025-04-26 14:32:36,918 DEBUG {"tool": "analyze_ast", "result_size": 1233}
+2025-04-26 14:32:38,614 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "classes"}}
+2025-04-26 14:32:38,622 DEBUG {"tool": "analyze_ast", "result_size": 2980}
+2025-04-26 14:32:40,237 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "functions"}}
+2025-04-26 14:32:40,244 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-26 14:32:44,760 DEBUG {"tool": "analyze_dependencies", "params": {"directory": "./", "include_external": false}}
+2025-04-26 14:32:49,983 DEBUG {"tool": "analyze_dependencies", "result_size": 218485}
+2025-04-26 14:32:56,089 DEBUG {"tool": "read_file", "params": {"file_path": "app.py"}}
+2025-04-26 14:32:56,089 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/app.py
+2025-04-26 14:32:56,093 DEBUG {"tool": "read_file", "result_size": 24341}
+2025-04-26 14:33:07,595 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,601 DEBUG {"tool": "analyze_ast", "result_size": 1848}
+2025-04-26 14:33:07,602 DEBUG {"tool": "analyze_ast", "params": {"file_path": "collection.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,607 DEBUG {"tool": "analyze_ast", "result_size": 2890}
+2025-04-26 14:33:07,608 DEBUG {"tool": "analyze_ast", "params": {"file_path": "search.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,613 DEBUG {"tool": "analyze_ast", "result_size": 2988}
+2025-04-26 14:33:07,613 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,621 DEBUG {"tool": "analyze_ast", "result_size": 3417}
+2025-04-26 14:33:07,621 DEBUG {"tool": "analyze_ast", "params": {"file_path": "navigation.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,628 DEBUG {"tool": "analyze_ast", "result_size": 3748}
+2025-04-26 14:33:07,628 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_viz.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,631 DEBUG {"tool": "analyze_ast", "result_size": 3425}
+2025-04-26 14:33:07,632 DEBUG {"tool": "analyze_ast", "params": {"file_path": "media_indicators.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,633 DEBUG {"tool": "analyze_ast", "result_size": 1017}
+2025-04-26 14:33:07,633 DEBUG {"tool": "analyze_ast", "params": {"file_path": "singles.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,636 DEBUG {"tool": "analyze_ast", "result_size": 2532}
+2025-04-26 14:33:07,636 DEBUG {"tool": "analyze_ast", "params": {"file_path": "enhanced_output.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,638 DEBUG {"tool": "analyze_ast", "result_size": 4274}
+2025-04-26 14:33:07,638 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_analytics.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,646 DEBUG {"tool": "analyze_ast", "result_size": 4901}
+2025-04-26 14:33:07,647 DEBUG {"tool": "analyze_ast", "params": {"file_path": "logging_setup.py", "analysis_type": "classes"}}
+2025-04-26 14:33:07,647 DEBUG {"tool": "analyze_ast", "result_size": 15}
+2025-04-26 14:35:19,085 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG", "*.prg"], "exclude_patterns": []}}
+2025-04-26 14:35:19,087 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 14:35:19,088 DEBUG {"tool": "read_directory", "result_size": 842}

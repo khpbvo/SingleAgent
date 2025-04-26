@@ -314,3 +314,28 @@ class EnhancedContextData(BaseModel):
         recent = self.memory_items[-3:]
         lines = [f"- {m.content}" for m in recent]
         return "Recent memory items:\n" + "\n".join(lines)
+
+    # Add these methods
+    def set_state(self, key: str, value: Any) -> None:
+        """
+        Set a value in the session state dictionary.
+        
+        Args:
+            key: State key to set
+            value: Value to store
+        """
+        self.session_state[key] = value
+        self.last_updated = time.time()
+
+    def get_state(self, key: str, default: Any = None) -> Any:
+        """
+        Get a value from the session state dictionary.
+        
+        Args:
+            key: State key to retrieve
+            default: Default value if key doesn't exist
+            
+        Returns:
+            The stored value or default if not found
+        """
+        return self.session_state.get(key, default)
