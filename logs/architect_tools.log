@@ -1,0 +1,101 @@
+2025-04-23 23:33:41,258 DEBUG {"tool": "analyze_project_structure", "params": {"directory": "/Users/kevinvanosch/Documents/Topv3/", "max_depth": 5, "include_patterns": ["*.py", "*"], "exclude_patterns": ["__pycache__", "*.pyc", ".git", ".venv", "env"]}}
+2025-04-23 23:33:41,289 DEBUG {"tool": "analyze_project_structure", "result_size": 35986}
+2025-04-23 23:34:59,176 DEBUG {"tool": "analyze_project_structure", "params": {"directory": "SOURCE/", "max_depth": 4, "include_patterns": ["*.py"], "exclude_patterns": ["test_*.py", "__pycache__/*"]}}
+2025-04-23 23:34:59,178 DEBUG {"tool": "analyze_project_structure", "result_size": 184}
+2025-04-24 00:06:30,228 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "imports"}}
+2025-04-24 00:06:30,244 DEBUG {"tool": "analyze_ast", "result_size": 932}
+2025-04-24 00:07:02,358 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "classes"}}
+2025-04-24 00:07:02,370 DEBUG {"tool": "analyze_ast", "result_size": 1555}
+2025-04-24 00:08:47,459 DEBUG {"tool": "analyze_project_structure", "params": {"directory": "/Users/kevinvanosch/Documents/Topv3/", "max_depth": 3, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 00:08:47,480 DEBUG {"tool": "analyze_project_structure", "result_size": 8822}
+2025-04-24 04:21:40,639 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 5, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 04:21:40,640 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:21:40,642 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-24 04:22:22,178 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 1, "include_patterns": ["*.md"], "exclude_patterns": []}}
+2025-04-24 04:22:22,179 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:22:22,180 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-24 04:22:52,717 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 1, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-24 04:22:52,717 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:22:52,719 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:22:56,588 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/MAINTAIN.PRG"}}
+2025-04-24 04:22:56,588 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG
+2025-04-24 04:22:56,606 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-24 04:22:56,607 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-24 04:22:56,607 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-24 04:22:56,617 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-24 04:22:56,617 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/SINGLE.PRG"}}
+2025-04-24 04:22:56,617 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG
+2025-04-24 04:22:56,618 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-24 04:22:56,618 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP.PRG"}}
+2025-04-24 04:22:56,618 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG
+2025-04-24 04:22:56,620 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-24 04:22:56,620 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-24 04:22:56,620 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-24 04:22:56,636 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-24 04:24:33,016 DEBUG {"tool": "generate_todo_list", "params": {"description": "Checklist for all project functionality (architecture-focused) based on available files in the context.", "features": [], "directory": "/Users/kevinvanosch/Documents/SingleAgent"}}
+2025-04-24 04:24:33,016 ERROR Error in generate_todo_list: 'FunctionTool' object is not callable
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 444, in generate_todo_list
+    existing_structure = await analyze_project_structure(wrapper, structure_params)
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'FunctionTool' object is not callable
+2025-04-24 04:24:34,713 DEBUG {"tool": "analyze_project_structure", "params": {"directory": "/Users/kevinvanosch/Documents/SingleAgent", "max_depth": 3, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 04:24:34,725 DEBUG {"tool": "analyze_project_structure", "result_size": 8530}
+2025-04-24 04:24:40,668 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/main.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,676 DEBUG {"tool": "analyze_ast", "result_size": 131}
+2025-04-24 04:24:40,676 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,692 DEBUG {"tool": "analyze_ast", "result_size": 810}
+2025-04-24 04:24:40,692 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/Tools/tools_single_agent.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,700 DEBUG {"tool": "analyze_ast", "result_size": 695}
+2025-04-24 04:24:40,700 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/The_Agents/ArchitectAgent.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,704 DEBUG {"tool": "analyze_ast", "result_size": 78}
+2025-04-24 04:24:40,704 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/The_Agents/SingleAgent.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,709 DEBUG {"tool": "analyze_ast", "result_size": 78}
+2025-04-24 04:24:40,709 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/The_Agents/entity_recognizer.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,713 DEBUG {"tool": "analyze_ast", "result_size": 166}
+2025-04-24 04:24:40,714 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/The_Agents/context_data.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,721 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-24 04:24:40,721 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/utils/project_info.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,722 DEBUG {"tool": "analyze_ast", "result_size": 114}
+2025-04-24 04:26:29,787 DEBUG {"tool": "read_directory", "params": {"directory_path": "/Users/kevinvanosch/Documents/SingleAgent", "max_depth": 4, "include_patterns": ["*.PRG", "*.prg"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 04:26:29,802 DEBUG {"tool": "read_directory", "result_size": 22070}
+2025-04-24 04:27:09,770 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 4, "include_patterns": ["*"], "exclude_patterns": ["__pycache__", "*.pyc", ".git", ".DS_Store"]}}
+2025-04-24 04:27:09,770 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:27:09,771 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:27:50,118 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 04:27:50,118 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:27:50,119 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:28:28,019 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-24 04:28:28,019 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:28:28,020 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:29:03,869 DEBUG {"tool": "get_context", "params": {"include_details": true}}
+2025-04-24 04:29:03,870 DEBUG {"tool": "get_context", "output_length": 2061}
+2025-04-24 04:29:19,100 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/utils/project_info.py"}}
+2025-04-24 04:29:19,102 DEBUG {"tool": "read_file", "result_size": 2044}
+2025-04-24 04:45:59,057 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": ["__pycache__"]}}
+2025-04-24 04:45:59,058 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-24 04:45:59,061 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:46:02,467 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG"}}
+2025-04-24 04:46:02,487 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-24 04:46:02,487 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG"}}
+2025-04-24 04:46:02,497 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-24 04:46:02,497 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG"}}
+2025-04-24 04:46:02,498 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-24 04:46:02,498 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG"}}
+2025-04-24 04:46:02,499 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-24 04:46:02,499 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG"}}
+2025-04-24 04:46:02,514 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-24 04:47:14,444 DEBUG {"tool": "read_directory", "params": {"directory_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE", "max_depth": 1, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-24 04:47:14,445 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-24 04:47:18,063 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG"}}
+2025-04-24 04:47:18,081 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-24 04:47:18,082 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG"}}
+2025-04-24 04:47:18,091 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-24 04:47:18,092 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG"}}
+2025-04-24 04:47:18,092 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-24 04:47:18,092 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG"}}
+2025-04-24 04:47:18,094 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-24 04:47:18,094 DEBUG {"tool": "read_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG"}}
+2025-04-24 04:47:18,109 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-24 04:47:36,857 DEBUG {"tool": "write_file", "params": {"file_path": "/Users/kevinvanosch/Documents/TopV3/functions-todo.md", "mode": "w"}}
+2025-04-24 04:47:36,860 DEBUG {"tool": "write_file", "output": "File written: /Users/kevinvanosch/Documents/TopV3/functions-todo.md, size: 544 bytes"}
