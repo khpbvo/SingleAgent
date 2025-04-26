@@ -138,3 +138,75 @@ TypeError: 'FunctionTool' object is not callable
 2025-04-26 14:35:19,085 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG", "*.prg"], "exclude_patterns": []}}
 2025-04-26 14:35:19,087 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
 2025-04-26 14:35:19,088 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-26 14:45:18,702 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 2, "include_patterns": ["app.py", "*.py"], "exclude_patterns": ["__pycache__", "*.pyc", ".venv", "venv"]}}
+2025-04-26 14:45:18,702 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-26 14:45:18,705 DEBUG {"tool": "read_directory", "result_size": 14840}
+2025-04-26 14:45:29,380 DEBUG {"tool": "read_file", "params": {"file_path": "app.py"}}
+2025-04-26 14:45:29,380 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/app.py
+2025-04-26 14:45:29,388 DEBUG {"tool": "read_file", "result_size": 24341}
+2025-04-26 14:45:29,388 DEBUG {"tool": "read_file", "params": {"file_path": "chart_analytics.py"}}
+2025-04-26 14:45:29,388 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/chart_analytics.py
+2025-04-26 14:45:29,398 DEBUG {"tool": "read_file", "result_size": 52010}
+2025-04-26 14:45:29,399 DEBUG {"tool": "read_file", "params": {"file_path": "chart_viz.py"}}
+2025-04-26 14:45:29,399 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/chart_viz.py
+2025-04-26 14:45:29,403 DEBUG {"tool": "read_file", "result_size": 20044}
+2025-04-26 14:45:29,403 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-26 14:45:29,403 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 14:45:29,404 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-26 14:45:42,430 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-26 14:45:42,430 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-26 14:45:42,450 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-26 14:45:42,451 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-26 14:45:42,451 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-26 14:45:42,457 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-26 14:47:33,392 DEBUG {"tool": "analyze_project_structure", "params": {"directory": ".", "max_depth": 3, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc", ".git", "*.md"]}}
+2025-04-26 14:47:33,399 DEBUG {"tool": "analyze_project_structure", "result_size": 4180}
+2025-04-26 14:47:38,021 DEBUG {"tool": "generate_todo_list", "params": {"description": "A large Python project with data handling, analytics, batch entry, navigation, logging, chart visualization, database interaction, and various scripts. Main entry point is likely app.py; repo contains tests, utilities, and multiple related modules. Project size and number of scripts indicate a moderately complex application, likely with a mix of CLI and possibly some GUI/scripted automation.", "features": ["Refactor code for better modularity and maintainability", "Ensure each module has focused responsibility (Single Responsibility Principle)", "Review and improve logging and error handling", "Unify and document data access in one or more modules", "Enforce proper separation between presentation, business, and data layers (if not present)", "Review and consolidate script entry points\u2014reduce redundant files", "Strengthen or introduce test coverage\u2014unit + integration", "Create or update high-level architecture documentation", "Implement or refactor configuration management (single config or environment-based)", "Ensure consistent naming conventions across files and modules", "Identify and reduce code duplication", "Update or add inline comments and module docstrings", "Implement (or improve) dependency injection for testability and flexibility", "Establish a clear process for running/debugging the application(s)", "Prepare the code for scalability and extensibility"], "directory": "."}}
+2025-04-26 14:47:38,022 ERROR Error in generate_todo_list: 'FunctionTool' object is not callable
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 521, in generate_todo_list
+    existing_structure = await analyze_project_structure(wrapper, structure_params)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'FunctionTool' object is not callable
+2025-04-26 14:48:20,002 DEBUG {"tool": "write_file", "params": {"file_path": "chartanalytics-todo.md", "mode": "w"}}
+2025-04-26 14:48:20,004 DEBUG {"tool": "write_file", "output": "File written: chartanalytics-todo.md, size: 1667 bytes"}
+2025-04-26 15:07:15,738 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.py", "*.PRG"], "exclude_patterns": []}}
+2025-04-26 15:07:15,740 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 15:07:15,741 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-26 15:07:17,977 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/chart_analytics.py"}}
+2025-04-26 15:07:17,977 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/chart_analytics.py
+2025-04-26 15:07:17,977 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/MAINTAIN.PRG"}}
+2025-04-26 15:07:17,977 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG
+2025-04-26 15:07:17,986 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-26 15:07:17,987 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-26 15:07:17,987 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-26 15:07:17,995 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-26 15:07:17,995 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/SINGLE.PRG"}}
+2025-04-26 15:07:17,995 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG
+2025-04-26 15:07:17,996 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-26 15:07:17,996 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP.PRG"}}
+2025-04-26 15:07:17,996 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG
+2025-04-26 15:07:17,998 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-26 15:07:17,998 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-26 15:07:17,998 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-26 15:07:18,012 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-26 15:07:24,615 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 1, "include_patterns": ["chart_analytics.py"], "exclude_patterns": []}}
+2025-04-26 15:07:24,615 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 15:07:24,615 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-26 15:07:26,535 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.py"], "exclude_patterns": []}}
+2025-04-26 15:07:26,536 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 15:07:26,536 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-26 15:07:28,232 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 3, "include_patterns": ["*.py"], "exclude_patterns": []}}
+2025-04-26 15:07:28,232 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 15:07:28,233 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-26 15:07:30,337 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 5, "include_patterns": ["*.py"], "exclude_patterns": []}}
+2025-04-26 15:07:30,338 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-26 15:07:30,339 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-26 15:07:32,124 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 5, "include_patterns": ["chart_analytics.py"], "exclude_patterns": []}}
+2025-04-26 15:07:32,124 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-26 15:07:32,143 DEBUG {"tool": "read_directory", "result_size": 17912}
+2025-04-26 15:07:34,362 DEBUG {"tool": "read_file", "params": {"file_path": "chart_analytics.py"}}
+2025-04-26 15:07:34,362 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/chart_analytics.py
+2025-04-26 15:07:34,367 DEBUG {"tool": "read_file", "result_size": 52010}
+2025-04-26 15:07:48,321 DEBUG {"tool": "write_file", "params": {"file_path": "analytics-todo.md", "mode": "w"}}
+2025-04-26 15:07:48,322 DEBUG {"tool": "write_file", "output": "File written: analytics-todo.md, size: 3106 bytes"}
