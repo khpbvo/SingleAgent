@@ -67,6 +67,8 @@ from agents import (
 from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
 from pydantic import BaseModel, Field
 
+from agents.model_settings import ModelSettings
+
 # Import OpenAI for summarization
 from openai import OpenAI, AsyncOpenAI
 
