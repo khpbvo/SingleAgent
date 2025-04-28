@@ -17,6 +17,9 @@ import re
 import time
 from logging.handlers import RotatingFileHandler
 
+# Import tool usage utilities
+from utilities.tool_usage import handle_stream_events
+
 # Configure logger for ArchitectAgent
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -48,6 +51,7 @@ except ImportError:
 from agents import (
     Agent, 
     Runner, 
+    ItemHelpers,
     RunItemStreamEvent, 
     RawResponsesStreamEvent,
     AgentUpdatedStreamEvent,
@@ -503,64 +507,13 @@ For TODO lists:
             context=self.context,
         )
         
-        # Status indicators
-        tool_status = f"{YELLOW}⚙{RESET}"  # Tool execution
-        thinking_chars = ["⋮", "⋰", "⋯", "⋱"]  # Rotating dots pattern
-        handoff_status = f"{BLUE}→{RESET}"  # Handoff to another agent
-        
-        # Animation variables
-        thinking_index = 0
-        last_animation_time = asyncio.get_event_loop().time()
-        animation_interval = 0.2  # seconds between animation frames
-        
-        # Output buffer for collecting the response
-        output_text_buffer = ""
-        
-        # Print initial thinking indicator
-        print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
-        
-        try:
-            async for event in result.stream_events():
-                # Animate the thinking indicator while waiting
-                current_time = asyncio.get_event_loop().time()
-                if current_time - last_animation_time > animation_interval:
-                    if not output_text_buffer:  # Only animate if no output yet
-                        # Clear the current indicator
-                        print("\r", end="", flush=True)
-                        # Update the animation
-                        thinking_index = (thinking_index + 1) % len(thinking_chars)
-                        print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
-                        last_animation_time = current_time
-                
-                # Process raw response events for token-by-token streaming
-                if isinstance(event, RawResponsesStreamEvent):
-                    if hasattr(event, 'data') and isinstance(event.data, ResponseTextDeltaEvent):
-                        # Clear thinking indicator if this is first text
-                        if not output_text_buffer:
-                            print("\r" + " " * 10 + "\r", end="", flush=True)  # Clear indicator
-                        
-                        # Print text deltas in real-time
-                        delta = event.data.delta
-                        print(delta, end="", flush=True)
-                        output_text_buffer += delta
-                    continue  # Continue to next event after processing
-                
-                # Handle agent handoff/update events
-                if isinstance(event, AgentUpdatedStreamEvent):
-                    print(f"\n{handoff_status} Handoff to {event.new_agent.name}", flush=True)
-                    continue
-                    
-                # Only process RunItemStreamEvent generically (details handled elsewhere)
-                if isinstance(event, RunItemStreamEvent):
-                    continue
-                
-        except Exception as e:
-            logger.error(f"Error in streaming run: {e}")
-            print(f"\n{RED}Error: {e}{RESET}")
-            return f"Error occurred: {e}"
-            
-        # Print a newline at the end
-        print()
+        # Use the shared stream event handler 
+        output_text_buffer = await handle_stream_events(
+            result.stream_events(),
+            self.context,
+            logger,
+            ItemHelpers
+        )
         
         # Log end of streamed run
         logger.debug(json.dumps({

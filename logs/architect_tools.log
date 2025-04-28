@@ -210,3 +210,234 @@ TypeError: 'FunctionTool' object is not callable
 2025-04-26 15:07:34,367 DEBUG {"tool": "read_file", "result_size": 52010}
 2025-04-26 15:07:48,321 DEBUG {"tool": "write_file", "params": {"file_path": "analytics-todo.md", "mode": "w"}}
 2025-04-26 15:07:48,322 DEBUG {"tool": "write_file", "output": "File written: analytics-todo.md, size: 3106 bytes"}
+2025-04-28 14:28:17,925 DEBUG {"tool": "read_directory", "params": {"directory_path": "/Users/kevinvanosch/Documents/Topv3/", "max_depth": 4, "include_patterns": ["*"], "exclude_patterns": ["__pycache__", "*.pyc", ".git", ".DS_Store"]}}
+2025-04-28 14:28:17,940 DEBUG {"tool": "read_directory", "result_size": 31137}
+2025-04-28 14:35:54,488 DEBUG {"tool": "read_directory", "params": {"directory_path": "/Users/kevinvanosch/Documents/Topv3/", "max_depth": 3, "include_patterns": ["*"], "exclude_patterns": ["__pycache__", "*.pyc", ".git", ".DS_Store"]}}
+2025-04-28 14:35:54,495 DEBUG {"tool": "read_directory", "result_size": 24310}
+2025-04-28 14:59:37,449 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 3, "include_patterns": ["*"], "exclude_patterns": ["__pycache__", "*.pyc", ".git"]}}
+2025-04-28 14:59:37,449 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-28 14:59:37,459 DEBUG {"tool": "read_directory", "result_size": 24432}
+2025-04-28 15:00:51,471 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 5, "include_patterns": ["*.py"], "exclude_patterns": ["__pycache__", "*.pyc"]}}
+2025-04-28 15:00:51,471 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:00:51,471 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-28 15:01:17,279 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-28 15:01:17,280 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:01:17,280 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-28 15:02:23,900 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-28 15:02:23,900 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:02:23,900 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-28 15:02:26,462 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/MAINTAIN.PRG"}}
+2025-04-28 15:02:26,462 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG
+2025-04-28 15:02:26,472 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-28 15:02:26,473 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-28 15:02:26,473 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-28 15:02:26,480 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-28 15:02:26,481 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/SINGLE.PRG"}}
+2025-04-28 15:02:26,481 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG
+2025-04-28 15:02:26,481 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-28 15:02:26,482 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP.PRG"}}
+2025-04-28 15:02:26,482 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG
+2025-04-28 15:02:26,483 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-28 15:02:26,483 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-28 15:02:26,484 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-28 15:02:26,498 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-28 15:07:58,565 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.py"], "exclude_patterns": []}}
+2025-04-28 15:07:58,566 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:07:58,566 DEBUG {"tool": "read_directory", "result_size": 236}
+2025-04-28 15:08:00,050 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 2, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-28 15:08:00,051 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:08:00,052 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-28 15:08:07,759 DEBUG {"tool": "analyze_ast", "params": {"file_path": "SOURCE/MAINTAIN.PRG", "analysis_type": "functions"}}
+2025-04-28 15:08:07,760 ERROR Error in analyze_ast: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers (MAINTAIN.PRG, line 6)
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 231, in analyze_ast
+    tree = ast.parse(code, filename=params.file_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.7_1/Frameworks/Python.framework/Versions/3.11/lib/python3.11/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "SOURCE/MAINTAIN.PRG", line 6
+    *           first issue : 06-02-90                                        *
+                              ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+2025-04-28 15:08:07,763 DEBUG {"tool": "analyze_ast", "params": {"file_path": "SOURCE/OUT.PRG", "analysis_type": "functions"}}
+2025-04-28 15:08:07,763 ERROR Error in analyze_ast: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers (OUT.PRG, line 13)
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 231, in analyze_ast
+    tree = ast.parse(code, filename=params.file_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.7_1/Frameworks/Python.framework/Versions/3.11/lib/python3.11/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "SOURCE/OUT.PRG", line 13
+    *           first issue : 18-03-90                                        *
+                                 ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+2025-04-28 15:08:07,764 DEBUG {"tool": "analyze_ast", "params": {"file_path": "SOURCE/SINGLE.PRG", "analysis_type": "functions"}}
+2025-04-28 15:08:07,764 ERROR Error in analyze_ast: invalid syntax (SINGLE.PRG, line 1)
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 231, in analyze_ast
+    tree = ast.parse(code, filename=params.file_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.7_1/Frameworks/Python.framework/Versions/3.11/lib/python3.11/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "SOURCE/SINGLE.PRG", line 1
+    select 1
+           ^
+SyntaxError: invalid syntax
+2025-04-28 15:08:07,764 DEBUG {"tool": "analyze_ast", "params": {"file_path": "SOURCE/TOP.PRG", "analysis_type": "functions"}}
+2025-04-28 15:08:07,765 ERROR Error in analyze_ast: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers (TOP.PRG, line 6)
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 231, in analyze_ast
+    tree = ast.parse(code, filename=params.file_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.7_1/Frameworks/Python.framework/Versions/3.11/lib/python3.11/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "SOURCE/TOP.PRG", line 6
+    *           first issue : 21-01-90                                        *
+                                 ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+2025-04-28 15:08:07,765 DEBUG {"tool": "analyze_ast", "params": {"file_path": "SOURCE/TOP40.PRG", "analysis_type": "functions"}}
+2025-04-28 15:08:07,765 ERROR Error in analyze_ast: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers (TOP40.PRG, line 19)
+Traceback (most recent call last):
+  File "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", line 231, in analyze_ast
+    tree = ast.parse(code, filename=params.file_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.7_1/Frameworks/Python.framework/Versions/3.11/lib/python3.11/ast.py", line 50, in parse
+    return compile(source, filename, mode, flags,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "SOURCE/TOP40.PRG", line 19
+    *                date   : 21-01-90                                        *
+                                 ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+2025-04-28 15:08:36,880 DEBUG {"tool": "analyze_project_structure", "params": {"directory": "SOURCE/", "max_depth": 2, "include_patterns": ["*.py"], "exclude_patterns": ["test_*.py", "__pycache__"]}}
+2025-04-28 15:08:36,881 DEBUG {"tool": "analyze_project_structure", "result_size": 184}
+2025-04-28 15:09:11,770 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "imports"}}
+2025-04-28 15:09:11,776 DEBUG {"tool": "analyze_ast", "result_size": 1234}
+2025-04-28 15:09:14,866 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "classes"}}
+2025-04-28 15:09:14,873 DEBUG {"tool": "analyze_ast", "result_size": 3052}
+2025-04-28 15:09:16,668 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "functions"}}
+2025-04-28 15:09:16,673 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:09:18,122 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_analytics.py", "analysis_type": "classes"}}
+2025-04-28 15:09:18,135 DEBUG {"tool": "analyze_ast", "result_size": 4901}
+2025-04-28 15:09:20,373 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_analytics.py", "analysis_type": "functions"}}
+2025-04-28 15:09:20,384 DEBUG {"tool": "analyze_ast", "result_size": 1465}
+2025-04-28 15:09:23,773 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_viz.py", "analysis_type": "classes"}}
+2025-04-28 15:09:23,778 DEBUG {"tool": "analyze_ast", "result_size": 3425}
+2025-04-28 15:09:25,987 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_viz.py", "analysis_type": "functions"}}
+2025-04-28 15:09:25,992 DEBUG {"tool": "analyze_ast", "result_size": 2938}
+2025-04-28 15:09:29,238 DEBUG {"tool": "analyze_ast", "params": {"file_path": "collection.py", "analysis_type": "classes"}}
+2025-04-28 15:09:29,252 DEBUG {"tool": "analyze_ast", "result_size": 2890}
+2025-04-28 15:09:29,253 DEBUG {"tool": "analyze_ast", "params": {"file_path": "collection.py", "analysis_type": "functions"}}
+2025-04-28 15:09:29,264 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:09:31,921 DEBUG {"tool": "analyze_ast", "params": {"file_path": "enhanced_output.py", "analysis_type": "classes"}}
+2025-04-28 15:09:31,926 DEBUG {"tool": "analyze_ast", "result_size": 4274}
+2025-04-28 15:09:33,645 DEBUG {"tool": "analyze_ast", "params": {"file_path": "enhanced_output.py", "analysis_type": "functions"}}
+2025-04-28 15:09:33,649 DEBUG {"tool": "analyze_ast", "result_size": 2268}
+2025-04-28 15:09:35,746 DEBUG {"tool": "analyze_ast", "params": {"file_path": "logging_setup.py", "analysis_type": "classes"}}
+2025-04-28 15:09:35,746 DEBUG {"tool": "analyze_ast", "result_size": 15}
+2025-04-28 15:09:37,759 DEBUG {"tool": "analyze_ast", "params": {"file_path": "logging_setup.py", "analysis_type": "functions"}}
+2025-04-28 15:09:37,761 DEBUG {"tool": "analyze_ast", "result_size": 130}
+2025-04-28 15:09:42,966 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "classes"}}
+2025-04-28 15:09:42,979 DEBUG {"tool": "analyze_ast", "result_size": 4510}
+2025-04-28 15:09:42,980 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "functions"}}
+2025-04-28 15:09:43,031 DEBUG {"tool": "analyze_ast", "result_size": 242}
+2025-04-28 15:09:46,464 DEBUG {"tool": "analyze_ast", "params": {"file_path": "media_indicators.py", "analysis_type": "classes"}}
+2025-04-28 15:09:46,465 DEBUG {"tool": "analyze_ast", "result_size": 1017}
+2025-04-28 15:09:48,338 DEBUG {"tool": "analyze_ast", "params": {"file_path": "media_indicators.py", "analysis_type": "functions"}}
+2025-04-28 15:09:48,343 DEBUG {"tool": "analyze_ast", "result_size": 2262}
+2025-04-28 15:09:51,842 DEBUG {"tool": "analyze_ast", "params": {"file_path": "navigation.py", "analysis_type": "classes"}}
+2025-04-28 15:09:51,851 DEBUG {"tool": "analyze_ast", "result_size": 3748}
+2025-04-28 15:09:53,778 DEBUG {"tool": "analyze_ast", "params": {"file_path": "navigation.py", "analysis_type": "functions"}}
+2025-04-28 15:09:53,784 DEBUG {"tool": "analyze_ast", "result_size": 404}
+2025-04-28 15:09:55,794 DEBUG {"tool": "analyze_ast", "params": {"file_path": "search.py", "analysis_type": "classes"}}
+2025-04-28 15:09:55,805 DEBUG {"tool": "analyze_ast", "result_size": 2988}
+2025-04-28 15:09:57,344 DEBUG {"tool": "analyze_ast", "params": {"file_path": "search.py", "analysis_type": "functions"}}
+2025-04-28 15:09:57,353 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:09:59,985 DEBUG {"tool": "analyze_ast", "params": {"file_path": "singles.py", "analysis_type": "classes"}}
+2025-04-28 15:09:59,990 DEBUG {"tool": "analyze_ast", "result_size": 2532}
+2025-04-28 15:10:03,335 DEBUG {"tool": "analyze_ast", "params": {"file_path": "singles.py", "analysis_type": "functions"}}
+2025-04-28 15:10:03,338 DEBUG {"tool": "analyze_ast", "result_size": 1809}
+2025-04-28 15:10:06,410 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "classes"}}
+2025-04-28 15:10:06,422 DEBUG {"tool": "analyze_ast", "result_size": 1848}
+2025-04-28 15:10:10,197 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "functions"}}
+2025-04-28 15:10:10,207 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:16:15,952 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 1, "include_patterns": ["*.py"], "exclude_patterns": []}}
+2025-04-28 15:16:15,953 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-28 15:16:15,955 DEBUG {"tool": "read_directory", "result_size": 5880}
+2025-04-28 15:16:17,831 DEBUG {"tool": "read_directory", "params": {"directory_path": "SOURCE/", "max_depth": 1, "include_patterns": ["*.PRG"], "exclude_patterns": []}}
+2025-04-28 15:16:17,831 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE
+2025-04-28 15:16:17,832 DEBUG {"tool": "read_directory", "result_size": 842}
+2025-04-28 15:16:24,789 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "classes"}}
+2025-04-28 15:16:24,794 DEBUG {"tool": "analyze_ast", "result_size": 3052}
+2025-04-28 15:16:24,795 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "functions"}}
+2025-04-28 15:16:24,800 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:16:24,801 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "classes"}}
+2025-04-28 15:16:24,817 DEBUG {"tool": "analyze_ast", "result_size": 4510}
+2025-04-28 15:16:24,819 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "functions"}}
+2025-04-28 15:16:24,831 DEBUG {"tool": "analyze_ast", "result_size": 242}
+2025-04-28 15:16:24,832 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "classes"}}
+2025-04-28 15:16:24,838 DEBUG {"tool": "analyze_ast", "result_size": 1848}
+2025-04-28 15:16:24,838 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "functions"}}
+2025-04-28 15:16:24,845 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:16:24,845 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/MAINTAIN.PRG"}}
+2025-04-28 15:16:24,845 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG
+2025-04-28 15:16:24,852 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-28 15:16:24,853 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-28 15:16:24,853 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-28 15:16:24,862 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-28 15:16:24,863 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP.PRG"}}
+2025-04-28 15:16:24,863 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG
+2025-04-28 15:16:24,864 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-28 15:16:24,864 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-28 15:16:24,864 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-28 15:16:24,869 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-28 15:16:24,869 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/SINGLE.PRG"}}
+2025-04-28 15:16:24,870 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG
+2025-04-28 15:16:24,870 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-28 15:19:44,781 DEBUG {"tool": "read_directory", "params": {"directory_path": ".", "max_depth": 1, "include_patterns": ["*.py", "*.PRG"], "exclude_patterns": []}}
+2025-04-28 15:19:44,781 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3
+2025-04-28 15:19:44,783 DEBUG {"tool": "read_directory", "result_size": 6521}
+2025-04-28 15:19:47,674 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/MAINTAIN.PRG"}}
+2025-04-28 15:19:47,674 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/MAINTAIN.PRG
+2025-04-28 15:19:47,687 DEBUG {"tool": "read_file", "result_size": 46390}
+2025-04-28 15:19:47,688 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/OUT.PRG"}}
+2025-04-28 15:19:47,688 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/OUT.PRG
+2025-04-28 15:19:47,695 DEBUG {"tool": "read_file", "result_size": 35888}
+2025-04-28 15:19:47,695 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/SINGLE.PRG"}}
+2025-04-28 15:19:47,695 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/SINGLE.PRG
+2025-04-28 15:19:47,696 DEBUG {"tool": "read_file", "result_size": 352}
+2025-04-28 15:19:47,696 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP.PRG"}}
+2025-04-28 15:19:47,696 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP.PRG
+2025-04-28 15:19:47,697 DEBUG {"tool": "read_file", "result_size": 6211}
+2025-04-28 15:19:47,697 DEBUG {"tool": "read_file", "params": {"file_path": "SOURCE/TOP40.PRG"}}
+2025-04-28 15:19:47,698 INFO Converted relative path to absolute: /Users/kevinvanosch/Documents/TopV3/SOURCE/TOP40.PRG
+2025-04-28 15:19:47,711 DEBUG {"tool": "read_file", "result_size": 72873}
+2025-04-28 15:19:54,228 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "functions"}}
+2025-04-28 15:19:54,232 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:19:54,232 DEBUG {"tool": "analyze_ast", "params": {"file_path": "app.py", "analysis_type": "classes"}}
+2025-04-28 15:19:54,235 DEBUG {"tool": "analyze_ast", "result_size": 3052}
+2025-04-28 15:19:59,806 DEBUG {"tool": "analyze_ast", "params": {"file_path": "batch_entry.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,816 DEBUG {"tool": "analyze_ast", "result_size": 65}
+2025-04-28 15:19:59,817 DEBUG {"tool": "analyze_ast", "params": {"file_path": "collection.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,826 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:19:59,827 DEBUG {"tool": "analyze_ast", "params": {"file_path": "navigation.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,878 DEBUG {"tool": "analyze_ast", "result_size": 404}
+2025-04-28 15:19:59,879 DEBUG {"tool": "analyze_ast", "params": {"file_path": "top40.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,885 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:19:59,885 DEBUG {"tool": "analyze_ast", "params": {"file_path": "maintenance.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,895 DEBUG {"tool": "analyze_ast", "result_size": 242}
+2025-04-28 15:19:59,896 DEBUG {"tool": "analyze_ast", "params": {"file_path": "singles.py", "analysis_type": "functions"}}
+2025-04-28 15:19:59,898 DEBUG {"tool": "analyze_ast", "result_size": 1809}
+2025-04-28 15:20:05,586 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_analytics.py", "analysis_type": "functions"}}
+2025-04-28 15:20:05,596 DEBUG {"tool": "analyze_ast", "result_size": 1465}
+2025-04-28 15:20:05,597 DEBUG {"tool": "analyze_ast", "params": {"file_path": "chart_viz.py", "analysis_type": "functions"}}
+2025-04-28 15:20:05,600 DEBUG {"tool": "analyze_ast", "result_size": 2938}
+2025-04-28 15:20:05,600 DEBUG {"tool": "analyze_ast", "params": {"file_path": "search.py", "analysis_type": "functions"}}
+2025-04-28 15:20:05,610 DEBUG {"tool": "analyze_ast", "result_size": 17}
+2025-04-28 15:20:05,610 DEBUG {"tool": "analyze_ast", "params": {"file_path": "media_indicators.py", "analysis_type": "functions"}}
+2025-04-28 15:20:05,612 DEBUG {"tool": "analyze_ast", "result_size": 2262}
+2025-04-28 15:20:58,697 DEBUG {"tool": "write_file", "params": {"file_path": "detailed_list.md", "mode": "w"}}
+2025-04-28 15:20:58,698 DEBUG {"tool": "write_file", "output": "File written: detailed_list.md, size: 4941 bytes"}
