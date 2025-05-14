@@ -300,7 +300,8 @@ async def analyze_ast(wrapper: RunContextWrapper[EnhancedContextData], params: A
         if params.analysis_type in ('functions', 'all'):
             functions = []
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and not any(isinstance(parent, ast.ClassDef) for parent in ast.iter_child_nodes(tree) if node in ast.iter_child_nodes(parent)):
+                # Check if this is a top-level function (not a method in a class)
+                if isinstance(node, ast.FunctionDef) and not any(isinstance(parent, ast.ClassDef) for parent in ast.iter_child_nodes(tree) if hasattr(parent, 'body') and node in parent.body):
                     func_info = {
                         'name': node.name,
                         'lineno': node.lineno,
@@ -511,13 +512,15 @@ async def generate_todo_list(wrapper: RunContextWrapper[EnhancedContextData], pa
         # If directory is provided, analyze existing structure
         existing_structure = None
         if params.directory and os.path.isdir(params.directory):
-            # Use project structure tool to analyze
+            # Create structure parameters
             structure_params = ProjectStructureParams(
                 directory=params.directory,
                 max_depth=3,
                 include_patterns=["*.py", "*.md", "*.txt", "*.json"],
                 exclude_patterns=["__pycache__", "*.pyc", "*.pyo", ".git", ".venv", "venv"]
             )
+            
+            # Use analyze_project_structure directly
             existing_structure = await analyze_project_structure(wrapper, structure_params)
         
         # Process features into tasks
@@ -934,15 +937,21 @@ async def detect_code_patterns(wrapper: RunContextWrapper[EnhancedContextData], 
                     anti_patterns["god_object"]["confidence"] = 0.7
         
         # Detect magic numbers
+        # We'll modify this section to avoid the parent attribute issue
+        magic_numbers = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.Num) and not isinstance(node.parent, ast.Assign):
+            # Check for magic numbers in the code (Python 3.8+ compatible)
+            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
                 # Exclude common numbers like 0, 1, -1, 2
-                if node.n not in [0, 1, -1, 2, 10, 100]:
-                    anti_patterns["magic_numbers"]["instances"].append({
-                        "value": node.n,
+                if node.value not in [0, 1, -1, 2, 10, 100]:
+                    magic_numbers.append({
+                        "value": node.value,
                         "line": getattr(node, "lineno", "unknown")
                     })
-                    anti_patterns["magic_numbers"]["confidence"] = 0.6
+        
+        if magic_numbers:
+            anti_patterns["magic_numbers"]["instances"] = magic_numbers
+            anti_patterns["magic_numbers"]["confidence"] = 0.6
         
         # Prepare result based on requested pattern_type
         result = {
