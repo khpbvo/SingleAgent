@@ -96,7 +96,10 @@ def handle_entity_tracking(context, tool_name: str, tool_params: Any) -> None:
     if tool_name and tool_params and hasattr(context, "track_entity"):
         if tool_name in ("os_command", "run_command"):
             if isinstance(tool_params, dict) and "command" in tool_params:
-                context.track_entity("command", tool_params["command"])
+                cmd = tool_params["command"]
+                context.track_entity("command", cmd)
+                if hasattr(context, "remember_command"):
+                    context.remember_command(cmd, "")
         elif tool_name == "read_file":
             if isinstance(tool_params, dict) and "file_path" in tool_params:
                 context.track_entity("file", tool_params["file_path"])
@@ -112,20 +115,18 @@ def track_file_from_output(context, output: Dict[str, Any]) -> None:
     if hasattr(context, "track_entity") and isinstance(output, dict):
         if 'file_path' in output and 'content' in output:
             context.track_entity(
-                "file", 
-                output['file_path'], 
+                "file",
+                output['file_path'],
                 {"content_preview": output['content'][:100] if output['content'] else None}
             )
+            if hasattr(context, "remember_file"):
+                context.remember_file(output['file_path'], output['content'])
 
 def display_agent_handoff(new_agent_name: str) -> None:
-    """
-    Display agent handoff notification.
-    
-    Args:
-        new_agent_name: Name of the agent being handed off to
-    """
-    handoff_status = f"{BLUE}→{RESET}"  # Handoff indicator
-    print(f"\n{handoff_status} Handoff to {new_agent_name}", flush=True)
+    """Display a visible banner when control switches to another agent."""
+    handoff_status = f"{BLUE}{BOLD}→{RESET}"
+    banner = f"{handoff_status} Switched to {BOLD}{new_agent_name}{RESET}"
+    print(f"\n{banner}\n{'-' * len(banner)}", flush=True)
 
 def display_thinking_animation(thinking_chars: list, thinking_index: int) -> int:
     """

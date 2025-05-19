@@ -122,6 +122,12 @@ async def main():
         # Mode switching commands
         if query.strip().lower() == "!architect" and current_mode == AgentMode.CODE:
             # Switch to architect mode
+            summary = code_agent.get_context_summary()
+            architect_agent.context.add_manual_context(
+                content=summary,
+                source="code_agent",
+                label="handoff_from_code"
+            )
             current_mode = AgentMode.ARCHITECT
             # Save context before switching
             await code_agent.save_context()
@@ -131,6 +137,12 @@ async def main():
             continue
         elif query.strip().lower() == "!code" and current_mode == AgentMode.ARCHITECT:
             # Switch to code mode
+            summary = architect_agent.get_context_summary()
+            code_agent.context.add_manual_context(
+                content=summary,
+                source="architect_agent",
+                label="handoff_from_architect"
+            )
             current_mode = AgentMode.CODE
             # Save context before switching
             await architect_agent.save_context()

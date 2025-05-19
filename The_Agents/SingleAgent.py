@@ -95,12 +95,13 @@ from agents.exceptions import MaxTurnsExceeded
 
 # Import our enhanced context
 from The_Agents.context_data import EnhancedContextData
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 # Path for persistent context storage
 CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".singleagent_context.json")
 
 # Constants
-AGENT_INSTRUCTIONS = """
+AGENT_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
 You are a code assistant capable of helping users write, edit, and patch code.
 You have full control of the terminal and can run commands like sed, grep, ls, dir, cd, tail, python, and bash.
 You can analyze code with pylint, ruff and pyright, generate colored diffs, and apply patches to files.
