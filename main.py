@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 main.py
-Entry point for the dual-agent system with both Code and Architect capabilities.
-Allows switching between SingleAgent and ArchitectAgent based on user commands.
+Entry point for the multi-agent system with Code, Architect and Web Browser agents.
+Allows switching between SingleAgent, ArchitectAgent and WebBrowserAgent based on user commands.
 """
 
 import asyncio
@@ -26,6 +26,7 @@ from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
 # Import both agents
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
+from The_Agents.WebBrowserAgent import WebBrowserAgent
 
 # ANSI escape codes
 GREEN = "\033[32m"
@@ -51,6 +52,7 @@ root_logger.addHandler(main_handler)
 class AgentMode:
     CODE = "code"
     ARCHITECT = "architect"
+    BROWSER = "browser"
 
 async def main():
     """Main function to run the dual-agent system with mode switching support."""
@@ -62,22 +64,29 @@ async def main():
     current_mode = AgentMode.CODE
     code_agent = SingleAgent()
     architect_agent = ArchitectAgent()
+    browser_agent = WebBrowserAgent()
     
-    print(f"{BOLD}Dual-Agent system initialized.{RESET}")
+    print(f"{BOLD}Multi-Agent system initialized.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
-    print(f"Use {BOLD}!code{RESET} or {BOLD}!architect{RESET} to switch between agents.")
+    print(f"Use {BOLD}!code{RESET}, {BOLD}!architect{RESET} or {BOLD}!browser{RESET} to switch between agents.")
     print(f"Use {BOLD}!history{RESET} to view chat history or {BOLD}!clear{RESET} to clear it.")
     
     # Get the currently active agent
     def get_current_agent():
-        return code_agent if current_mode == AgentMode.CODE else architect_agent
+        if current_mode == AgentMode.CODE:
+            return code_agent
+        if current_mode == AgentMode.ARCHITECT:
+            return architect_agent
+        return browser_agent
     
     # Display agent mode banner
     def display_mode_banner():
         if current_mode == AgentMode.CODE:
             print(f"\n{GREEN}=== Code Agent Mode ==={RESET}")
-        else:
+        elif current_mode == AgentMode.ARCHITECT:
             print(f"\n{BLUE}=== Architect Agent Mode ==={RESET}")
+        else:
+            print(f"\n{YELLOW}=== Web Browser Agent Mode ==={RESET}")
     
     # Show initial context
     display_mode_banner()
@@ -120,35 +129,44 @@ async def main():
             break
 
         # Mode switching commands
-        if query.strip().lower() == "!architect" and current_mode == AgentMode.CODE:
-            # Switch to architect mode
-            summary = code_agent.get_context_summary()
+        if query.strip().lower() == "!architect" and current_mode != AgentMode.ARCHITECT:
+            summary = get_current_agent().get_context_summary()
             architect_agent.context.add_manual_context(
                 content=summary,
-                source="code_agent",
-                label="handoff_from_code"
+                source=f"{current_mode}_agent",
+                label=f"handoff_from_{current_mode}"
             )
+            await get_current_agent().save_context()
             current_mode = AgentMode.ARCHITECT
-            # Save context before switching
-            await code_agent.save_context()
             print(f"\n{BLUE}Switching to Architect Agent mode.{RESET}")
             display_mode_banner()
             print(f"\n{architect_agent.get_context_summary()}\n")
             continue
-        elif query.strip().lower() == "!code" and current_mode == AgentMode.ARCHITECT:
-            # Switch to code mode
-            summary = architect_agent.get_context_summary()
+        elif query.strip().lower() == "!code" and current_mode != AgentMode.CODE:
+            summary = get_current_agent().get_context_summary()
             code_agent.context.add_manual_context(
                 content=summary,
-                source="architect_agent",
-                label="handoff_from_architect"
+                source=f"{current_mode}_agent",
+                label=f"handoff_from_{current_mode}"
             )
+            await get_current_agent().save_context()
             current_mode = AgentMode.CODE
-            # Save context before switching
-            await architect_agent.save_context()
             print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
             display_mode_banner()
             print(f"\n{code_agent.get_context_summary()}\n")
+            continue
+        elif query.strip().lower() == "!browser" and current_mode != AgentMode.BROWSER:
+            summary = get_current_agent().get_context_summary()
+            browser_agent.context.add_manual_context(
+                content=summary,
+                source=f"{current_mode}_agent",
+                label=f"handoff_from_{current_mode}"
+            )
+            await get_current_agent().save_context()
+            current_mode = AgentMode.BROWSER
+            print(f"\n{YELLOW}Switching to Web Browser Agent mode.{RESET}")
+            display_mode_banner()
+            print(f"\n{browser_agent.get_context_summary()}\n")
             continue
             
         # Common special commands for both modes
@@ -165,6 +183,7 @@ async def main():
 !delctx:label  - Remove manual context item by label
 !code       - Switch to Code Agent mode
 !architect  - Switch to Architect Agent mode
+!browser    - Switch to Web Browser Agent mode
 
 {BOLD}Special Commands:{RESET}
 code:read:path - Add file at path to persistent context
@@ -410,8 +429,15 @@ exit/quit   - Exit the program
             }))
             
             # Show agent-specific processing indicator
-            mode_color = GREEN if current_mode == AgentMode.CODE else BLUE
-            agent_name = "Code Agent" if current_mode == AgentMode.CODE else "Architect Agent"
+            if current_mode == AgentMode.CODE:
+                mode_color = GREEN
+                agent_name = "Code Agent"
+            elif current_mode == AgentMode.ARCHITECT:
+                mode_color = BLUE
+                agent_name = "Architect Agent"
+            else:
+                mode_color = YELLOW
+                agent_name = "Web Browser Agent"
             print(f"{mode_color}Processing with {agent_name}...{RESET}")
             
             # Run the agent with streaming output
@@ -420,7 +446,6 @@ exit/quit   - Exit the program
             
             # Save context after each interaction
             await current_agent.save_context()
-            
         except Exception as e:
             logging.error(f"Error running agent: {e}", exc_info=True)
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
