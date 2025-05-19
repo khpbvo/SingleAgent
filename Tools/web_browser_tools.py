@@ -12,7 +12,7 @@ class FetchUrlParams(BaseModel):
 class SearchWebParams(BaseModel):
     """Parameters for searching the web."""
     query: str = Field(description="Search query")
-    max_results: int = Field(5, description="Maximum number of results")
+    max_results: int = Field(description="Maximum number of results")
 
 @function_tool
 def fetch_url(wrapper: RunContextWrapper[EnhancedContextData], params: FetchUrlParams) -> str:

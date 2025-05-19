@@ -18,7 +18,7 @@ class SearchQueryParams(BaseModel):
     """Parameters for searching the web."""
 
     query: str = Field(description="Query string to search for")
-    max_results: int = Field(5, description="Maximum number of results to return")
+    max_results: int = Field(description="Maximum number of results to return")
 
 
 class FetchResultParams(BaseModel):
