@@ -17,3 +17,6 @@ main.log.2
 main.log.3
 /Macvenvallot
 count_words.py
+logs/architectagent.log
+*.log
+*.log.*
