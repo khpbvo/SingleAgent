@@ -123,10 +123,9 @@ def track_file_from_output(context, output: Dict[str, Any]) -> None:
                 context.remember_file(output['file_path'], output['content'])
 
 def display_agent_handoff(new_agent_name: str) -> None:
-    """Display a visible banner when control switches to another agent."""
-    handoff_status = f"{BLUE}{BOLD}→{RESET}"
-    banner = f"{handoff_status} Switched to {BOLD}{new_agent_name}{RESET}"
-    print(f"\n{banner}\n{'-' * len(banner)}", flush=True)
+    """Display a prominent banner when control switches to another agent."""
+    banner = f"{BLUE}{BOLD}>>> HANDOFF TO {new_agent_name} <<<{RESET}"
+    print(f"\n{banner}\n{'=' * len(banner)}", flush=True)
 
 def display_thinking_animation(thinking_chars: list, thinking_index: int) -> int:
     """

@@ -27,6 +27,7 @@ from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
 from The_Agents.WebBrowserAgent import WebBrowserAgent
+from The_Agents.context_data import EnhancedContextData
 
 # ANSI escape codes
 GREEN = "\033[32m"
@@ -60,11 +61,15 @@ async def main():
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
     await nlp_singleton.initialize(model_name="en_core_web_lg", disable=["parser"])
     
+    # Load or create shared context
+    shared_path = os.path.join(os.path.expanduser("~"), ".agent_shared_context.json")
+    shared_context = await EnhancedContextData.load_from_json(shared_path)
+
     # Start in code agent mode by default
     current_mode = AgentMode.CODE
-    code_agent = SingleAgent()
-    architect_agent = ArchitectAgent()
-    browser_agent = WebBrowserAgent()
+    browser_agent = WebBrowserAgent(context=shared_context, context_path=shared_path)
+    code_agent = SingleAgent(context=shared_context, context_path=shared_path, browser_agent=browser_agent)
+    architect_agent = ArchitectAgent(context=shared_context, context_path=shared_path)
     
     print(f"{BOLD}Multi-Agent system initialized.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")

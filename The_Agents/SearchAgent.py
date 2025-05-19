@@ -35,9 +35,10 @@ CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".searchagent_context.
 class SearchAgent:
     """Agent responsible for web searches."""
 
-    def __init__(self) -> None:
+    def __init__(self, context: EnhancedContextData | None = None, context_path: str = CONTEXT_FILE_PATH) -> None:
         cwd = os.getcwd()
-        self.context = EnhancedContextData(
+        self.context_path = context_path
+        self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
             project_info=discover_project_info(cwd),
@@ -59,14 +60,16 @@ class SearchAgent:
         )
 
     async def _load_context(self) -> None:
+        if self.context:
+            return
         try:
-            self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
+            self.context = await EnhancedContextData.load_from_json(self.context_path)
         except Exception:
             pass
 
     async def save_context(self) -> None:
         try:
-            await self.context.save_to_json(CONTEXT_FILE_PATH)
+            await self.context.save_to_json(self.context_path)
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
 

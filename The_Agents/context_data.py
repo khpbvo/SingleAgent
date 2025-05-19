@@ -328,14 +328,35 @@ class EnhancedContextData(BaseModel):
         self.last_updated = time.time()
 
     def get_state(self, key: str, default: Any = None) -> Any:
-        """
-        Get a value from the session state dictionary.
-        
-        Args:
-            key: State key to retrieve
-            default: Default value if key doesn't exist
-            
-        Returns:
-            The stored value or default if not found
-        """
+        """Return a value from the session state dictionary."""
         return self.session_state.get(key, default)
+
+    # ----- SERIALIZATION -----
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a serializable dictionary of the context."""
+        return self.model_dump()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EnhancedContextData":
+        """Create an instance from a dictionary."""
+        return cls(**data)
+
+    @classmethod
+    async def load_from_json(cls, path: str) -> "EnhancedContextData":
+        """Load context from a JSON file if it exists."""
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return cls.from_dict(data)
+            except Exception:
+                pass
+        return cls()
+
+    async def save_to_json(self, path: str) -> None:
+        """Persist the context to a JSON file."""
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(self.to_dict(), f)
+        except Exception as e:
+            logger.error(f"Failed to save context to {path}: {e}")

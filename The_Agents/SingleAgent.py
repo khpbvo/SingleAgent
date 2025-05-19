@@ -96,6 +96,7 @@ from agents.exceptions import MaxTurnsExceeded
 # Import our enhanced context
 from The_Agents.context_data import EnhancedContextData
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+from agents import handoff
 
 # Path for persistent context storage
 CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".singleagent_context.json")
@@ -301,10 +302,12 @@ class SingleAgent:
                 return f"{user_input} in {target}"
         return user_input
     
-    def __init__(self):
+    def __init__(self, context: EnhancedContextData | None = None, context_path: str = CONTEXT_FILE_PATH, browser_agent=None):
         # ensure we always have a context attribute before async loading
         cwd = os.getcwd()
-        self.context = EnhancedContextData(
+        self.context_path = context_path
+        self.browser_agent = browser_agent
+        self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
             project_info=discover_project_info(cwd),
@@ -328,6 +331,13 @@ class SingleAgent:
             self.context.current_file = None
         
         # Create the enhanced agent with all tools
+        handoffs = []
+        if self.browser_agent is not None:
+            try:
+                handoffs.append(handoff(self.browser_agent.agent))
+            except Exception:
+                pass
+
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
             model="gpt-4.1",
@@ -346,7 +356,8 @@ class SingleAgent:
                 get_context,
                 get_context_response,
                 add_manual_context
-            ]
+            ],
+            handoffs=handoffs
         )
         
         # Initialize the OpenAI client for summarization
@@ -359,10 +370,12 @@ class SingleAgent:
     
     async def _load_context(self):
         """Load context from persistent storage or create new if not found."""
+        if self.context:
+            return
         try:
             # Attempt to load existing context
-            self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
-            logger.info(f"Loaded context from {CONTEXT_FILE_PATH}")
+            self.context = await EnhancedContextData.load_from_json(self.context_path)
+            logger.info(f"Loaded context from {self.context_path}")
         
             # Update working directory to current directory
             if self.context.working_directory != os.getcwd():
@@ -391,8 +404,8 @@ class SingleAgent:
     async def save_context(self):
         """Save context to persistent storage."""
         try:
-            await self.context.save_to_json(CONTEXT_FILE_PATH)
-            logger.info(f"Saved context to {CONTEXT_FILE_PATH}")
+            await self.context.save_to_json(self.context_path)
+            logger.info(f"Saved context to {self.context_path}")
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
     
@@ -419,11 +432,15 @@ class SingleAgent:
         )
 
         # Rebuild the Agent with the updated prompt, matching your original model
-        self.agent = Agent[EnhancedContextData](
+        handoffs = self.agent.handoffs if hasattr(self.agent, "handoffs") else []
+        self.agent = Agent[
+            EnhancedContextData
+        ](
             name="CodeAssistant",
-            model="gpt-4.1",           # ← use the same model string as in __init__
+            model="gpt-4.1",  # ← use the same model string as in __init__
             instructions=instr,
-            tools=self.agent.tools
+            tools=self.agent.tools,
+            handoffs=handoffs,
         )
 
     async def run(self, user_input: str, stream_output: bool = True):
