@@ -86,7 +86,7 @@ class ArchitectAgent:
     for analyzing and suggesting improvements to project structure and design.
     """
     
-    def __init__(self, openai_client=None):
+    def __init__(self, openai_client=None, context: EnhancedContextData | None = None, context_path: str = "architect_context.json"):
         """
         Initialize the architect agent with default configuration.
         
@@ -94,6 +94,7 @@ class ArchitectAgent:
             openai_client: Optional OpenAI client for API calls
         """
         self.openai_client = openai_client
+        self.context_path = context_path
         self.instructions = self._get_default_instructions()
         
         # Create agent
@@ -118,31 +119,27 @@ class ArchitectAgent:
         )
         
         logger.debug("ArchitectAgent initialized")
-        # Initialize context with default state
         cwd = os.getcwd()
-        self.context = EnhancedContextData(
+        self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd)
         )
         
     async def _load_context(self):
-        """
-        Load context data from persistent storage if available.
-        """
-        self.context = EnhancedContextData()  # Initialize empty context
-        
-        # Try to load persisted context 
-        context_file = "architect_context.json"
-        if os.path.exists(context_file):
+        """Load context data from persistent storage if available."""
+        if self.context:
+            return
+
+        self.context = EnhancedContextData()
+
+        if os.path.exists(self.context_path):
             try:
-                with open(context_file, 'r') as f:
+                with open(self.context_path, "r") as f:
                     data = json.load(f)
-                    # Convert raw dict to EnhancedContextData
                     self.context = EnhancedContextData.from_dict(data)
-                logger.debug(f"Loaded context from {context_file}")
+                logger.debug(f"Loaded context from {self.context_path}")
             except Exception as e:
                 logger.error(f"Error loading context: {e}")
-                # Continue with empty context on error
         else:
             logger.debug("No saved context found, starting fresh")
             
@@ -160,14 +157,10 @@ class ArchitectAgent:
         Save context data to persistent storage.
         """
         try:
-            context_file = "architect_context.json"
-            # Convert context object to serializable dictionary
             data = self.context.to_dict()
-            
-            with open(context_file, 'w') as f:
+            with open(self.context_path, "w") as f:
                 json.dump(data, f)
-                
-            logger.debug(f"Context saved to {context_file}")
+            logger.debug(f"Context saved to {self.context_path}")
         except Exception as e:
             logger.error(f"Error saving context: {e}")
     
