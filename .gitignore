@@ -20,3 +20,4 @@ count_words.py
 logs/architectagent.log
 *.log
 *.log.*
+logs/architectagent.log

@@ -342,16 +342,29 @@ class EnhancedContextData(BaseModel):
         return cls(**data)
 
     @classmethod
-    async def load_from_json(cls, path: str) -> "EnhancedContextData":
-        """Load context from a JSON file if it exists."""
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                return cls.from_dict(data)
-            except Exception:
-                pass
-        return cls()
+    async def load_from_json(cls, file_path: str) -> "EnhancedContextData":
+        """Load context data from a JSON file."""
+        try:
+            if os.path.exists(file_path):
+                with open(file_path, "r") as file:
+                    data = json.load(file)
+            else:
+                data = {}
+            
+            # Provide default values for required fields if they're missing
+            if not isinstance(data, dict):
+                data = {}
+                
+            # Ensure working_directory has a default value if missing
+            if "working_directory" not in data:
+                data["working_directory"] = os.getcwd()
+                
+            # Return class instantiated with data
+            return cls(**data)
+        except Exception as e:
+            logger.error(f"Error loading context data: {e}")
+            # Provide minimal valid data to avoid validation errors
+            return cls(working_directory=os.getcwd())
 
     async def save_to_json(self, path: str) -> None:
         """Persist the context to a JSON file."""
