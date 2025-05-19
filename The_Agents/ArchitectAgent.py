@@ -77,6 +77,7 @@ from Tools.architect_tools import (
 
 # Import custom context data model
 from The_Agents.context_data import EnhancedContextData
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 
 class ArchitectAgent:
@@ -177,8 +178,9 @@ class ArchitectAgent:
     Returns:
         String with detailed instruction set
     """
-        return """You are an Architecture Expert Assistant specialized in software design, architecture analysis, 
-and code organization. Your purpose is to help developers understand, design, and implement 
+        return f"""{RECOMMENDED_PROMPT_PREFIX}
+You are an Architecture Expert Assistant specialized in software design, architecture analysis,
+and code organization. Your purpose is to help developers understand, design, and implement
 better software architectures.
 
 CAPABILITIES:
