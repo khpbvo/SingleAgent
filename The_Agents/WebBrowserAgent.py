@@ -70,26 +70,47 @@ class WebBrowserAgent:
             tools=self.agent.tools,
         )
 
-    async def _run_streamed(self, user_input: str) -> str:
+    async def _run_streamed(
+        self,
+        user_input: str,
+        *,
+        enable_tracing: bool = False,
+        trace_dir: str | None = None,
+    ) -> str:
         result = Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
             max_turns=50,
             context=self.context,
+            enable_tracing=enable_tracing,
+            trace_dir=trace_dir,
         )
         output = await handle_stream_events(result.stream_events())
         return output
 
-    async def run(self, user_input: str, stream_output: bool = True) -> str:
+    async def run(
+        self,
+        user_input: str,
+        stream_output: bool = True,
+        *,
+        enable_tracing: bool = False,
+        trace_dir: str | None = None,
+    ) -> str:
         self._prepare_context_for_agent()
         self.context.add_chat_message("user", user_input)
         if stream_output:
-            final = await self._run_streamed(user_input)
+            final = await self._run_streamed(
+                user_input,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
+            )
         else:
             res = await Runner.run(
                 starting_agent=self.agent,
                 input=user_input,
                 context=self.context,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
             )
             final = res.final_output
         self.context.add_chat_message("assistant", final)

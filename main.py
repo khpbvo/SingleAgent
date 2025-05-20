@@ -55,7 +55,7 @@ class AgentMode:
     ARCHITECT = "architect"
     BROWSER = "browser"
 
-async def main():
+async def main(*, enable_tracing: bool = False, trace_dir: str = "traces"):
     """Main function to run the dual-agent system with mode switching support."""
     # Initialize spaCy model at startup
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
@@ -328,7 +328,12 @@ exit/quit   - Exit the program
                 # Get current agent and run 
                 current_agent = get_current_agent()
                 print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                await current_agent.run(modified_query, stream_output=True)
+                await current_agent.run(
+                    modified_query,
+                    stream_output=True,
+                    enable_tracing=enable_tracing,
+                    trace_dir=trace_dir,
+                )
                 
                 # Save context after interaction
                 await current_agent.save_context()
@@ -361,7 +366,12 @@ exit/quit   - Exit the program
                 # Get current agent and run
                 current_agent = get_current_agent()
                 print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                await current_agent.run(modified_query, stream_output=True)
+                await current_agent.run(
+                    modified_query,
+                    stream_output=True,
+                    enable_tracing=enable_tracing,
+                    trace_dir=trace_dir,
+                )
                 
                 # Save context after interaction
                 await current_agent.save_context()
@@ -446,7 +456,12 @@ exit/quit   - Exit the program
             print(f"{mode_color}Processing with {agent_name}...{RESET}")
             
             # Run the agent with streaming output
-            result = await current_agent.run(query, stream_output=True)
+            result = await current_agent.run(
+                query,
+                stream_output=True,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
+            )
             # Since output is streamed, we don't need to print the result again
             
             # Save context after each interaction
@@ -456,4 +471,19 @@ exit/quit   - Exit the program
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the multi-agent REPL")
+    parser.add_argument(
+        "--trace",
+        action="store_true",
+        help="Enable Agents SDK tracing",
+    )
+    parser.add_argument(
+        "--trace-dir",
+        default="traces",
+        help="Directory to store trace files",
+    )
+    args = parser.parse_args()
+
+    asyncio.run(main(enable_tracing=args.trace, trace_dir=args.trace_dir))
