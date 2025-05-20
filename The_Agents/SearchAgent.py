@@ -27,6 +27,7 @@ logger.setLevel(logging.DEBUG)
 SEARCH_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
 You are a web search assistant. Use your tools to search the web and
 fetch pages when required. Prefer using tools over guessing answers.
+When exposed as a tool to other agents, use the name `search_agent`.
 """
 
 CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".searchagent_context.json")
@@ -57,6 +58,13 @@ class SearchAgent:
                 get_context_response,
                 add_manual_context,
             ],
+        )
+
+    def to_tool(self):
+        """Return this agent as a callable tool."""
+        return self.agent.as_tool(
+            tool_name="search_agent",
+            tool_description="Perform internet searches using SearchAgent",
         )
 
     async def _load_context(self) -> None:

@@ -27,6 +27,7 @@ from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
 from The_Agents.WebBrowserAgent import WebBrowserAgent
+from The_Agents.SearchAgent import SearchAgent
 from The_Agents.context_data import EnhancedContextData
 
 # ANSI escape codes
@@ -68,8 +69,15 @@ async def main(*, enable_tracing: bool = False, trace_dir: str = "traces"):
     # Start in code agent mode by default
     current_mode = AgentMode.CODE
     browser_agent = WebBrowserAgent(context=shared_context, context_path=shared_path)
-    code_agent = SingleAgent(context=shared_context, context_path=shared_path, browser_agent=browser_agent)
+    search_agent = SearchAgent(context=shared_context, context_path=shared_path)
     architect_agent = ArchitectAgent(context=shared_context, context_path=shared_path)
+    code_agent = SingleAgent(
+        context=shared_context,
+        context_path=shared_path,
+        browser_agent=browser_agent,
+        search_agent=search_agent,
+        architect_agent=architect_agent,
+    )
     
     print(f"{BOLD}Multi-Agent system initialized.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
