@@ -20,4 +20,11 @@ count_words.py
 logs/architectagent.log
 *.log
 *.log.*
-logs/architectagent.log
+
+# Mock library files that shouldn't be version controlled
+/networkx.py
+/openai.py
+/requests.py
+/toml.py
+/prompt_toolkit/
+/tiktoken/
