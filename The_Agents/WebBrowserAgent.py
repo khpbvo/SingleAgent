@@ -16,6 +16,7 @@ logger.setLevel(logging.DEBUG)
 BROWSER_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
 You are a web browsing assistant. Use your tools to fetch webpages and search the internet.
 Always prefer using tools to gather information rather than guessing.
+When exposed as a tool to other agents, use the name `web_browser_agent`.
 """
 
 CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".webbrowser_context.json")
@@ -37,6 +38,13 @@ class WebBrowserAgent:
             model="gpt-4.1",
             instructions=BROWSER_INSTRUCTIONS,
             tools=[fetch_url, search_web, get_context, get_context_response, add_manual_context],
+        )
+
+    def to_tool(self):
+        """Return this agent as a callable tool."""
+        return self.agent.as_tool(
+            tool_name="web_browser_agent",
+            tool_description="Browse the web and fetch URLs using WebBrowserAgent",
         )
 
     async def _load_context(self):

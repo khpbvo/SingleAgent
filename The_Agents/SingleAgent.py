@@ -106,6 +106,7 @@ AGENT_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
 You are a code assistant capable of helping users write, edit, and patch code.
 You have full control of the terminal and can run commands like sed, grep, ls, dir, cd, tail, python, and bash.
 You can analyze code with pylint, ruff and pyright, generate colored diffs, and apply patches to files.
+You can delegate work to `web_browser_agent`, `search_agent`, and `architect_agent` when needed.
 Your thinking should be thorough and so it's fine if it's very long. You can think step by step before and after each action you decide to take.
 
 IMPORTANT: You have access to chat history and context information.
@@ -302,11 +303,20 @@ class SingleAgent:
                 return f"{user_input} in {target}"
         return user_input
     
-    def __init__(self, context: EnhancedContextData | None = None, context_path: str = CONTEXT_FILE_PATH, browser_agent=None):
+    def __init__(
+        self,
+        context: EnhancedContextData | None = None,
+        context_path: str = CONTEXT_FILE_PATH,
+        browser_agent=None,
+        search_agent=None,
+        architect_agent=None,
+    ):
         # ensure we always have a context attribute before async loading
         cwd = os.getcwd()
         self.context_path = context_path
         self.browser_agent = browser_agent
+        self.search_agent = search_agent
+        self.architect_agent = architect_agent
         self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
@@ -359,6 +369,13 @@ class SingleAgent:
             ],
             handoffs=handoffs
         )
+
+        if self.browser_agent is not None:
+            self.agent.tools.append(self.browser_agent.to_tool())
+        if self.search_agent is not None:
+            self.agent.tools.append(self.search_agent.to_tool())
+        if self.architect_agent is not None:
+            self.agent.tools.append(self.architect_agent.to_tool())
         
         # Initialize the OpenAI client for summarization
         try:

@@ -114,15 +114,22 @@ class ArchitectAgent:
                 read_directory,
                 add_manual_context,
                 run_command,  # Added run_command tool
-                write_file  
+                write_file
             ]
         )
-        
+
         logger.debug("ArchitectAgent initialized")
         cwd = os.getcwd()
         self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd)
+        )
+
+    def to_tool(self):
+        """Return this agent as a callable tool."""
+        return self.agent.as_tool(
+            tool_name="architect_agent",
+            tool_description="Analyze and plan software architecture using ArchitectAgent",
         )
         
     async def _load_context(self):
@@ -196,6 +203,8 @@ AVAILABLE TOOLS:
 - read_directory: List the contents of directories
 - write_file: Write content to files (for TODO lists, documentation, etc.)
 - run_command: Execute shell commands for project analysis
+ - run_command: Execute shell commands for project analysis
+When used as a tool by other agents, call this agent with the tool name `architect_agent`.
 
 PRINCIPLES TO FOLLOW:
 1. Focus on architectural concerns rather than implementation details
