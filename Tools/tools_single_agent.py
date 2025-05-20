@@ -306,7 +306,7 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
 
 
 @function_tool
-async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
+async def apply_patch(wrapper: RunContextWrapper[EnhancedContextData], params: ApplyPatchParams) -> str:
     """Apply a patch to files using the apply_patch.py script with colored diff preview."""
     logger.debug(json.dumps({"tool": "apply_patch", "params": params.model_dump()}))
     
