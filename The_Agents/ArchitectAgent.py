@@ -86,7 +86,13 @@ class ArchitectAgent:
     for analyzing and suggesting improvements to project structure and design.
     """
     
-    def __init__(self, openai_client=None, context: EnhancedContextData | None = None, context_path: str = "architect_context.json"):
+    def __init__(
+        self,
+        openai_client=None,
+        context: EnhancedContextData | None = None,
+        context_path: str = "architect_context.json",
+        mcp_servers: list | None = None,
+    ):
         """
         Initialize the architect agent with default configuration.
         
@@ -96,6 +102,7 @@ class ArchitectAgent:
         self.openai_client = openai_client
         self.context_path = context_path
         self.instructions = self._get_default_instructions()
+        self.mcp_servers = mcp_servers
         
         # Create agent
         self.agent = Agent[EnhancedContextData](
@@ -115,7 +122,8 @@ class ArchitectAgent:
                 add_manual_context,
                 run_command,  # Added run_command tool
                 write_file
-            ]
+            ],
+            mcp_servers=self.mcp_servers,
         )
 
         logger.debug("ArchitectAgent initialized")
@@ -236,7 +244,8 @@ For TODO lists:
             name="ArchitectAgent",
             model="gpt-4.1",
             instructions=instr,
-            tools=self.agent.tools
+            tools=self.agent.tools,
+            mcp_servers=self.mcp_servers,
         )
 
     async def run(

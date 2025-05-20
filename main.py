@@ -29,6 +29,7 @@ from The_Agents.ArchitectAgent import ArchitectAgent
 from The_Agents.WebBrowserAgent import WebBrowserAgent
 from The_Agents.SearchAgent import SearchAgent
 from The_Agents.context_data import EnhancedContextData
+from agents.mcp import MCPServerStdio, MCPServerSse
 
 # ANSI escape codes
 GREEN = "\033[32m"
@@ -56,7 +57,17 @@ class AgentMode:
     ARCHITECT = "architect"
     BROWSER = "browser"
 
-async def main(*, enable_tracing: bool = False, trace_dir: str = "traces"):
+async def main(
+    *,
+    enable_tracing: bool = False,
+    trace_dir: str = "traces",
+    enable_mcp: bool = False,
+    mcp_transport: str = "stdio",
+    mcp_command: str | None = None,
+    mcp_args: list | None = None,
+    mcp_url: str | None = None,
+    mcp_cache_tools: bool = False,
+):
     """Main function to run the dual-agent system with mode switching support."""
     # Initialize spaCy model at startup
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
@@ -66,18 +77,42 @@ async def main(*, enable_tracing: bool = False, trace_dir: str = "traces"):
     shared_path = os.path.join(os.path.expanduser("~"), ".agent_shared_context.json")
     shared_context = await EnhancedContextData.load_from_json(shared_path)
 
-    # Start in code agent mode by default
-    current_mode = AgentMode.CODE
-    browser_agent = WebBrowserAgent(context=shared_context, context_path=shared_path)
-    search_agent = SearchAgent(context=shared_context, context_path=shared_path)
-    architect_agent = ArchitectAgent(context=shared_context, context_path=shared_path)
-    code_agent = SingleAgent(
-        context=shared_context,
-        context_path=shared_path,
-        browser_agent=browser_agent,
-        search_agent=search_agent,
-        architect_agent=architect_agent,
-    )
+    # Initialize MCP servers if enabled
+    mcp_servers = []
+    mcp_server = None
+    if enable_mcp:
+        if mcp_transport == "stdio":
+            mcp_server = MCPServerStdio(
+                params={"command": mcp_command or "", "args": mcp_args or []},
+                cache_tools_list=mcp_cache_tools,
+            )
+        else:
+            mcp_server = MCPServerSse(
+                url=mcp_url or "",
+                cache_tools_list=mcp_cache_tools,
+            )
+        await mcp_server.__aenter__()
+        try:
+            tools = await mcp_server.list_tools()
+            print(f"Loaded {len(tools)} tools from MCP server")
+        except Exception:
+            pass
+        mcp_servers.append(mcp_server)
+
+    try:
+        # Start in code agent mode by default
+        current_mode = AgentMode.CODE
+        browser_agent = WebBrowserAgent(context=shared_context, context_path=shared_path, mcp_servers=mcp_servers)
+        search_agent = SearchAgent(context=shared_context, context_path=shared_path, mcp_servers=mcp_servers)
+        architect_agent = ArchitectAgent(context=shared_context, context_path=shared_path, mcp_servers=mcp_servers)
+        code_agent = SingleAgent(
+            context=shared_context,
+            context_path=shared_path,
+            browser_agent=browser_agent,
+            search_agent=search_agent,
+            architect_agent=architect_agent,
+            mcp_servers=mcp_servers,
+        )
     
     print(f"{BOLD}Multi-Agent system initialized.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
@@ -477,6 +512,9 @@ exit/quit   - Exit the program
         except Exception as e:
             logging.error(f"Error running agent: {e}", exc_info=True)
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
+    finally:
+        if mcp_server:
+            await mcp_server.__aexit__(None, None, None)
 
 if __name__ == "__main__":
     import argparse
@@ -492,6 +530,37 @@ if __name__ == "__main__":
         default="traces",
         help="Directory to store trace files",
     )
+    parser.add_argument(
+        "--enable-mcp",
+        action="store_true",
+        help="Enable MCP support",
+    )
+    parser.add_argument(
+        "--mcp-transport",
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="MCP server transport",
+    )
+    parser.add_argument("--mcp-command", help="Command for MCP stdio server")
+    parser.add_argument("--mcp-args", default="[]", help="JSON list of args for stdio server")
+    parser.add_argument("--mcp-url", help="URL for MCP SSE server")
+    parser.add_argument(
+        "--mcp-cache-tools",
+        action="store_true",
+        help="Cache MCP tools list",
+    )
     args = parser.parse_args()
 
-    asyncio.run(main(enable_tracing=args.trace, trace_dir=args.trace_dir))
+    mcp_args = json.loads(args.mcp_args)
+    asyncio.run(
+        main(
+            enable_tracing=args.trace,
+            trace_dir=args.trace_dir,
+            enable_mcp=args.enable_mcp,
+            mcp_transport=args.mcp_transport,
+            mcp_command=args.mcp_command,
+            mcp_args=mcp_args,
+            mcp_url=args.mcp_url,
+            mcp_cache_tools=args.mcp_cache_tools,
+        )
+    )

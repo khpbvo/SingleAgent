@@ -22,9 +22,15 @@ When exposed as a tool to other agents, use the name `web_browser_agent`.
 CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".webbrowser_context.json")
 
 class WebBrowserAgent:
-    def __init__(self, context: EnhancedContextData | None = None, context_path: str = CONTEXT_FILE_PATH):
+    def __init__(
+        self,
+        context: EnhancedContextData | None = None,
+        context_path: str = CONTEXT_FILE_PATH,
+        mcp_servers: list | None = None,
+    ):
         cwd = os.getcwd()
         self.context_path = context_path
+        self.mcp_servers = mcp_servers
         self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
@@ -38,6 +44,7 @@ class WebBrowserAgent:
             model="gpt-4.1",
             instructions=BROWSER_INSTRUCTIONS,
             tools=[fetch_url, search_web, get_context, get_context_response, add_manual_context],
+            mcp_servers=self.mcp_servers,
         )
 
     def to_tool(self):
@@ -76,6 +83,7 @@ class WebBrowserAgent:
             model="gpt-4.1",
             instructions=instr,
             tools=self.agent.tools,
+            mcp_servers=self.mcp_servers,
         )
 
     async def _run_streamed(

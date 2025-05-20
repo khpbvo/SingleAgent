@@ -311,6 +311,7 @@ class SingleAgent:
         browser_agent=None,
         search_agent=None,
         architect_agent=None,
+        mcp_servers: list | None = None,
     ):
         # ensure we always have a context attribute before async loading
         cwd = os.getcwd()
@@ -318,6 +319,7 @@ class SingleAgent:
         self.browser_agent = browser_agent
         self.search_agent = search_agent
         self.architect_agent = architect_agent
+        self.mcp_servers = mcp_servers
         self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
@@ -373,7 +375,8 @@ class SingleAgent:
                 get_context_response,
                 add_manual_context
             ],
-            handoffs=handoffs
+            handoffs=handoffs,
+            mcp_servers=self.mcp_servers,
         )
 
         if self.browser_agent is not None:
@@ -464,6 +467,7 @@ class SingleAgent:
             instructions=instr,
             tools=self.agent.tools,
             handoffs=handoffs,
+            mcp_servers=self.mcp_servers,
         )
 
     async def run(
