@@ -443,16 +443,29 @@ class SingleAgent:
             handoffs=handoffs,
         )
 
-    async def run(self, user_input: str, stream_output: bool = True):
+    async def run(
+        self,
+        user_input: str,
+        stream_output: bool = True,
+        *,
+        enable_tracing: bool = False,
+        trace_dir: str | None = None,
+    ):
         self._prepare_context_for_agent()
         self.context.add_chat_message("user", user_input)
         if stream_output:
-            out = await self._run_streamed(user_input)
+            out = await self._run_streamed(
+                user_input,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
+            )
         else:
             res = await Runner.run(
                 starting_agent=self.agent,
                 input=user_input,
                 context=self.context,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
             )
             out = res.final_output
         self.context.add_chat_message("assistant", out)
@@ -630,7 +643,13 @@ class SingleAgent:
         # Log fallback results
         logger.debug("Fallback entity extraction complete")
     
-    async def _run_streamed(self, user_input: str) -> str:
+    async def _run_streamed(
+        self,
+        user_input: str,
+        *,
+        enable_tracing: bool = False,
+        trace_dir: str | None = None,
+    ) -> str:
         """
         Run the agent with streamed output.
         
@@ -650,6 +669,8 @@ class SingleAgent:
             input=user_input,
             max_turns=999,  # Increased for complex tasks
             context=self.context,
+            enable_tracing=enable_tracing,
+            trace_dir=trace_dir,
         )
         
         # Use the shared stream event handler

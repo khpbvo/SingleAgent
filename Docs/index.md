@@ -50,3 +50,15 @@ print(result.final_output)
 ```bash
 export OPENAI_API_KEY=sk-...
 ```
+
+## Tracing
+
+To capture detailed traces of each agent run, launch the system with the
+`--trace` flag:
+
+```bash
+python main.py --trace --trace-dir traces
+```
+
+Traces are saved in the specified directory and can be visualized with the
+OpenAI Agents SDK tooling.
