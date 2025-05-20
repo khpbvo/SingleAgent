@@ -129,8 +129,30 @@ class EnhancedContextData(BaseModel):
         return self._tokenizer
 
     def count_tokens(self, text: str) -> int:
+        """Return the number of tokens for the given text.
+
+        This helper previously assumed ``text`` was always a string. In
+        practice the caller may occasionally pass in other objects (for
+        example OpenAI SDK response objects). ``tiktoken`` expects a plain
+        string or bytes-like object and will raise ``TypeError`` otherwise.
+        To make the function more robust we coerce the value to ``str`` before
+        encoding and fall back to a simple length-based count if encoding
+        fails.
+        """
+
         enc = self.get_tokenizer()
-        return len(enc.encode(text))
+
+        # ``tiktoken`` requires a string/bytes input.  Coerce any other type
+        # to string to avoid ``TypeError: expected string or buffer``.
+        if not isinstance(text, (str, bytes)):
+            text = str(text)
+
+        try:
+            return len(enc.encode(text))
+        except Exception as e:  # pragma: no cover - defensive fallback
+            logger.error(f"Error counting tokens: {e}")
+            # Fall back to a crude token estimate based on whitespace
+            return len(text.split())
 
     def update_token_count(self, new_tokens: int) -> None:
         self.token_count += new_tokens
