@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Callable
 
 __all__ = [
     "Agent",
@@ -14,6 +14,8 @@ __all__ = [
     "RunItemStreamEvent",
     "RawResponsesStreamEvent",
     "AgentUpdatedStreamEvent",
+    "HandoffInputData",
+    "Handoff",
     "handoff",
 ]
 
@@ -117,8 +119,19 @@ class AgentUpdatedStreamEvent(StreamEvent):
         self.new_agent = new_agent
 
 
-def handoff(agent: Agent):
-    return agent
+@dataclass
+class HandoffInputData:
+    history: list
+
+
+@dataclass
+class Handoff:
+    agent: Agent
+    input_filter: Callable | None = None
+
+
+def handoff(agent: Agent, *, input_filter=None, **kwargs):
+    return Handoff(agent=agent, input_filter=input_filter)
 
 
 # Submodules

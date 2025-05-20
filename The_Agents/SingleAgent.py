@@ -96,6 +96,7 @@ from agents.exceptions import MaxTurnsExceeded
 # Import our enhanced context
 from The_Agents.context_data import EnhancedContextData
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+from agents.extensions import handoff_filters
 from agents import handoff
 
 # Path for persistent context storage
@@ -344,7 +345,12 @@ class SingleAgent:
         handoffs = []
         if self.browser_agent is not None:
             try:
-                handoffs.append(handoff(self.browser_agent.agent))
+                handoffs.append(
+                    handoff(
+                        self.browser_agent.agent,
+                        input_filter=handoff_filters.remove_all_tools,
+                    )
+                )
             except Exception:
                 pass
 
