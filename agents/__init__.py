@@ -49,6 +49,7 @@ class Agent(Generic[T]):
     instructions: str = ""
     tools: list | None = None
     handoffs: list | None = None
+    mcp_servers: list | None = None
     model_settings: object | None = None
 
     @classmethod
@@ -60,6 +61,8 @@ class Agent(Generic[T]):
             self.tools = []
         if self.handoffs is None:
             self.handoffs = []
+        if self.mcp_servers is None:
+            self.mcp_servers = []
 
     async def respond(self, input: str, context=None):
         return f"{self.name} response: {input}"

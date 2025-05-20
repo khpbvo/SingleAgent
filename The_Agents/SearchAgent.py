@@ -36,9 +36,15 @@ CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".searchagent_context.
 class SearchAgent:
     """Agent responsible for web searches."""
 
-    def __init__(self, context: EnhancedContextData | None = None, context_path: str = CONTEXT_FILE_PATH) -> None:
+    def __init__(
+        self,
+        context: EnhancedContextData | None = None,
+        context_path: str = CONTEXT_FILE_PATH,
+        mcp_servers: list | None = None,
+    ) -> None:
         cwd = os.getcwd()
         self.context_path = context_path
+        self.mcp_servers = mcp_servers
         self.context = context or EnhancedContextData(
             working_directory=cwd,
             project_name=os.path.basename(cwd),
@@ -58,6 +64,7 @@ class SearchAgent:
                 get_context_response,
                 add_manual_context,
             ],
+            mcp_servers=self.mcp_servers,
         )
 
     def to_tool(self):
@@ -96,6 +103,7 @@ class SearchAgent:
             model="gpt-4.1",
             instructions=instr,
             tools=self.agent.tools,
+            mcp_servers=self.mcp_servers,
         )
 
     async def _run_streamed(self, user_input: str) -> str:
