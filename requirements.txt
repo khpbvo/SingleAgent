@@ -1,0 +1,11 @@
+openai
+prompt_toolkit
+pydantic
+tiktoken
+spacy
+networkx
+typing_extensions
+toml
+ruff
+pylint
+pyright
