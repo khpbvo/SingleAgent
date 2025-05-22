@@ -5,6 +5,7 @@ Entry point for the multi-agent system with Code, Architect and Web Browser agen
 Allows switching between SingleAgent, ArchitectAgent and WebBrowserAgent based on user commands.
 """
 
+import argparse
 import asyncio
 import sys
 import logging
@@ -153,74 +154,79 @@ async def main(
         # enter REPL loop
         while True:
             try:
-            # Use prompt_toolkit session for input with auto-suggest
-            query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
-            logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
-
-            # Process input with spaCy for entity recognition
-            # This allows the agent to have entities available before processing
-            try:
-                entities = await nlp_singleton.extract_entities(query)
-                mapped_entities = await nlp_singleton.map_entity_types(entities)
-                logging.debug(json.dumps({"event": "entity_extraction", "entities": mapped_entities}))
-            except Exception as e:
-                logging.error(f"Error extracting entities: {e}", exc_info=True)
-
-            if not query.strip():
-                continue
-
-            if query.strip().lower() in ("exit", "quit"):
-                print("Goodbye.")
-                break
-
-            # Mode switching commands
-            if query.strip().lower() == "!architect" and current_mode != AgentMode.ARCHITECT:
-                summary = get_current_agent().get_context_summary()
-                architect_agent.context.add_manual_context(
-                content=summary,
-                source=f"{current_mode}_agent",
-                label=f"handoff_from_{current_mode}"
+                # Use prompt_toolkit session for input with auto-suggest
+                query = await session.prompt_async(
+                    HTML('<b><ansigreen>User:</ansigreen></b> ')
                 )
-                await get_current_agent().save_context()
-                current_mode = AgentMode.ARCHITECT
-                print(f"\n{BLUE}Switching to Architect Agent mode.{RESET}")
-                display_mode_banner()
-                print(f"\n{architect_agent.get_context_summary()}\n")
-                continue
-            elif query.strip().lower() == "!code" and current_mode != AgentMode.CODE:
-                summary = get_current_agent().get_context_summary()
-                code_agent.context.add_manual_context(
-                content=summary,
-                source=f"{current_mode}_agent",
-                label=f"handoff_from_{current_mode}"
+                logging.debug(
+                    json.dumps({"event": "user_input", "input": query, "mode": current_mode})
                 )
-                await get_current_agent().save_context()
-                current_mode = AgentMode.CODE
-                print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
-                display_mode_banner()
-                print(f"\n{code_agent.get_context_summary()}\n")
-                continue
-            elif query.strip().lower() == "!browser" and current_mode != AgentMode.BROWSER:
-                summary = get_current_agent().get_context_summary()
-                browser_agent.context.add_manual_context(
-                content=summary,
-                source=f"{current_mode}_agent",
-                label=f"handoff_from_{current_mode}"
-                )
-                await get_current_agent().save_context()
-                current_mode = AgentMode.BROWSER
-                print(f"\n{YELLOW}Switching to Web Browser Agent mode.{RESET}")
-                display_mode_banner()
-                print(f"\n{browser_agent.get_context_summary()}\n")
-                continue
 
-            # Common special commands for both modes
-            if query.strip().lower() == "!help":
-                print(f"""
+                # Process input with spaCy for entity recognition
+                try:
+                    entities = await nlp_singleton.extract_entities(query)
+                    mapped_entities = await nlp_singleton.map_entity_types(entities)
+                    logging.debug(
+                        json.dumps({"event": "entity_extraction", "entities": mapped_entities})
+                    )
+                except Exception as e:
+                    logging.error(f"Error extracting entities: {e}", exc_info=True)
+
+                if not query.strip():
+                    continue
+
+                if query.strip().lower() in ("exit", "quit"):
+                    print("Goodbye.")
+                    break
+
+                # Mode switching commands
+                if query.strip().lower() == "!architect" and current_mode != AgentMode.ARCHITECT:
+                    summary = get_current_agent().get_context_summary()
+                    architect_agent.context.add_manual_context(
+                        content=summary,
+                        source=f"{current_mode}_agent",
+                        label=f"handoff_from_{current_mode}",
+                    )
+                    await get_current_agent().save_context()
+                    current_mode = AgentMode.ARCHITECT
+                    print(f"\n{BLUE}Switching to Architect Agent mode.{RESET}")
+                    display_mode_banner()
+                    print(f"\n{architect_agent.get_context_summary()}\n")
+                    continue
+                elif query.strip().lower() == "!code" and current_mode != AgentMode.CODE:
+                    summary = get_current_agent().get_context_summary()
+                    code_agent.context.add_manual_context(
+                        content=summary,
+                        source=f"{current_mode}_agent",
+                        label=f"handoff_from_{current_mode}",
+                    )
+                    await get_current_agent().save_context()
+                    current_mode = AgentMode.CODE
+                    print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
+                    display_mode_banner()
+                    print(f"\n{code_agent.get_context_summary()}\n")
+                    continue
+                elif query.strip().lower() == "!browser" and current_mode != AgentMode.BROWSER:
+                    summary = get_current_agent().get_context_summary()
+                    browser_agent.context.add_manual_context(
+                        content=summary,
+                        source=f"{current_mode}_agent",
+                        label=f"handoff_from_{current_mode}",
+                    )
+                    await get_current_agent().save_context()
+                    current_mode = AgentMode.BROWSER
+                    print(f"\n{YELLOW}Switching to Web Browser Agent mode.{RESET}")
+                    display_mode_banner()
+                    print(f"\n{browser_agent.get_context_summary()}\n")
+                    continue
+
+                # Common special commands for both modes
+                if query.strip().lower() == "!help":
+                    print(f"""
     {BOLD}Agent Commands:{RESET}
     !help       - Show this help message
     !history    - Show chat history
-    !context    - Show full context summary 
+    !context    - Show full context summary
     !clear      - Clear chat history
     !save       - Manually save context
     !entity     - List tracked entities
@@ -242,273 +248,244 @@ async def main(
 
     exit/quit   - Exit the program
     """)
-                continue
-            elif query.strip().lower() == "!history":
-                print(f"\n{get_current_agent().get_chat_history_summary()}\n")
-                continue
-            elif query.strip().lower() == "!context":
-                print(f"\n{get_current_agent().get_context_summary()}\n")
-                continue
-            elif query.strip().lower() == "!clear":
-                get_current_agent().clear_chat_history()
-                print("\nChat history cleared.\n")
-                continue
-            elif query.strip().lower() == "!save":
-                await get_current_agent().save_context()
-                print("\nContext saved.\n")
-                continue
-            elif query.strip().lower() == "!entity":
-                current_agent = get_current_agent()
-                entities = current_agent.context.active_entities
-                if not entities:
-                print("\nNo tracked entities.\n")
-                continue
+                    continue
+                elif query.strip().lower() == "!history":
+                    print(f"\n{get_current_agent().get_chat_history_summary()}\n")
+                    continue
+                elif query.strip().lower() == "!context":
+                    print(f"\n{get_current_agent().get_context_summary()}\n")
+                    continue
+                elif query.strip().lower() == "!clear":
+                    get_current_agent().clear_chat_history()
+                    print("\nChat history cleared.\n")
+                    continue
+                elif query.strip().lower() == "!save":
+                    await get_current_agent().save_context()
+                    print("\nContext saved.\n")
+                    continue
+                elif query.strip().lower() == "!entity":
+                    current_agent = get_current_agent()
+                    entities = current_agent.context.active_entities
+                    if not entities:
+                        print("\nNo tracked entities.\n")
+                        continue
 
-                print(f"\n{BOLD}Tracked Entities:{RESET}")
-                # Get entity types based on the current mode
-                entity_types = ["file", "command", "url", "search_query"]
-                if current_mode == AgentMode.ARCHITECT:
-                entity_types.extend(["design_pattern", "architecture_concept"])
+                    print(f"\n{BOLD}Tracked Entities:{RESET}")
+                    entity_types = ["file", "command", "url", "search_query"]
+                    if current_mode == AgentMode.ARCHITECT:
+                        entity_types.extend(["design_pattern", "architecture_concept"])
 
-                for entity_type in entity_types:
-                type_entities = [e for e in entities.values() if e.entity_type == entity_type]
-                if type_entities:
-                    print(f"\n{BOLD}{entity_type.capitalize()}s:{RESET}")
-                    # Sort by access count (most frequent first)
-                    type_entities.sort(key=lambda e: e.access_count, reverse=True)
-                    for i, entity in enumerate(type_entities[:10]):  # Show top 10
-                    print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
-                print()
-                continue
-            elif query.strip().lower() == "!manualctx":
-                current_agent = get_current_agent()
-                if not hasattr(current_agent.context, 'manual_context_items') or not current_agent.context.manual_context_items:
-                print("\nNo manual context items available.\n")
-                continue
+                    for entity_type in entity_types:
+                        type_entities = [e for e in entities.values() if e.entity_type == entity_type]
+                        if type_entities:
+                            print(f"\n{BOLD}{entity_type.capitalize()}s:{RESET}")
+                            type_entities.sort(key=lambda e: e.access_count, reverse=True)
+                            for i, entity in enumerate(type_entities[:10]):
+                                print(f"  {i+1}. {entity.value} (accessed {entity.access_count} times)")
+                    print()
+                    continue
+                elif query.strip().lower() == "!manualctx":
+                    current_agent = get_current_agent()
+                    if (
+                        not hasattr(current_agent.context, "manual_context_items")
+                        or not current_agent.context.manual_context_items
+                    ):
+                        print("\nNo manual context items available.\n")
+                        continue
 
-                manual_items = current_agent.context.manual_context_items
+                    manual_items = current_agent.context.manual_context_items
 
-                print(f"\n{BOLD}Manual Context Items:{RESET}")
-                print(f"\nTotal items: {len(manual_items)}")
+                    print(f"\n{BOLD}Manual Context Items:{RESET}")
+                    print(f"\nTotal items: {len(manual_items)}")
 
-                for i, item in enumerate(manual_items):
-                time_str = datetime.fromtimestamp(item.timestamp).strftime("%Y-%m-%d %H:%M:%S")
-                content_preview = item.content[:50].replace('\n', ' ') + "..." if len(item.content) > 50 else item.content.replace('\n', ' ')
-                print(f"\n{i+1}. {BOLD}{item.label}{RESET}")
-                print(f"   Source: {item.source}")
-                print(f"   Added: {time_str}")
-                print(f"   Size: {item.token_count} tokens")
-                print(f"   Preview: {content_preview}")
+                    for i, item in enumerate(manual_items):
+                        time_str = datetime.fromtimestamp(item.timestamp).strftime("%Y-%m-%d %H:%M:%S")
+                        content_preview = (
+                            item.content[:50].replace("\n", " ") + "..."
+                            if len(item.content) > 50
+                            else item.content.replace("\n", " ")
+                        )
+                        print(f"\n{i+1}. {BOLD}{item.label}{RESET}")
+                        print(f"   Source: {item.source}")
+                        print(f"   Added: {time_str}")
+                        print(f"   Size: {item.token_count} tokens")
+                        print(f"   Preview: {content_preview}")
+                    print()
+                    continue
 
-                print()
-                continue
+                # Check for command to delete context item
+                if query.startswith("!delctx:"):
+                    try:
+                        label = query[len("!delctx:"):].strip()
+                        current_agent = get_current_agent()
+                        if not hasattr(current_agent.context, "manual_context_items"):
+                            print(f"{RED}No manual context items exist.{RESET}")
+                            continue
 
-            # Check for command to delete context item
-            if query.startswith("!delctx:"):
+                        found = False
+                        for item in current_agent.context.manual_context_items:
+                            if item.label == label:
+                                found = True
+                                break
+
+                        if not found:
+                            print(f"{RED}No context item found with label '{label}'.{RESET}")
+                            print(f"{YELLOW}Use !manualctx to list available context items.{RESET}")
+                            continue
+
+                        removed = current_agent.context.remove_manual_context(label)
+                        await current_agent.save_context()
+
+                        if removed:
+                            print(f"{GREEN}Successfully removed context item '{label}'.{RESET}")
+                        else:
+                            print(f"{RED}Failed to remove context item '{label}'.{RESET}")
+                        continue
+                    except Exception as e:
+                        print(f"{RED}Error removing context item: {str(e)}{RESET}")
+                        continue
+
+                # Check for arch:readfile command
+                if query.startswith("arch:readfile:"):
+                    try:
+                        if current_mode != AgentMode.ARCHITECT:
+                            print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
+                            current_mode = AgentMode.ARCHITECT
+
+                        file_path = query[len("arch:readfile:"):].strip()
+                        if not file_path:
+                            print(f"{RED}Error: No file path provided. Usage: arch:readfile:path/to/file{RESET}")
+                            continue
+
+                        modified_query = (
+                            f"Read and analyze the file at '{file_path}'. Provide a detailed summary of its content, structure, and purpose."
+                        )
+
+                        current_agent = get_current_agent()
+                        print(f"{BLUE}Processing with Architect Agent...{RESET}")
+                        await current_agent.run(
+                            modified_query,
+                            stream_output=True,
+                            enable_tracing=enable_tracing,
+                            trace_dir=trace_dir,
+                        )
+
+                        await current_agent.save_context()
+                        continue
+                    except Exception as e:
+                        print(f"{RED}Error reading file: {str(e)}{RESET}")
+                        continue
+
+                # Check for arch:readdir command
+                if query.startswith("arch:readdir:"):
+                    try:
+                        if current_mode != AgentMode.ARCHITECT:
+                            print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
+                            current_mode = AgentMode.ARCHITECT
+
+                        dir_path = query[len("arch:readdir:"):].strip()
+                        if not dir_path:
+                            print(f"{RED}Error: No directory path provided. Usage: arch:readdir:path/to/directory{RESET}")
+                            continue
+
+                        modified_query = (
+                            f"Read and analyze the directory structure at '{dir_path}'. Provide a comprehensive overview of the project structure, files, and potential architecture."
+                        )
+
+                        current_agent = get_current_agent()
+                        print(f"{BLUE}Processing with Architect Agent...{RESET}")
+                        await current_agent.run(
+                            modified_query,
+                            stream_output=True,
+                            enable_tracing=enable_tracing,
+                            trace_dir=trace_dir,
+                        )
+
+                        await current_agent.save_context()
+                        continue
+                    except Exception as e:
+                        print(f"{RED}Error reading directory: {str(e)}{RESET}")
+                        continue
+
+                # Check for special code:read command pattern
+                if query.startswith("code:read:"):
+                    try:
+                        file_path = query[len("code:read:"):].strip()
+                        if not os.path.isabs(file_path):
+                            file_path = os.path.abspath(os.path.join(os.getcwd(), file_path))
+
+                        if not os.path.exists(file_path):
+                            print(f"{RED}Error: File not found at {file_path}{RESET}")
+                            continue
+
+                        current_agent = get_current_agent()
+                        label = f"file:{os.path.basename(file_path)}"
+
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            content = f.read()
+
+                        added_label = current_agent.context.add_manual_context(
+                            content=content,
+                            source=file_path,
+                            label=label,
+                        )
+
+                        current_agent.context.track_entity(
+                            entity_type="file",
+                            value=file_path,
+                            metadata={"content_preview": content[:100] if content else None},
+                        )
+
+                        await current_agent.save_context()
+
+                        tokens = current_agent.context.count_tokens(content)
+                        print(
+                            f"{GREEN}Successfully added context from {file_path} with label '{added_label}' ({tokens} tokens){RESET}"
+                        )
+                        continue
+                    except Exception as e:
+                        print(f"{RED}Error adding context: {str(e)}{RESET}")
+                        continue
+
+                # Run the appropriate agent with the query
                 try:
-                # Extract label
-                label = query[len("!delctx:"):].strip()
+                    current_agent = get_current_agent()
+                    logging.debug(
+                        json.dumps(
+                            {"event": "agent_processing", "mode": current_mode, "query": query}
+                        )
+                    )
 
-                # Get current agent
-                current_agent = get_current_agent()
+                    if current_mode == AgentMode.CODE:
+                        mode_color = GREEN
+                        agent_name = "Code Agent"
+                    elif current_mode == AgentMode.ARCHITECT:
+                        mode_color = BLUE
+                        agent_name = "Architect Agent"
+                    else:
+                        mode_color = YELLOW
+                        agent_name = "Web Browser Agent"
+                    print(f"{mode_color}Processing with {agent_name}...{RESET}")
 
-                # Check if context item exists
-                if not hasattr(current_agent.context, 'manual_context_items'):
-                    print(f"{RED}No manual context items exist.{RESET}")
-                    continue
+                    await current_agent.run(
+                        query,
+                        stream_output=True,
+                        enable_tracing=enable_tracing,
+                        trace_dir=trace_dir,
+                    )
 
-                found = False
-                for item in current_agent.context.manual_context_items:
-                    if item.label == label:
-                    found = True
-                    break
-
-                if not found:
-                    print(f"{RED}No context item found with label '{label}'.{RESET}")
-                    print(f"{YELLOW}Use !manualctx to list available context items.{RESET}")
-                    continue
-
-                # Remove item
-                removed = current_agent.context.remove_manual_context(label)
-
-                # Save context
-                await current_agent.save_context()
-
-                if removed:
-                    print(f"{GREEN}Successfully removed context item '{label}'.{RESET}")
-                else:
-                    print(f"{RED}Failed to remove context item '{label}'.{RESET}")
-
-                continue
+                    await current_agent.save_context()
                 except Exception as e:
-                print(f"{RED}Error removing context item: {str(e)}{RESET}")
-                continue
-
-            # Check for arch:readfile command
-            if query.startswith("arch:readfile:"):
-                try:
-                # Make sure we're in architect mode
-                if current_mode != AgentMode.ARCHITECT:
-                    print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
-                    current_mode = AgentMode.ARCHITECT
-
-                # Extract file path
-                file_path = query[len("arch:readfile:"):].strip()
-
-                # Skip if path is empty
-                if not file_path:
-                    print(f"{RED}Error: No file path provided. Usage: arch:readfile:path/to/file{RESET}")
-                    continue
-
-                # Create modified query for the agent
-                modified_query = f"Read and analyze the file at '{file_path}'. Provide a detailed summary of its content, structure, and purpose."
-
-                # Get current agent and run 
-                current_agent = get_current_agent()
-                print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                await current_agent.run(
-                    modified_query,
-                    stream_output=True,
-                    enable_tracing=enable_tracing,
-                    trace_dir=trace_dir,
-                )
-
-                # Save context after interaction
-                await current_agent.save_context()
-                continue
-
-                except Exception as e:
-                print(f"{RED}Error reading file: {str(e)}{RESET}")
-                continue
-
-            # Check for arch:readdir command
-            if query.startswith("arch:readdir:"):
-                try:
-                # Make sure we're in architect mode
-                if current_mode != AgentMode.ARCHITECT:
-                    print(f"{YELLOW}Switching to Architect Agent mode...{RESET}")
-                    current_mode = AgentMode.ARCHITECT
-
-                # Extract directory path
-                dir_path = query[len("arch:readdir:"):].strip()
-
-                # Skip if path is empty
-                if not dir_path:
-                    print(f"{RED}Error: No directory path provided. Usage: arch:readdir:path/to/directory{RESET}")
-                    continue
-
-                # Create modified query for the agent
-                modified_query = f"Read and analyze the directory structure at '{dir_path}'. Provide a comprehensive overview of the project structure, files, and potential architecture."
-
-                # Get current agent and run
-                current_agent = get_current_agent()
-                print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                await current_agent.run(
-                    modified_query,
-                    stream_output=True,
-                    enable_tracing=enable_tracing,
-                    trace_dir=trace_dir,
-                )
-
-                # Save context after interaction
-                await current_agent.save_context()
-                continue
-
-                except Exception as e:
-                print(f"{RED}Error reading directory: {str(e)}{RESET}")
-                continue
-
-            # Check for special code:read command pattern
-            if query.startswith("code:read:"):
-                try:
-                # Extract file path
-                file_path = query[len("code:read:"):].strip()
-
-                # Get absolute path if relative
-                if not os.path.isabs(file_path):
-                    file_path = os.path.abspath(os.path.join(os.getcwd(), file_path))
-
-                # Check if file exists
-                if not os.path.exists(file_path):
-                    print(f"{RED}Error: File not found at {file_path}{RESET}")
-                    continue
-
-                # Get agent and add context
-                current_agent = get_current_agent()
-
-                # Generate a label based on filename
-                label = f"file:{os.path.basename(file_path)}"
-
-                # Add to context
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-
-                # Add to context using the internal method directly
-                added_label = current_agent.context.add_manual_context(
-                    content=content,
-                    source=file_path,
-                    label=label
-                )
-
-                # Track as file entity as well
-                current_agent.context.track_entity(
-                    entity_type="file",
-                    value=file_path,
-                    metadata={"content_preview": content[:100] if content else None}
-                )
-
-                # Save context
-                await current_agent.save_context()
-
-                # Show success message
-                tokens = current_agent.context.count_tokens(content)
-                print(f"{GREEN}Successfully added context from {file_path} with label '{added_label}' ({tokens} tokens){RESET}")
-                continue
-
-                except Exception as e:
-                print(f"{RED}Error adding context: {str(e)}{RESET}")
-                continue
-
-            # Run the appropriate agent with the query
-            try:
-                current_agent = get_current_agent()
-                # Log which agent is handling the query
-                logging.debug(json.dumps({
-                "event": "agent_processing", 
-                "mode": current_mode, 
-                "query": query
-                }))
-
-                # Show agent-specific processing indicator
-                if current_mode == AgentMode.CODE:
-                mode_color = GREEN
-                agent_name = "Code Agent"
-                elif current_mode == AgentMode.ARCHITECT:
-                mode_color = BLUE
-                agent_name = "Architect Agent"
-                else:
-                mode_color = YELLOW
-                agent_name = "Web Browser Agent"
-                print(f"{mode_color}Processing with {agent_name}...{RESET}")
-
-                # Run the agent with streaming output
-                result = await current_agent.run(
-                query,
-                stream_output=True,
-                enable_tracing=enable_tracing,
-                trace_dir=trace_dir,
-                )
-                # Since output is streamed, we don't need to print the result again
-
-                # Save context after each interaction
-                await current_agent.save_context()
-            except Exception as e:
-                logging.error(f"Error running agent: {e}", exc_info=True)
-                print(f"\n{RED}Error running agent: {e}{RESET}\n")
-
+                    logging.error(f"Error running agent: {e}", exc_info=True)
+                    print(f"\n{RED}Error running agent: {e}{RESET}\n")
             except (EOFError, KeyboardInterrupt):
-            print("\nExiting. Goodbye.")
-            break
+                print("\nExiting. Goodbye.")
+                break
+    except Exception as e:
+        logging.error(f"Unexpected error in main loop: {e}", exc_info=True)
+    finally:
+        for server in mcp_servers:
+            await server.__aexit__(None, None, None)
 
     parser = argparse.ArgumentParser(description="Run the multi-agent REPL")
     parser.add_argument(
