@@ -107,7 +107,7 @@ class SearchAgent:
         )
 
     async def _run_streamed(self, user_input: str) -> str:
-        result = Runner.run_streamed(
+        result = await Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
             max_turns=50,

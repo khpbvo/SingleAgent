@@ -93,7 +93,7 @@ class WebBrowserAgent:
         enable_tracing: bool = False,
         trace_dir: str | None = None,
     ) -> str:
-        result = Runner.run_streamed(
+        result = await Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
             max_turns=50,
