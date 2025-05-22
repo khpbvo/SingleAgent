@@ -181,9 +181,43 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
                 print(delta, end="", flush=True)
                 output_text_buffer += delta
                 consume_event = True
+            # Added fallback for when event.data is a dictionary with a delta attribute
+            elif hasattr(event, 'data') and isinstance(event.data, dict) and 'delta' in event.data:
+                # Clear thinking indicator if this is first text
+                if not output_text_buffer:
+                    clear_thinking_animation()
+                
+                # Get text delta from dictionary
+                delta = event.data['delta']
+                
+                # Print text deltas in real-time
+                print(delta, end="", flush=True)
+                output_text_buffer += delta
+                consume_event = True
         except ImportError:
             # Handle case where ResponseTextDeltaEvent is not available
-            pass
+            # Try to handle raw event data if it has a delta attribute or content
+            if hasattr(event, 'data'):
+                event_data = event.data
+                delta = ""
+                
+                # Try different attribute names for the content
+                if hasattr(event_data, 'delta'):
+                    delta = event_data.delta
+                elif hasattr(event_data, 'content') and event_data.content:
+                    delta = event_data.content
+                elif isinstance(event_data, dict):
+                    delta = event_data.get('delta', event_data.get('content', ''))
+                
+                if delta:
+                    # Clear thinking indicator if this is first text
+                    if not output_text_buffer:
+                        clear_thinking_animation()
+                    
+                    # Print text deltas in real-time
+                    print(delta, end="", flush=True)
+                    output_text_buffer += delta
+                    consume_event = True
     
     # Handle agent handoff/update events
     elif isinstance(event, AgentUpdatedStreamEvent):
@@ -229,12 +263,20 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
                 logger.warning(f"Could not process tool output: {str(e)}")
         
         # Assistant message output (don't show separately if already shown via streaming)
-        elif item.type == 'message_output_item' and not output_text_buffer:
+        elif item.type == 'message_output_item':
             # Use the helper function to extract just the text content without duplication
             content = item_helpers.text_message_output(item)
             # Only print non-empty content if no raw streaming occurred to avoid duplicates
             if content.strip():
-                print(content, end='', flush=True)
+                # Clear thinking indicator if this is first text
+                if not output_text_buffer:
+                    clear_thinking_animation()
+                    
+                # Only print if this is new content or output_text_buffer is empty
+                if not output_text_buffer or content.strip() not in output_text_buffer:
+                    print(content, end='', flush=True)
+                
+                # Always update the buffer
                 output_text_buffer = content
                 consume_event = True
     
@@ -263,6 +305,7 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
     
     # Output buffer for collecting the response
     output_text_buffer = ""
+    final_message_content = ""
     
     # Print initial thinking indicator
     print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
@@ -282,6 +325,13 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
                 event, context, item_helpers, output_text_buffer
             )
             
+            # Track final message content separately
+            from agents.stream_events import RunItemStreamEvent
+            if isinstance(event, RunItemStreamEvent) and event.item.type == 'message_output_item':
+                content = item_helpers.text_message_output(event.item)
+                if content.strip():
+                    final_message_content = content
+            
             # If event wasn't handled by our processing, log it
             if not consumed:
                 logger.debug(f"Unhandled event type: {type(event).__name__}")
@@ -293,4 +343,5 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
     # Print a newline at the end
     print()
     
-    return output_text_buffer
+    # Return the final message if available, otherwise return the streaming buffer
+    return final_message_content if final_message_content else output_text_buffer

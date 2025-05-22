@@ -708,8 +708,8 @@ class SingleAgent:
             ItemHelpers
         )
         
-        # Final output (Agent reply)
-        final = result.final_output
+        # Use the streamed output buffer if available, otherwise fallback to final_output
+        final = output_text_buffer if output_text_buffer else result.final_output
         
         # Count tokens for the agent's response
         response_tokens = self.context.count_tokens(final)
