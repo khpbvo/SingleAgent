@@ -147,6 +147,48 @@ def clear_thinking_animation() -> None:
     """Clear the thinking animation from the terminal."""
     print("\r" + " " * 10 + "\r", end="", flush=True)
 
+def extract_delta_content(event_data) -> str:
+    """
+    Extract text content from various event data formats.
+    
+    Args:
+        event_data: The event data to extract content from
+        
+    Returns:
+        Extracted text content or empty string
+    """
+    if not event_data:
+        return ""
+        
+    delta = ""
+    
+    # Try different ways to extract the content
+    try:
+        # Try OpenAI ResponseTextDeltaEvent
+        from openai.types.responses import ResponseTextDeltaEvent
+        if isinstance(event_data, ResponseTextDeltaEvent):
+            return event_data.delta
+    except ImportError:
+        pass
+    
+    # Try direct delta attribute
+    if hasattr(event_data, 'delta'):
+        delta = event_data.delta
+    # Try content attribute
+    elif hasattr(event_data, 'content') and event_data.content:
+        delta = event_data.content
+    # Try text attribute
+    elif hasattr(event_data, 'text') and event_data.text:
+        delta = event_data.text
+    # Try dictionary access
+    elif isinstance(event_data, dict):
+        delta = event_data.get('delta', event_data.get('content', event_data.get('text', '')))
+    # Try string conversion as last resort
+    elif isinstance(event_data, str):
+        delta = event_data
+    
+    return str(delta) if delta else ""
+
 async def process_stream_event(event, context, item_helpers, output_text_buffer: str = "") -> tuple:
     """
     Process a single stream event and update the output buffer.
@@ -168,56 +210,21 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
     # Handle raw response events (token-by-token streaming)
     if isinstance(event, RawResponsesStreamEvent):
         try:
-            from openai.types.responses import ResponseTextDeltaEvent
-            if hasattr(event, 'data') and isinstance(event.data, ResponseTextDeltaEvent):
-                # Clear thinking indicator if this is first text
-                if not output_text_buffer:
-                    clear_thinking_animation()
-                
-                # Get text delta
-                delta = event.data.delta
-                
+            # Clear thinking indicator if this is first text
+            if not output_text_buffer:
+                clear_thinking_animation()
+            
+            # Extract delta content using our helper function
+            delta = extract_delta_content(event.data)
+            
+            if delta:
                 # Print text deltas in real-time
                 print(delta, end="", flush=True)
                 output_text_buffer += delta
                 consume_event = True
-            # Added fallback for when event.data is a dictionary with a delta attribute
-            elif hasattr(event, 'data') and isinstance(event.data, dict) and 'delta' in event.data:
-                # Clear thinking indicator if this is first text
-                if not output_text_buffer:
-                    clear_thinking_animation()
                 
-                # Get text delta from dictionary
-                delta = event.data['delta']
-                
-                # Print text deltas in real-time
-                print(delta, end="", flush=True)
-                output_text_buffer += delta
-                consume_event = True
-        except ImportError:
-            # Handle case where ResponseTextDeltaEvent is not available
-            # Try to handle raw event data if it has a delta attribute or content
-            if hasattr(event, 'data'):
-                event_data = event.data
-                delta = ""
-                
-                # Try different attribute names for the content
-                if hasattr(event_data, 'delta'):
-                    delta = event_data.delta
-                elif hasattr(event_data, 'content') and event_data.content:
-                    delta = event_data.content
-                elif isinstance(event_data, dict):
-                    delta = event_data.get('delta', event_data.get('content', ''))
-                
-                if delta:
-                    # Clear thinking indicator if this is first text
-                    if not output_text_buffer:
-                        clear_thinking_animation()
-                    
-                    # Print text deltas in real-time
-                    print(delta, end="", flush=True)
-                    output_text_buffer += delta
-                    consume_event = True
+        except Exception as e:
+            logger.debug(f"Error processing raw response event: {e}")
     
     # Handle agent handoff/update events
     elif isinstance(event, AgentUpdatedStreamEvent):
@@ -262,23 +269,26 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
             except Exception as e:
                 logger.warning(f"Could not process tool output: {str(e)}")
         
-        # Assistant message output (don't show separately if already shown via streaming)
+        # Assistant message output
         elif item.type == 'message_output_item':
             # Use the helper function to extract just the text content without duplication
-            content = item_helpers.text_message_output(item)
-            # Only print non-empty content if no raw streaming occurred to avoid duplicates
-            if content.strip():
-                # Clear thinking indicator if this is first text
-                if not output_text_buffer:
-                    clear_thinking_animation()
+            try:
+                content = item_helpers.text_message_output(item)
+                # Only print non-empty content if no raw streaming occurred to avoid duplicates
+                if content and content.strip():
+                    # Clear thinking indicator if this is first text
+                    if not output_text_buffer:
+                        clear_thinking_animation()
+                        
+                    # Only print if this is new content or output_text_buffer is empty
+                    if not output_text_buffer or content.strip() not in output_text_buffer:
+                        print(content, end='', flush=True)
                     
-                # Only print if this is new content or output_text_buffer is empty
-                if not output_text_buffer or content.strip() not in output_text_buffer:
-                    print(content, end='', flush=True)
-                
-                # Always update the buffer
-                output_text_buffer = content
-                consume_event = True
+                    # Always update the buffer
+                    output_text_buffer = content
+                    consume_event = True
+            except Exception as e:
+                logger.debug(f"Error processing message output: {e}")
     
     return output_text_buffer, processed_output, consume_event
 
@@ -311,7 +321,10 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
     print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
     
     try:
+        event_count = 0
         async for event in stream_events:
+            event_count += 1
+            
             # Animate the thinking indicator while waiting
             current_time = asyncio.get_event_loop().time()
             if current_time - last_animation_time > animation_interval:
@@ -321,27 +334,42 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
                     last_animation_time = current_time
             
             # Process this event
-            output_text_buffer, processed_output, consumed = await process_stream_event(
-                event, context, item_helpers, output_text_buffer
-            )
-            
-            # Track final message content separately
-            from agents.stream_events import RunItemStreamEvent
-            if isinstance(event, RunItemStreamEvent) and event.item.type == 'message_output_item':
-                content = item_helpers.text_message_output(event.item)
-                if content.strip():
-                    final_message_content = content
-            
-            # If event wasn't handled by our processing, log it
-            if not consumed:
-                logger.debug(f"Unhandled event type: {type(event).__name__}")
-            
+            try:
+                output_text_buffer, processed_output, consumed = await process_stream_event(
+                    event, context, item_helpers, output_text_buffer
+                )
+                
+                # Track final message content separately
+                from agents.stream_events import RunItemStreamEvent
+                if isinstance(event, RunItemStreamEvent) and event.item.type == 'message_output_item':
+                    try:
+                        content = item_helpers.text_message_output(event.item)
+                        if content and content.strip():
+                            final_message_content = content
+                    except Exception as e:
+                        logger.debug(f"Error extracting final message content: {e}")
+                
+                # If event wasn't handled by our processing, log it
+                if not consumed:
+                    logger.debug(f"Unhandled event type: {type(event).__name__}")
+                    
+            except Exception as e:
+                logger.error(f"Error processing individual stream event: {e}")
+                
+        logger.debug(f"Processed {event_count} stream events total")
+        
     except Exception as e:
         logger.error(f"Error in stream event handling: {e}")
         print(f"\n{RED}Error: {e}{RESET}")
         
-    # Print a newline at the end
-    print()
+    # Clear any remaining thinking animation
+    clear_thinking_animation()
+    
+    # Print a newline at the end if we have output
+    if output_text_buffer or final_message_content:
+        print()
     
     # Return the final message if available, otherwise return the streaming buffer
-    return final_message_content if final_message_content else output_text_buffer
+    result = final_message_content if final_message_content else output_text_buffer
+    logger.debug(f"Final output length: {len(result)} characters")
+    return result

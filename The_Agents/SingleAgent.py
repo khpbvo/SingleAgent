@@ -478,25 +478,35 @@ class SingleAgent:
         enable_tracing: bool = False,
         trace_dir: str | None = None,
     ):
-        self._prepare_context_for_agent()
-        self.context.add_chat_message("user", user_input)
-        if stream_output:
-            out = await self._run_streamed(
-                user_input,
-                enable_tracing=enable_tracing,
-                trace_dir=trace_dir,
-            )
-        else:
-            res = await Runner.run(
-                starting_agent=self.agent,
-                input=user_input,
-                context=self.context,
-                enable_tracing=enable_tracing,
-                trace_dir=trace_dir,
-            )
-            out = res.final_output
-        self.context.add_chat_message("assistant", out)
-        return out
+        """Run the agent with the given input and return the response."""
+        try:
+            self._prepare_context_for_agent()
+            self.context.add_chat_message("user", user_input)
+            
+            if stream_output:
+                out = await self._run_streamed(
+                    user_input,
+                    enable_tracing=enable_tracing,
+                    trace_dir=trace_dir,
+                )
+            else:
+                res = await Runner.run(
+                    starting_agent=self.agent,
+                    input=user_input,
+                    context=self.context,
+                    enable_tracing=enable_tracing,
+                    trace_dir=trace_dir,
+                )
+                out = res.final_output
+            
+            self.context.add_chat_message("assistant", out)
+            return out
+            
+        except Exception as e:
+            logger.error(f"Error in agent run: {e}", exc_info=True)
+            error_msg = f"Agent encountered an error: {str(e)}"
+            self.context.add_chat_message("assistant", error_msg)
+            return error_msg
     
     async def _extract_entities_from_input(self, user_input: str):
         """
@@ -690,41 +700,48 @@ class SingleAgent:
         logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
         print(f"{CYAN}Starting agent...{RESET}")
         
-        # Run the agent with streaming
-        result = await Runner.run_streamed(
-            starting_agent=self.agent,
-            input=user_input,
-            max_turns=999,  # Increased for complex tasks
-            context=self.context,
-            enable_tracing=enable_tracing,
-            trace_dir=trace_dir,
-        )
-        
-        # Use the shared stream event handler
-        output_text_buffer = await handle_stream_events(
-            result.stream_events(),
-            self.context,
-            logger,
-            ItemHelpers
-        )
-        
-        # Use the streamed output buffer if available, otherwise fallback to final_output
-        final = output_text_buffer if output_text_buffer else result.final_output
-        
-        # Count tokens for the agent's response
-        response_tokens = self.context.count_tokens(final)
-        logger.info(f"Response size: ~{response_tokens} tokens")
-        
-        # Update context with token count from response
-        self.context.update_token_count(response_tokens)
-        
-        logger.debug(json.dumps({
-            "event": "_run_streamed_end", 
-            "final_output": final,
-            "token_count": self.context.token_count
-        }))
-        
-        return final
+        try:
+            # Run the agent with streaming
+            result = await Runner.run_streamed(
+                starting_agent=self.agent,
+                input=user_input,
+                max_turns=999,  # Increased for complex tasks
+                context=self.context,
+                enable_tracing=enable_tracing,
+                trace_dir=trace_dir,
+            )
+            
+            # Use the shared stream event handler
+            output_text_buffer = await handle_stream_events(
+                result.stream_events(),
+                self.context,
+                logger,
+                ItemHelpers
+            )
+            
+            # Use the streamed output buffer if available, otherwise fallback to final_output
+            final = output_text_buffer if output_text_buffer else result.final_output
+            
+            # Count tokens for the agent's response
+            response_tokens = self.context.count_tokens(final)
+            logger.info(f"Response size: ~{response_tokens} tokens")
+            
+            # Update context with token count from response
+            self.context.update_token_count(response_tokens)
+            
+            logger.debug(json.dumps({
+                "event": "_run_streamed_end", 
+                "final_output": final,
+                "token_count": self.context.token_count
+            }))
+            
+            return final
+            
+        except Exception as e:
+            logger.error(f"Error in _run_streamed: {e}", exc_info=True)
+            # Return a fallback response instead of crashing
+            error_response = f"I encountered an error while processing your request: {str(e)}"
+            return error_response
 
     def get_chat_history_summary(self) -> str:
         """Return a summary of the chat history for display."""
@@ -782,3 +799,10 @@ async def main():
         except Exception as e:
             logger.error(f"Error running agent: {e}", exc_info=True)
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
+
+if __name__ == "__main__":
+    # Ensure proper event loop policy for Windows/cross-platform compatibility
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    
+    asyncio.run(main())
