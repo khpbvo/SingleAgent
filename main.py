@@ -365,12 +365,14 @@ async def main(
 
                         current_agent = get_current_agent()
                         print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                        await current_agent.run(
+                        response = await current_agent.run(
                             modified_query,
                             stream_output=True,
                             enable_tracing=enable_tracing,
                             trace_dir=trace_dir,
                         )
+                        if response:
+                            print(f"\n{response}\n")
 
                         await current_agent.save_context()
                         continue
@@ -396,12 +398,14 @@ async def main(
 
                         current_agent = get_current_agent()
                         print(f"{BLUE}Processing with Architect Agent...{RESET}")
-                        await current_agent.run(
+                        response = await current_agent.run(
                             modified_query,
                             stream_output=True,
                             enable_tracing=enable_tracing,
                             trace_dir=trace_dir,
                         )
+                        if response:
+                            print(f"\n{response}\n")
 
                         await current_agent.save_context()
                         continue
@@ -469,12 +473,15 @@ async def main(
                         agent_name = "Web Browser Agent"
                     print(f"{mode_color}Processing with {agent_name}...{RESET}")
 
-                    await current_agent.run(
+                    response = await current_agent.run(
                         query,
                         stream_output=True,
                         enable_tracing=enable_tracing,
                         trace_dir=trace_dir,
                     )
+
+                    if response:
+                        print(f"\n{response}\n")
 
                     await current_agent.save_context()
                 except Exception as e:
