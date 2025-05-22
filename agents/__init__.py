@@ -82,16 +82,18 @@ class Runner:
         return SimpleNamespace(final_output=output)
 
     @staticmethod
-    def run_streamed(*args, **kwargs):
+    async def run_streamed(*args, **kwargs):
+        """Asynchronously run an agent and return a dummy streamed result."""
         class Dummy:
             def __init__(self, output):
                 self.final_output = output
+
             async def stream_events(self):
                 if False:
                     yield None
-        loop = asyncio.get_event_loop()
-        output = loop.run_until_complete(Runner.run(*args, **kwargs)).final_output
-        return Dummy(output)
+
+        result = await Runner.run(*args, **kwargs)
+        return Dummy(result.final_output)
 
 
 class WebSearchTool:

@@ -532,7 +532,7 @@ For TODO lists:
         print(f"{CYAN}Starting architect agent...{RESET}")
         
         # Run the agent with streaming
-        result = Runner.run_streamed(
+        result = await Runner.run_streamed(
             starting_agent=self.agent,
             input=user_input,
             max_turns=999,  # Increased for complex tasks
