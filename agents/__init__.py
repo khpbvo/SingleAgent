@@ -65,7 +65,57 @@ class Agent(Generic[T]):
             self.mcp_servers = []
 
     async def respond(self, input: str, context=None):
-        return f"{self.name} response: {input}"
+        """Return an LLM generated reply.
+
+        This uses ``openai`` if it is installed. The current ``instructions``
+        string is passed as the system message and any chat history stored on
+        ``context`` (if provided) is included before the user message.  If the
+        OpenAI client is unavailable or an error occurs, the method falls back
+        to echoing the input which matches the previous placeholder
+        behaviour.
+        """
+
+        messages = []
+
+        instr = self.instructions
+        if callable(instr):
+            try:
+                maybe = instr(context) if context is not None else instr()
+                instr = await maybe if asyncio.iscoroutine(maybe) else maybe
+            except Exception:
+                instr = str(instr)
+
+        if instr:
+            messages.append({"role": "system", "content": str(instr)})
+
+        if context is not None and hasattr(context, "get_chat_history"):
+            try:
+                messages.extend(context.get_chat_history())
+            except Exception:
+                pass
+
+        messages.append({"role": "user", "content": input})
+
+        try:
+            from openai import AsyncOpenAI
+
+            client = AsyncOpenAI()
+            response = await client.chat.completions.create(
+                model=self.model or "gpt-3.5-turbo",
+                messages=messages,
+                **(self.model_settings.settings if hasattr(self.model_settings, "settings") else {})
+            )
+            output = response.choices[0].message.content
+        except Exception:
+            output = f"{self.name} response: {input}"
+
+        if context is not None and hasattr(context, "add_chat_message"):
+            try:
+                context.add_chat_message("assistant", output)
+            except Exception:
+                pass
+
+        return output
 
     def as_tool(self, tool_name: str, tool_description: str):
         @function_tool(name_override=tool_name, description_override=tool_description)
