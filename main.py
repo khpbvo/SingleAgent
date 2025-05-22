@@ -113,47 +113,47 @@ async def main(
             architect_agent=architect_agent,
             mcp_servers=mcp_servers,
         )
-    
-    print(f"{BOLD}Multi-Agent system initialized.{RESET}")
-    print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
-    print(f"Use {BOLD}!code{RESET}, {BOLD}!architect{RESET} or {BOLD}!browser{RESET} to switch between agents.")
-    print(f"Use {BOLD}!history{RESET} to view chat history or {BOLD}!clear{RESET} to clear it.")
-    
-    # Get the currently active agent
-    def get_current_agent():
-        if current_mode == AgentMode.CODE:
-            return code_agent
-        if current_mode == AgentMode.ARCHITECT:
-            return architect_agent
-        return browser_agent
-    
-    # Display agent mode banner
-    def display_mode_banner():
-        if current_mode == AgentMode.CODE:
-            print(f"\n{GREEN}=== Code Agent Mode ==={RESET}")
-        elif current_mode == AgentMode.ARCHITECT:
-            print(f"\n{BLUE}=== Architect Agent Mode ==={RESET}")
-        else:
-            print(f"\n{YELLOW}=== Web Browser Agent Mode ==={RESET}")
-    
-    # Show initial context
-    display_mode_banner()
-    print(f"\n{get_current_agent().get_context_summary()}\n")
-    
-    # Set up prompt_toolkit session for CLI with history auto-suggest
-    style = Style.from_dict({
-        'auto-suggestion': 'fg:#888888 italic'
-    })
-    session = PromptSession(
-        history=InMemoryHistory(),
-        auto_suggest=AutoSuggestFromHistory(),
-        style=style
-    )
+        
+        print(f"{BOLD}Multi-Agent system initialized.{RESET}")
+        print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
+        print(f"Use {BOLD}!code{RESET}, {BOLD}!architect{RESET} or {BOLD}!browser{RESET} to switch between agents.")
+        print(f"Use {BOLD}!history{RESET} to view chat history or {BOLD}!clear{RESET} to clear it.")
+        
+        # Get the currently active agent
+        def get_current_agent():
+            if current_mode == AgentMode.CODE:
+                return code_agent
+            if current_mode == AgentMode.ARCHITECT:
+                return architect_agent
+            return browser_agent
+        
+        # Display agent mode banner
+        def display_mode_banner():
+            if current_mode == AgentMode.CODE:
+                print(f"\n{GREEN}=== Code Agent Mode ==={RESET}")
+            elif current_mode == AgentMode.ARCHITECT:
+                print(f"\n{BLUE}=== Architect Agent Mode ==={RESET}")
+            else:
+                print(f"\n{YELLOW}=== Web Browser Agent Mode ==={RESET}")
+        
+        # Show initial context
+        display_mode_banner()
+        print(f"\n{get_current_agent().get_context_summary()}\n")
+        
+        # Set up prompt_toolkit session for CLI with history auto-suggest
+        style = Style.from_dict({
+            'auto-suggestion': 'fg:#888888 italic'
+        })
+        session = PromptSession(
+            history=InMemoryHistory(),
+            auto_suggest=AutoSuggestFromHistory(),
+            style=style
+        )
 
-    # enter REPL loop
-    while True:
-        try:
-            # Use prompt_toolkit session for input with auto-suggest
+        # enter REPL loop
+        while True:
+            try:
+                # Use prompt_toolkit session for input with auto-suggest
             query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
             logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
             
