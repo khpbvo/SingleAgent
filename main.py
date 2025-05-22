@@ -489,6 +489,7 @@ async def main(
         for server in mcp_servers:
             await server.__aexit__(None, None, None)
 
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the multi-agent REPL")
     parser.add_argument(
         "--trace",
