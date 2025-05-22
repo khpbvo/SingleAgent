@@ -16,7 +16,9 @@ from logging.handlers import RotatingFileHandler
 
 # Add these imports for prompt_toolkit
 from prompt_toolkit import PromptSession
-from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit import history
+# Use this instead of the direct import 
+InMemoryHistory = history.InMemoryHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
