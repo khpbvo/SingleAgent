@@ -1,0 +1,8 @@
+[tool.ruff]
+line-length = 120
+# Gebruik Ruff als formatter (optioneel):
+formatter = "ruff"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP", "I", "SIM", "D"] # pycodestyle, pyflakes, bugbear, pyupgrade, isort, flake8‑simplify, pydocstyle
+ignore = ["D203", "D213"]  # Conflicterende docstring‑rules
