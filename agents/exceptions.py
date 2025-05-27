@@ -1,0 +1,2 @@
+class MaxTurnsExceeded(Exception):
+    pass
