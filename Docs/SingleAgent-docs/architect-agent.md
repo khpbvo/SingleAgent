@@ -1,24 +1,24 @@
 # Architect Agent
 
-De Architect Agent is gespecialiseerd in high-level software architectuur analyse, design pattern detectie, en strategische project planning. Het is ontworpen voor software architects en senior developers die structurele inzichten nodig hebben.
+The Architect Agent is specialized in high-level software architecture analysis, design pattern detection, and strategic project planning. It is designed for software architects and senior developers who need structural insights.
 
-## Overzicht
+## Overview
 
-De Architect Agent biedt geavanceerde tools voor:
-- **Project Structure Analysis**: Complete codebase structuur analyse  
-- **Design Pattern Detection**: Automatische identificatie van design patterns
-- **Dependency Analysis**: Dependency graphs en cyclische dependencies
-- **Architectural Planning**: TODO lists en roadmap generatie
-- **AST-based Analysis**: Diepgaande code structure analyse
+The Architect Agent provides advanced tools for:
+- **Project Structure Analysis**: Complete codebase structure analysis  
+- **Design Pattern Detection**: Automatic identification of design patterns
+- **Dependency Analysis**: Dependency graphs and cyclic dependencies
+- **Architectural Planning**: TODO lists and roadmap generation
+- **AST-based Analysis**: In-depth code structure analysis
 
-## Activeren
+## Activation
 
 ```bash
-# Schakel naar Architect Agent mode
+# Switch to Architect Agent mode
 !architect
 ```
 
-Het systeem toont dan:
+The system then shows:
 ```
 === Architect Agent Mode ===
 ```
@@ -30,14 +30,14 @@ Het systeem toont dan:
 #### Complete Codebase Overview
 
 ```python
-# High-level project analyse
-"Analyseer de complete project structuur"
+# High-level project analysis
+"Analyze the complete project structure"
 
-# Specifieke directory
-"Geef me een overzicht van de Tools/ directory structuur"
+# Specific directory
+"Give me an overview of the Tools/ directory structure"
 
-# Met statistieken
-"Analyseer de project structuur en geef statistieken per file type"
+# With statistics
+"Analyze the project structure and provide statistics per file type"
 ```
 
 **Output Features:**

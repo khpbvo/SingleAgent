@@ -1,37 +1,37 @@
-# Installatie
+# Installation
 
-Deze pagina bevat gedetailleerde installatie instructies voor SingleAgent op verschillende platformen.
+This page contains detailed installation instructions for SingleAgent on different platforms.
 
-## Systeem Vereisten
+## System Requirements
 
 ### Hardware
-- **RAM**: Minimaal 4GB, aanbevolen 8GB+ (voor spaCy model)
-- **Disk Space**: Ongeveer 500MB voor alle dependencies
-- **CPU**: Geen specifieke vereisten
+- **RAM**: Minimum 4GB, recommended 8GB+ (for spaCy model)
+- **Disk Space**: Approximately 500MB for all dependencies
+- **CPU**: No specific requirements
 
 ### Software
-- **Python**: 3.8 of hoger (3.9+ aanbevolen)
-- **pip**: Voor package management
-- **Internet**: Voor OpenAI API calls en package downloads
+- **Python**: 3.8 or higher (3.9+ recommended)
+- **pip**: For package management
+- **Internet**: For OpenAI API calls and package downloads
 
-## Platform Specifieke Instructies
+## Platform-Specific Instructions
 
 ### macOS
 
 ```bash
-# Controleer Python versie
+# Check Python version
 python3 --version
 
-# Installeer Homebrew (als je dit nog niet hebt)
+# Install Homebrew (if you don't have it)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Update pip
 python3 -m pip install --upgrade pip
 
-# Clone/download het project
-# Navigeer naar de project directory
+# Clone/download the project
+# Navigate to the project directory
 
-# Installeer requirements
+# Install requirements
 pip3 install -r requirements.txt
 
 # Download spaCy model
@@ -41,23 +41,23 @@ python3 -m spacy download en_core_web_lg
 ### Linux (Ubuntu/Debian)
 
 ```bash
-# Update package lijst
+# Update package list
 sudo apt update
 
-# Installeer Python en pip (als nog niet aanwezig)
+# Install Python and pip (if not present)
 sudo apt install python3 python3-pip python3-venv
 
-# Controleer versie
+# Check version
 python3 --version
 
-# Clone/download het project
-# Navigeer naar de project directory
+# Clone/download the project
+# Navigate to the project directory
 
-# Maak virtual environment (aanbevolen)
+# Create virtual environment (recommended)
 python3 -m venv venv
 source venv/bin/activate
 
-# Installeer requirements
+# Install requirements
 pip install -r requirements.txt
 
 # Download spaCy model
@@ -67,36 +67,36 @@ python -m spacy download en_core_web_lg
 ### Windows
 
 ```cmd
-REM Controleer Python versie
+REM Check Python version
 python --version
 
-REM Navigeer naar project directory
+REM Navigate to project directory
 cd path\to\your\project
 
-REM Maak virtual environment (aanbevolen)
+REM Create virtual environment (recommended)
 python -m venv venv
 venv\Scripts\activate
 
-REM Installeer requirements
+REM Install requirements
 pip install -r requirements.txt
 
 REM Download spaCy model
 python -m spacy download en_core_web_lg
 ```
 
-## Virtual Environment Setup (Aanbevolen)
+## Virtual Environment Setup (Recommended)
 
-Het wordt sterk aanbevolen om een virtual environment te gebruiken:
+It's strongly recommended to use a virtual environment:
 
-### Waarom Virtual Environment?
-- Voorkomt conflicten met andere Python projecten
-- Houdt dependencies georganiseerd
-- Makkelijker om verschillende versies te beheren
+### Why Virtual Environment?
+- Prevents conflicts with other Python projects
+- Keeps dependencies organized
+- Easier to manage different versions
 
 ### Setup
 
 ```bash
-# Maak virtual environment
+# Create virtual environment
 python -m venv singleagent-env
 
 # Activeer (macOS/Linux)

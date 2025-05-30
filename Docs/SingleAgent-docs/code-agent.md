@@ -1,8 +1,8 @@
 # Code Agent
 
-De Code Agent (SingleAgent) is gespecialiseerd in directe code manipulatie, analyse, en debugging. Het is ontworpen voor ontwikkelaars die gedetailleerde hulp nodig hebben bij programmeer taken.
+The Code Agent (SingleAgent) is specialized in direct code manipulation, analysis, and debugging. It is designed for developers who need detailed help with programming tasks.
 
-## Overzicht
+## Overview
 
 De Code Agent biedt een uitgebreide set tools voor:
 - **Code Quality Analysis**: Linting, type checking, en style analysis

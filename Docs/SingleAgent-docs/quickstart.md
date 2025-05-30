@@ -1,29 +1,29 @@
-# Snelstart Gids
+# Quick Start Guide
 
-Deze gids helpt je om SingleAgent snel op te zetten en je eerste taken uit te voeren.
+This guide helps you quickly set up SingleAgent and perform your first tasks.
 
-## Voordat je begint
+## Before You Begin
 
-Zorg ervoor dat je hebt:
-- Python 3.8 of hoger geïnstalleerd
-- Een OpenAI API key
-- Git (optioneel, voor klonen van repository)
+Make sure you have:
+- Python 3.8 or higher installed
+- An OpenAI API key
+- Git (optional, for cloning repository)
 
-## Stap 1: Installatie
+## Step 1: Installation
 
-### Basis Setup
+### Basic Setup
 
 ```bash
-# Clone de repository (of download de bestanden)
-cd je-project-directory
+# Clone the repository (or download the files)
+cd your-project-directory
 
-# Installeer de vereiste packages
+# Install required packages
 pip install -r requirements.txt
 ```
 
-### Vereiste Packages
+### Required Packages
 
-SingleAgent vereist de volgende packages:
+SingleAgent requires the following packages:
 ```
 openai
 prompt_toolkit
@@ -40,31 +40,31 @@ pyright
 
 ### SpaCy Model Setup
 
-Voor de beste entity recognition moet je een spaCy model downloaden:
+For the best entity recognition, you need to download a spaCy model:
 
 ```bash
 python -m spacy download en_core_web_lg
 ```
 
-## Stap 2: API Key Configuratie
+## Step 2: API Key Configuration
 
-Stel je OpenAI API key in als environment variable:
+Set your OpenAI API key as an environment variable:
 
 ```bash
 export OPENAI_API_KEY=sk-your-api-key-here
 ```
 
-Voor permanente setup, voeg dit toe aan je `~/.bashrc`, `~/.zshrc`, of equivalent.
+For permanent setup, add this to your `~/.bashrc`, `~/.zshrc`, or equivalent.
 
-## Stap 3: Eerste Start
+## Step 3: First Start
 
-Start het systeem:
+Start the system:
 
 ```bash
 python main.py
 ```
 
-Je zou moeten zien:
+You should see:
 ```
 Initializing spaCy model (this may take a moment)...
 Dual-Agent system initialized.
@@ -83,122 +83,122 @@ Context Summary: Working in /path/to/your/project
 User: 
 ```
 
-## Stap 4: Basis Gebruik
+## Step 4: Basic Usage
 
-### Code Agent Taken
+### Code Agent Tasks
 
-Het systeem start standaard in Code Agent mode. Probeer deze commando's:
+The system starts in Code Agent mode by default. Try these commands:
 
 ```
-# File analyse
-Kun je het bestand main.py analyseren?
+# File analysis
+Can you analyze the main.py file?
 
 # Code quality check
-Run ruff op alle Python bestanden
+Run ruff on all Python files
 
-# Debugging hulp
-Ik krijg een error in line 45 van SingleAgent.py, kun je helpen?
+# Debugging help
+I'm getting an error on line 45 of SingleAgent.py, can you help?
 ```
 
-### Architect Agent Taken
+### Architect Agent Tasks
 
-Schakel naar Architect mode en probeer:
+Switch to Architect mode and try:
 
-```
-!architect
-
-# Project structuur analyse
-Analyseer de project structuur van deze codebase
-
-# Design patterns detectie
-Welke design patterns zie je in de ArchitectAgent.py?
-
-# TODO lijst genereren
-Maak een TODO lijst voor het verbeteren van de code architectuur
-```
-
-### Basis Commando's
-
-| Commando | Beschrijving |
-|----------|-------------|
-| `!code` | Schakel naar Code Agent mode |
-| `!architect` | Schakel naar Architect Agent mode |
-| `!history` | Toon chat geschiedenis |
-| `!clear` | Wis chat geschiedenis |
-| `!entities` | Toon getrackte entities |
-| `!context` | Toon context samenvatting |
-| `!manualctx` | Voeg handmatige context toe |
-
-## Stap 5: Voorbeeld Workflow
-
-Hier is een typische workflow voor het analyseren van een Python project:
-
-### 1. Project Verkenning (Architect Agent)
 ```
 !architect
-Analyseer de project structuur en geef me een overzicht van de architectuur
+
+# Project structure analysis
+Analyze the project structure of this codebase
+
+# Design pattern detection
+What design patterns do you see in ArchitectAgent.py?
+
+# TODO list generation
+Create a TODO list for improving the code architecture
+```
+
+### Basic Commands
+
+| Command | Description |
+|---------|-------------|
+| `!code` | Switch to Code Agent mode |
+| `!architect` | Switch to Architect Agent mode |
+| `!history` | Show chat history |
+| `!clear` | Clear chat history |
+| `!entities` | Show tracked entities |
+| `!context` | Show context summary |
+| `!manualctx` | Add manual context |
+
+## Step 5: Example Workflow
+
+Here's a typical workflow for analyzing a Python project:
+
+### 1. Project Exploration (Architect Agent)
+```
+!architect
+Analyze the project structure and give me an overview of the architecture
 ```
 
 ### 2. Code Quality Check (Code Agent)
 ```
 !code
-Run alle linters (ruff, pylint, pyright) op de codebase
+Run all linters (ruff, pylint, pyright) on the codebase
 ```
 
-### 3. Specifieke File Analyse (Code Agent)
+### 3. Specific File Analysis (Code Agent)
 ```
-Lees het bestand main.py en leg uit hoe het werkt
+Read the main.py file and explain how it works
 ```
 
-### 4. Architectuur Verbeteringen (Architect Agent)
+### 4. Architecture Improvements (Architect Agent)
 ```
 !architect
-Welke design patterns zie je en welke verbeteringen stel je voor?
+What design patterns do you see and what improvements do you suggest?
 ```
 
 ### 5. TODO Planning (Architect Agent)
 ```
-Maak een gestructureerde TODO lijst met prioriteiten voor dit project
+Create a structured TODO list with priorities for this project
 ```
 
-## Tips voor Effectief Gebruik
+## Tips for Effective Use
 
-### 1. Context Beheer
-- Het systeem onthoudt je conversatie geschiedenis
-- Entities zoals bestanden en commando's worden automatisch getrackt
-- Gebruik `!context` om te zien wat het systeem weet
+### 1. Context Management
+- The system remembers your conversation history
+- Entities like files and commands are automatically tracked
+- Use `!context` to see what the system knows
 
-### 2. Agent Selectie
-- **Code Agent** voor: debugging, testing, file operations, patches
-- **Architect Agent** voor: structuur analyse, design patterns, planning
+### 2. Agent Selection
+- **Code Agent** for: debugging, testing, file operations, patches
+- **Architect Agent** for: structure analysis, design patterns, planning
 
-### 3. Tool Gebruik
-- De agents gebruiken automatisch de juiste tools
-- Je hoeft niet te specificeren welke tool te gebruiken
-- Tools worden intelligent gecombineerd voor complexe taken
+### 3. Tool Usage
+- Agents automatically use the right tools
+- You don't need to specify which tool to use
+- Tools are intelligently combined for complex tasks
 
 ### 4. Streaming Output
-- Output wordt real-time gestreamed voor betere responsiviteit
-- Je kunt de output zien terwijl de agent werkt
+- Output is streamed in real-time for better responsiveness
+- You can see the output while the agent is working
 
-## Volgende Stappen
+## Next Steps
 
-Nu je SingleAgent draait hebt, verken verder:
+Now that you have SingleAgent running, explore further:
 
-- [Code Agent Details](code-agent.md) - Diep duiken in Code Agent mogelijkheden
-- [Architect Agent Details](architect-agent.md) - Leer over architectuur analyse
-- [Tools Overzicht](tools.md) - Alle beschikbare tools en hun gebruik
-- [Gebruik Voorbeelden](examples.md) - Meer complexe voorbeelden en use cases
+- [Code Agent Details](code-agent.md) - Deep dive into Code Agent capabilities
+- [Architect Agent Details](architect-agent.md) - Learn about architecture analysis
+- [Tools Overview](tools.md) - All available tools and their usage
+- [Usage Examples](examples.md) - More complex examples and use cases
 
-## Veelvoorkomende Problemen
+## Common Issues
 
 ### "No module named 'agents'"
-Zorg ervoor dat alle packages geïnstalleerd zijn met `pip install -r requirements.txt`
+Make sure all packages are installed with `pip install -r requirements.txt`
 
-### SpaCy Model Fout
-Download het spaCy model: `python -m spacy download en_core_web_lg`
+### SpaCy Model Error
+Download the spaCy model: `python -m spacy download en_core_web_lg`
 
-### OpenAI API Fout
-Controleer of je API key correct is ingesteld en geldig is.
+### OpenAI API Error
+Check that your API key is correctly set and valid.
 
-Voor meer troubleshooting, zie [Troubleshooting Guide](troubleshooting.md).
+For more troubleshooting, see [Troubleshooting Guide](troubleshooting.md).

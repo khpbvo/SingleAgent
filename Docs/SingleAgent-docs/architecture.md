@@ -1,8 +1,8 @@
-# Architectuur Overview
+# Architecture Overview
 
-Deze pagina geeft een gedetailleerd overzicht van hoe SingleAgent is ontworpen en hoe de verschillende componenten samenwerken.
+This page provides a detailed overview of how SingleAgent is designed and how the different components work together.
 
-## High-Level Architectuur
+## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

@@ -1,85 +1,85 @@
 # SingleAgent Documentation
 
-SingleAgent is een geavanceerd dual-agent systeem gebouwd op de OpenAI Agents SDK. Het biedt twee gespecialiseerde AI agents - een Code Agent voor programmeer-gerelateerde taken en een Architect Agent voor software architectuur en project analyse.
+SingleAgent is an advanced dual-agent system built on the OpenAI Agents SDK. It provides two specialized AI agents - a Code Agent for programming-related tasks and an Architect Agent for software architecture and project analysis.
 
-## Overzicht
+## Overview
 
-SingleAgent maakt gebruik van de krachtige OpenAI Agents SDK om twee complementaire AI assistenten te bieden:
+SingleAgent leverages the powerful OpenAI Agents SDK to provide two complementary AI assistants:
 
-- **Code Agent (SingleAgent)**: Gespecialiseerd in code analyse, debugging, testing, en directe programmeer hulp
-- **Architect Agent**: Gefocust op software architectuur, project structuur analyse, en high-level design beslissingen
+- **Code Agent (SingleAgent)**: Specialized in code analysis, debugging, testing, and direct programming assistance
+- **Architect Agent**: Focused on software architecture, project structure analysis, and high-level design decisions
 
-Het systeem ondersteunt naadloos wisselen tussen agents en biedt geavanceerde context management, entity tracking, en streaming output.
+The system supports seamless switching between agents and provides advanced context management, entity tracking, and streaming output.
 
-## Inhoud
+## Contents
 
-1. [Snelstart Gids](quickstart.md) - Begin direct met SingleAgent
-2. [Installatie](installation.md) - Volledige installatie instructies
-3. [Architectuur Overview](architecture.md) - Hoe het systeem in elkaar zit
-4. [Code Agent](code-agent.md) - Gedetailleerde documentatie voor de Code Agent
-5. [Architect Agent](architect-agent.md) - Gedetailleerde documentatie voor de Architect Agent
-6. [Tools](tools.md) - Overzicht van alle beschikbare tools
-7. [Context Management](context-management.md) - Hoe context en entity tracking werkt
-8. [Configuration](configuration.md) - Configuratie opties en aanpassingen
-9. [Gebruik Voorbeelden](examples.md) - Praktische voorbeelden en use cases
-10. [API Referentie](api-reference.md) - Technische API documentatie
-11. [Troubleshooting](troubleshooting.md) - Veelvoorkomende problemen en oplossingen
+1. [Quick Start Guide](quickstart.md) - Get started with SingleAgent immediately
+2. [Installation](installation.md) - Complete installation instructions
+3. [Architecture Overview](architecture.md) - How the system is structured
+4. [Code Agent](code-agent.md) - Detailed documentation for the Code Agent
+5. [Architect Agent](architect-agent.md) - Detailed documentation for the Architect Agent
+6. [Tools](tools.md) - Overview of all available tools
+7. [Context Management](context-management.md) - How context and entity tracking works
+8. [Configuration](configuration.md) - Configuration options and customizations
+9. [Usage Examples](examples.md) - Practical examples and use cases
+10. [API Reference](api-reference.md) - Technical API documentation
+11. [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
-## Vereisten
+## Requirements
 
 - Python 3.8+
 - OpenAI API key
-- Enkele Python packages (zie [installatie](installation.md))
+- Several Python packages (see [installation](installation.md))
 
-## Snel Beginnen
+## Quick Start
 
 ```bash
-# Installeer dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# Set je OpenAI API key
+# Set your OpenAI API key
 export OPENAI_API_KEY=sk-...
 
-# Start het systeem
+# Start the system
 python main.py
 ```
 
-Voor meer details, zie de [Snelstart Gids](quickstart.md).
+For more details, see the [Quick Start Guide](quickstart.md).
 
 ## Key Features
 
-### Dual Agent Systeem
-- **!code** - Schakel naar Code Agent mode voor programmeer taken
-- **!architect** - Schakel naar Architect Agent mode voor architectuur analyse
+### Dual Agent System
+- **!code** - Switch to Code Agent mode for programming tasks
+- **!architect** - Switch to Architect Agent mode for architecture analysis
 
-### Geavanceerd Context Management
-- Automatische entity tracking (bestanden, commando's, taken)
-- Slimme context samenvattingen om token limits te beheren
-- Persistente context opslag tussen sessies
+### Advanced Context Management
+- Automatic entity tracking (files, commands, tasks)
+- Smart context summaries to manage token limits
+- Persistent context storage between sessions
 
-### Uitgebreide Tool Sets
+### Comprehensive Tool Sets
 - **Code Agent Tools**: Ruff, Pylint, Pyright, file operations, patch management
-- **Architect Agent Tools**: AST analyse, project structuur analyse, dependency grafieken, design pattern detectie
+- **Architect Agent Tools**: AST analysis, project structure analysis, dependency graphs, design pattern detection
 
 ### Interactive CLI
-- Prompt_toolkit powered interface met history en auto-suggest
+- Prompt_toolkit powered interface with history and auto-suggest
 - Real-time streaming output
-- Kleur-gecodeerde output voor betere leesbaarheid
+- Color-coded output for better readability
 
-## Voor Wie?
+## Who Is This For?
 
-Deze documentatie is geschreven voor:
+This documentation is written for:
 
-- **Ontwikkelaars** die SingleAgent willen gebruiken voor code analyse en debugging
-- **Software Architects** die het systeem willen gebruiken voor project analyse
-- **Contributors** die de codebase willen begrijpen en bijdragen
-- **DevOps Engineers** die het systeem willen integreren in workflows
+- **Developers** who want to use SingleAgent for code analysis and debugging
+- **Software Architects** who want to use the system for project analysis
+- **Contributors** who want to understand the codebase and contribute
+- **DevOps Engineers** who want to integrate the system into workflows
 
-We gaan er vanuit dat je bekend bent met:
-- Basis Python programmering
-- De [OpenAI Agents SDK](../openai-agents-sdk-docs_copy/index.md) concepten
-- Commando-regel interfaces
+We assume you're familiar with:
+- Basic Python programming
+- [OpenAI Agents SDK](../openai-agents-sdk-docs_copy/index.md) concepts
+- Command-line interfaces
 
 ## Support
 
-Voor vragen, bugs, of feature requests, zie de [Troubleshooting](troubleshooting.md) sectie of raadpleeg de bron code in de repository.
+For questions, bugs, or feature requests, see the [Troubleshooting](troubleshooting.md) section or consult the source code in the repository.
