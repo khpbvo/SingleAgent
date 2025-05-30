@@ -1,402 +1,333 @@
 # Architecture Overview
 
-This page provides a detailed overview or how SingleAgent is designed and how the different components work together.
+This document provides a comprehensive overview of SingleAgent's architecture, design principles, and system components.
 
-## High-Level Architecture
+## System Architecture
+
+SingleAgent is built on a dual-agent architecture that combines specialized AI agents with advanced context management and tool integration.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        SingleAgent System                   │
+│                    SingleAgent System                       │
 ├─────────────────────────────────────────────────────────────┤
-│  main.py - Entry Point & Agent Orchestration               │
+│                  Interactive CLI Interface                  │
+│                  (prompt_toolkit based)                     │
 ├─────────────────────────────────────────────────────────────┤
-│                    Agent Layer                              │
-│  ┌──────────────────┐           ┌─────────────────────────┐ │
-│  │   Code Agent     │           │    Architect Agent      │ │
-│  │  (SingleAgent)   │           │   (ArchitectAgent)      │ │
-│  │                  │           │                         │ │
-│  │ - Code Analysis  │           │ - Structure Analysis    │ │
-│  │ - Debugging      │           │ - Design Patterns       │ │
-│  │ - Testing        │           │ - Dependency Graphs     │ │
-│  │ - File Ops       │           │ - TODO Generation       │ │
-│  └──────────────────┘           └─────────────────────────┘ │
+│                   Agent Orchestrator                        │
+│                     (main.py)                              │
+├──────────────────────┬──────────────────────────────────────┤
+│    Code Agent        │       Architect Agent               │
+│  (SingleAgent.py)    │    (ArchitectAgent.py)             │
+├──────────────────────┼──────────────────────────────────────┤
+│   Code Tools         │     Architect Tools                 │
+│ (tools_single_agent) │   (architect_tools)                 │
+├──────────────────────┴──────────────────────────────────────┤
+│                 Context Management System                   │
+│                   (context_data.py)                        │
 ├─────────────────────────────────────────────────────────────┤
-│                     Tools Layer                             │
-│  ┌─────────────────┐            ┌─────────────────────────┐ │
-│  │ Code Agent Tools│            │ Architect Agent Tools   │ │
-│  │ - ruff         │            │ - AST Analysis          │ │
-│  │ - pylint       │            │ - Project Structure     │ │
-│  │ - pyright      │            │ - Pattern Detection     │ │
-│  │ - file ops     │            │ - Dependency Analysis   │ │
-│  │ - patch mgmt   │            │ - TODO Generation       │ │
-│  └─────────────────┘            └─────────────────────────┘ │
+│                OpenAI Agents SDK Integration                │
+│                     (agents/ directory)                     │
 ├─────────────────────────────────────────────────────────────┤
-│                   Context Management                        │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │              EnhancedContextData                      │ │
-│  │ - Chat History        - Entity Tracking              │ │
-│  │ - Token Management    - State Management             │ │
-│  │ - File Tracking       - Auto Summarization           │ │
-│  └───────────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│                Infrastructure Layer                         │
-│  ┌──────────────┐ ┌──────────────┐ ┌─────────────────────┐ │
-│  │   OpenAI     │ │    SpaCy     │ │   Prompt Toolkit    │ │
-│  │   Agents     │ │   NLP        │ │   CLI Interface     │ │
-│  │    SDK       │ │   Models     │ │   & Streaming       │ │
-│  └──────────────┘ └──────────────┘ └─────────────────────┘ │
+│              External Dependencies & Services               │
+│          OpenAI GPT-4 • SpaCy NLP • File System           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Core Componenten
+## Core Components
 
-### 1. Entry Point (main.py)
+### 1. Agent Orchestrator (`main.py`)
 
-**Verantwoordelijkheden:**
-- Agent orchestration and mode switching
-- CLI interface management
-- Session management
-- Command processing (`!code`, `!architect`, etc.)
+The central coordinator that manages:
+- Agent switching and lifecycle
+- CLI interface and user interactions
+- Context persistence and loading
+- Error handling and recovery
+- Streaming output management
 
 **Key Features:**
-- Dual-agent mode switching
-- Persistent session state
-- Interactive CLI with prompt_toolkit
-- Real-time streaming output
+- Seamless agent switching with `!code` and `!architect` commands
+- Rich interactive CLI with history and auto-suggestions
+- Automatic context saving and restoration
+- Graceful error handling and recovery
 
-```python
-# Agent mode switching
-class AgentMode:
-    CODE = "code"
-    ARCHITECT = "architect"
+### 2. Dual-Agent System
 
-# Dynamic agent selection
-current_agent = code_agent if current_mode == AgentMode.CODE else architect_agent
-```
-
-### 2. Agent Layer
-
-#### Code Agent (SingleAgent)
-
-**Primaire Focus:** Directe code manipulatie and analyse
+#### Code Agent (`SingleAgent.py`)
+Specialized for implementation and code-related tasks:
 
 **Capabilities:**
-- Code quality analysis (ruff, pylint, pyright)
-- File reading/writing operations
-- Patch creation and application
-- Context-aware debugging assistance
-- Command execution
+- Code analysis and review
+- File operations and manipulation
+- Debugging and testing
+- Implementation of features
+- Code optimization and refactoring
 
-**Tool Set:**
-```python
-tools=[
-    run_ruff,        # Code linting
-    run_pylint,      # Comprehensive analysis  
-    run_pyright,     # Type checking
-    run_command,     # Shell command execution
-    read_file,       # File operations
-    create_colored_diff, # Diff visualization
-    apply_patch,     # Patch management
-    change_dir,      # Directory navigation
-    os_command,      # OS operations
-    get_context,     # Context access
-    add_manual_context # Manual context addition
-]
-```
+**Design Principles:**
+- Direct, actionable responses
+- Focus on concrete implementation
+- Detailed code explanations
+- Practical problem-solving
 
-#### Architect Agent (ArchitectAgent)
-
-**Primaire Focus:** High-level architectuur and design analyse
+#### Architect Agent (`ArchitectAgent.py`)
+Specialized for high-level design and architecture:
 
 **Capabilities:**
-- Project structure analysis
-- AST-based code pattern detection
-- Dependency graph generation
-- Design pattern identification
-- TODO list generation
-- Architectural recommendations
+- System architecture design
+- Technology stack recommendations
+- Design pattern suggestions
+- Project structure planning
+- High-level problem solving
 
-**Tool Set:**
-```python
-tools=[
-    analyze_ast,             # Deep code structure analysis
-    analyze_project_structure, # Directory tree analysis
-    generate_todo_list,      # Task planning
-    analyze_dependencies,    # Dependency mapping
-    detect_code_patterns,    # Pattern recognition
-    read_file,              # File access
-    read_directory,         # Directory listing
-    write_file,             # Content creation
-    run_command            # Command execution
-]
+**Design Principles:**
+- Strategic thinking
+- Long-term considerations
+- Best practice recommendations
+- Scalability and maintainability focus
+
+### 3. Context Management System (`context_data.py`)
+
+Advanced context handling with multiple layers:
+
+```
+Context Management Architecture:
+┌─────────────────────────────────────┐
+│           Context Manager           │
+├─────────────────────────────────────┤
+│  Entity Tracker (SpaCy NLP)        │
+│  - Named Entity Recognition         │
+│  - Relationship Mapping             │
+│  - Semantic Understanding           │
+├─────────────────────────────────────┤
+│  Persistent Storage                 │
+│  - JSON-based storage               │
+│  - Hierarchical organization        │
+│  - Version tracking                 │
+├─────────────────────────────────────┤
+│  Context Retrieval                  │
+│  - Relevance scoring                │
+│  - Smart filtering                  │
+│  - Contextual suggestions           │
+└─────────────────────────────────────┘
 ```
 
-### 3. Context Management System
+**Key Features:**
+- **Entity Recognition**: SpaCy-powered NLP for identifying and tracking entities
+- **Persistent Storage**: JSON-based context storage with hierarchical organization
+- **Smart Retrieval**: Relevance-based context retrieval and filtering
+- **Manual Context**: Support for user-added context information
 
-#### EnhancedContextData
+### 4. Tool Systems
 
-Het hart of the geheugen systeem of SingleAgent:
+#### Code Agent Tools (`tools_single_agent.py`)
+Comprehensive toolset for development tasks:
 
-**Features:**
-- **Entity Tracking**: Automatische detectie and tracking of files, commands, URLs, etc.
-- **Chat History**: Volledige conversatie geschiedenis with role-based messages
-- **Token Management**: Automatische token counting and context summarization
-- **State Management**: Key-value state storage for session data
-- **Persistent Storage**: Context is opgeslagen tussen sessies
+- **File Operations**: Read, write, create, delete, move files
+- **Code Analysis**: Syntax checking, structure analysis, dependency mapping
+- **Search Capabilities**: Content search, pattern matching, grep-like functionality
+- **Execution Tools**: Code execution, testing, compilation
+- **Integration Tools**: Git operations, package management
 
-**Entity Types:**
-```python
-ENTITY_TYPES = [
-    "file",                # Bestanden in conversaties
-    "command",             # Uitgevoerde commands  
-    "url",                 # URLs and links
-    "search_query",        # Zoekopdrachten
-    "task",                # Actieve taken
-    "programming_language", # Talen in gebruik
-    "framework",           # Frameworks
-    "api_endpoint",        # API endpoints
-    "error_message",       # Error berichten
-    "design_pattern",      # Architect: Design patterns
-    "architecture_concept" # Architect: Architectuur concepten
-]
-```
+#### Architect Tools (`architect_tools.py`)
+Strategic planning and design tools:
 
-**Token Management:**
-```python
-# Automatische summarization wanneer token limit is bereikt
-if self.token_count > self.max_tokens * 0.8:
-    await self.summarize_if_needed(openai_client)
-```
+- **Architecture Analysis**: System design evaluation, pattern identification
+- **Documentation Tools**: Architecture documentation, diagram generation
+- **Planning Tools**: Project planning, milestone setting, roadmap creation
+- **Research Tools**: Technology evaluation, best practice research
+- **Design Tools**: UML generation, system modeling
 
-### 4. Tool Architecture
+### 5. OpenAI Agents SDK Integration
 
-#### Function Tool Decorator
+Built on the OpenAI Agents SDK for advanced AI capabilities:
 
-Alle tools use the `@function_tool` decorator from the OpenAI Agents SDK:
+**Integration Points:**
+- **Agent Configuration**: Custom agent definitions and behaviors
+- **Tool Integration**: Seamless tool calling and response handling
+- **Streaming**: Real-time response streaming for better UX
+- **Error Handling**: Robust error handling and recovery mechanisms
 
-```python
-@function_tool
-async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
-    # Tool implementation
-    cmd = ["ruff", "check", *params.paths, *params.flags]
-    # ... execution logic
-    return output
-```
+**SDK Features Utilized:**
+- GPT-4 model integration
+- Function calling capabilities
+- Conversation threading
+- Response formatting
 
-#### Tool Categorieën
+## Design Principles
 
-**Development Tools:**
-- `run_ruff`: Python linting
-- `run_pylint`: Comprehensive code analysis
-- `run_pyright`: Static type checking
+### 1. Separation of Concerns
 
-**File Operations:**
-- `read_file`: File content reading
-- `write_file`: File content writing
-- `create_colored_diff`: Visual diff creation
-- `apply_patch`: Patch application
+Each component has a specific responsibility:
+- **Agents**: Domain-specific intelligence and reasoning
+- **Tools**: Concrete action execution
+- **Context**: Information persistence and retrieval
+- **CLI**: User interaction and experience
 
-**Analysis Tools:**
-- `analyze_ast`: AST-based code analysis
-- `analyze_project_structure`: Directory structure analysis
-- `detect_code_patterns`: Design pattern detection
-- `analyze_dependencies`: Dependency graph creation
+### 2. Modularity
 
-### 5. Entity Recognition System
+The system is designed with modular components:
+- **Pluggable Tools**: Easy to add new capabilities
+- **Extensible Agents**: Simple to create new specialized agents
+- **Configurable Context**: Flexible context management strategies
+- **Interchangeable Components**: Clean interfaces between components
 
-#### SpaCy Integration
+### 3. Context Awareness
 
-SingleAgent used spaCy for geavanceerde entity recognition:
+Every component is context-aware:
+- **Agents**: Use context to inform responses
+- **Tools**: Access context for enhanced functionality
+- **CLI**: Provides context visibility and management
+- **Storage**: Maintains context integrity across sessions
 
-```python
-# SpaCy singleton for performance
-from The_Agents.spacy_singleton import nlp_singleton
+### 4. User Experience
 
-# Entity extraction
-entities = await entity_recognizer.extract_entities_async(
-    user_input, 
-    nlp_singleton.nlp
-)
-```
-
-#### Fallback Recognition
-
-Als spaCy faalt, used the systeem regex-based fallback:
-
-```python
-def _extract_entities_fallback(self, user_input: str):
-    # File paths
-    file_matches = re.findall(r'[\w\-_/.]+\.py', user_input)
-    
-    # Commands  
-    command_matches = re.findall(r'\b(run|execute|check)\s+(\w+)', user_input)
-    
-    # Tasks
-    task_matches = re.search(r'(implement|create|fix|debug)\s+([^\.]+)', user_input)
-```
-
-### 6. Streaming Architecture
-
-#### Real-time Output
-
-SingleAgent used async streaming for real-time feedback:
-
-```python
-async def _run_streamed(self, user_input: str) -> str:
-    response_chunks = []
-    
-    async for event in Runner.run_stream(
-        starting_agent=self.agent,
-        input=user_input,
-        context=self.context,
-    ):
-        if isinstance(event, ResponseTextDeltaEvent):
-            print(event.delta, end="", flush=True)
-            response_chunks.append(event.delta)
-    
-    return "".join(response_chunks)
-```
+Designed for developer productivity:
+- **Intuitive Commands**: Simple, memorable command structure
+- **Rich Feedback**: Detailed progress and status information
+- **Error Recovery**: Graceful handling of errors and edge cases
+- **Customization**: Configurable behavior and preferences
 
 ## Data Flow
 
 ### 1. User Input Processing
 
 ```
-User Input → Entity Extraction → Context Update → Agent Selection → Tool Execution → Response
+User Input → CLI Parser → Command Router → Agent Selector → Context Loader
 ```
 
-### 2. Context Flow
+### 2. Agent Processing
 
 ```
-┌─────────────────┐
-│   User Input    │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐    ┌──────────────────┐
-│ Entity Extract  │────│  Update Context  │
-└─────────────────┘    └─────────┬────────┘
-                                 │
-                                 ▼
-┌─────────────────┐    ┌──────────────────┐
-│  Agent Execute  │────│   Tool Execution │
-└─────────┬───────┘    └──────────────────┘
-          │
-          ▼
-┌─────────────────┐    ┌──────────────────┐
-│   Response      │────│   Update History │
-└─────────────────┘    └──────────────────┘
+Context + Input → Agent Reasoning → Tool Selection → Tool Execution → Response Generation
 ```
 
-### 3. Tool Execution Flow
+### 3. Context Updates
 
 ```
-Agent Request → Tool Selection → Parameter Validation → Execution → Result Processing → Context Update
+Agent Response → Entity Extraction → Context Updates → Persistence → Context Indexing
 ```
 
-## Memory Management
+### 4. Output Delivery
 
-### Token Counting
-
-```python
-# Automatische token counting with tiktoken
-import tiktoken
-
-def count_tokens(self, text: str) -> int:
-    encoding = tiktoken.get_encoding("cl100k_base")
-    return len(encoding.encode(text))
 ```
-
-### Context Summarization
-
-Wanneer the context te groot is:
-
-```python
-async def summarize_if_needed(self, openai_client) -> bool:
-    if self.token_count > self.max_tokens * 0.8:
-        # Gebruik OpenAI om context samen te vatten
-        summary = await self._create_summary(openai_client)
-        self._replace_old_messages_with_summary(summary)
-        return True
-    return False
-```
-
-## Configuration
-
-### Model Settings
-
-```python
-# Code Agent configuration
-model_settings=ModelSettings(temperature=0.0)  # Deterministic for code
-
-# Architect Agent configuration  
-model="gpt-4.1"  # Krachtig model for architectuur analyse
-```
-
-### File Persistence
-
-```python
-# Context opslag
-CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".singleagent_context.json")
-ARCHITECT_CONTEXT_FILE = os.path.join(os.path.expanduser("~"), ".architectagent_context.json")
-```
-
-## Error Handling
-
-### Graceful Degradation
-
-- SpaCy entity extraction → Regex fallback
-- OpenAI API errors → Local processing waar mogelijk
-- Tool failures → Error reporting with continue execution
-
-### Logging Strategy
-
-```python
-# Structured logging
-logging.debug(json.dumps({
-    "event": "user_input",
-    "input": query,
-    "mode": current_mode,
-    "entities_extracted": len(entities)
-}))
+Response → Formatting → Streaming → CLI Display → History Recording
 ```
 
 ## Performance Considerations
 
-### Optimization Strategies
+### 1. Context Management
 
-1. **Lazy Loading**: SpaCy model is alleen geladen wanneer nodig
-2. **Caching**: Entity results worden gecached
-3. **Streaming**: Real-time output for betere UX
-4. **Selective Tools**: Agents laden alleen relevante tools
-5. **Context Pruning**: Automatische context summarization
+- **Lazy Loading**: Context loaded on demand
+- **Intelligent Caching**: Frequently accessed context cached in memory
+- **Incremental Updates**: Only changed context persisted
+- **Compression**: Large context compressed for storage
 
-### Scalability
+### 2. Agent Switching
 
-- **Modular Design**: Nieuwe agents can eenvoudig worden toegevoegd
-- **Tool Extensibility**: Tools can onafhankelijk worden ontwikkeld
-- **Context Partitioning**: Context kan worden gesegmenteerd for grote projecten
+- **State Preservation**: Agent state maintained during switches
+- **Fast Initialization**: Agents initialized lazily
+- **Context Transfer**: Seamless context transfer between agents
+- **Memory Management**: Efficient memory usage across agents
 
-## Design Principles
+### 3. Tool Execution
 
-### 1. Separation or Concerns
-- Agents focussen on hun domein (code vs architectuur)
-- Tools are single-purpose and composable
-- Context management is centralized
+- **Parallel Execution**: Independent tools run in parallel
+- **Resource Management**: Tool resource usage monitored
+- **Caching**: Tool results cached when appropriate
+- **Error Isolation**: Tool failures don't affect system stability
 
-### 2. Extensibility
-- Nieuwe tools can eenvoudig worden toegevoegd
-- Agents can nieuwe capabilities krijgen
-- Context types can worden uitgebreid
+## Security Considerations
 
-### 3. User Experience
-- Intuitive command structure (`!code`, `!architect`)
-- Real-time feedback via streaming
-- Rich context awareness
+### 1. API Key Management
 
-### 4. Reliability
-- Graceful error handling
-- Fallback mechanisms
-- Persistent state management
+- **Environment Variables**: Secure API key storage
+- **No Logging**: API keys never logged or persisted
+- **Validation**: API key format validation
+- **Rotation Support**: Easy API key rotation
 
-Deze architectuur maakt SingleAgent a krachtig, uitbreidbaar and gebruiksvriendelijk systeem for software development and analyse taken.
+### 2. File System Access
+
+- **Sandboxing**: Tool file access limited to project directories
+- **Permission Checks**: File operation permissions validated
+- **Path Validation**: File paths sanitized and validated
+- **Backup Protection**: Critical files protected from accidental deletion
+
+### 3. Code Execution
+
+- **Controlled Environment**: Code execution in controlled context
+- **Resource Limits**: Execution time and resource limits
+- **Isolation**: Execution isolated from main system
+- **Validation**: Code validated before execution
+
+## Extensibility
+
+### 1. Adding New Tools
+
+Tools can be easily added by:
+1. Creating tool functions with proper signatures
+2. Adding tool descriptions and metadata
+3. Registering tools with appropriate agents
+4. Testing tool integration
+
+### 2. Creating New Agents
+
+New agents can be created by:
+1. Inheriting from base agent classes
+2. Defining agent-specific tools and behaviors
+3. Implementing context handling
+4. Integrating with the agent orchestrator
+
+### 3. Customizing Context
+
+Context behavior can be customized through:
+1. Custom entity recognition patterns
+2. Context storage backends
+3. Retrieval and ranking algorithms
+4. Context lifecycle management
+
+## Integration Points
+
+### 1. External Services
+
+- **OpenAI API**: Core AI capabilities
+- **File System**: Project file access
+- **Git**: Version control integration
+- **Package Managers**: Dependency management
+
+### 2. Development Tools
+
+- **IDEs**: Integration possibilities with popular IDEs
+- **CI/CD**: Potential CI/CD pipeline integration
+- **Testing Frameworks**: Test execution and analysis
+- **Documentation Tools**: Documentation generation and maintenance
+
+### 3. Monitoring and Logging
+
+- **Usage Analytics**: Usage pattern tracking
+- **Performance Metrics**: Response time and resource usage
+- **Error Tracking**: Error frequency and patterns
+- **Context Analytics**: Context effectiveness measurement
+
+## Future Architecture Considerations
+
+### 1. Scalability
+
+- **Multi-user Support**: Supporting multiple concurrent users
+- **Distributed Architecture**: Scaling across multiple machines
+- **Cloud Integration**: Cloud-native deployment options
+- **Load Balancing**: Request distribution and management
+
+### 2. Advanced Features
+
+- **Multi-modal Input**: Support for images, audio, and other inputs
+- **Real-time Collaboration**: Multiple users working on same project
+- **Advanced Analytics**: Deep insights into development patterns
+- **Machine Learning**: Custom model training on user data
+
+### 3. Integration Ecosystem
+
+- **Plugin Architecture**: Third-party plugin support
+- **API Exposure**: RESTful API for external integrations
+- **Webhook Support**: Event-driven integrations
+- **Marketplace**: Community-driven tool and agent sharing
+
+This architecture provides a solid foundation for intelligent development assistance while maintaining flexibility for future enhancements and customizations.

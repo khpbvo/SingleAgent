@@ -1,819 +1,937 @@
 # API Reference
 
-This document provides comprehensive technical API documentation for the SingleAgent system, including classes, methods, and integration interfaces.
+Complete technical reference for SingleAgent's APIs, classes, and methods. This documentation covers the core system components and their programmatic interfaces.
 
-## Core API Overview
-
-The SingleAgent system exposes several APIs for different use cases:
-- **Agent API**: Core agent interaction and orchestration
-- **Tools API**: Tool registration and execution
-- **Context API**: Context management and persistence
-- **Configuration API**: Runtime configuration management
-
-## Agent API
+## Core System APIs
 
 ### SingleAgent Class
 
-The main Code Agent implementation.
+The main entry point for the SingleAgent system.
 
 ```python
 class SingleAgent:
     """
-    Primary agent for code analysis, quality checking, and file operations.
-    
-    Inherits from OpenAI's Agent class and adds specialized tools for
-    software development tasks.
+    Main SingleAgent controller that orchestrates dual-agent interactions
     """
     
-    def __init__(
-        self,
-        model: str = "gpt-4",
-        max_tokens: int = 8000,
-        tools: List[str] = None,
-        context_manager: ContextManager = None
-    ):
+    def __init__(self, config: Dict[str, Any] = None):
         """
-        Initialize the Code Agent.
+        Initialize SingleAgent with configuration
         
         Args:
-            model: OpenAI model to use (default: "gpt-4")
-            max_tokens: Maximum context window size
-            tools: List or tools to enable (default: all code tools)
-            context_manager: Context management instance
+            config (Dict[str, Any]): Configuration dictionary
         """
-        
-    async def process_request(
-        self,
-        message: str,
-        file_paths: List[str] = None,
-        context: Dict[str, Any] = None
-    ) -> AgentResponse:
+    
+    def process_message(self, message: str, context: ContextData = None) -> AgentResponse:
         """
-        Process a user request with the Code Agent.
+        Process user message and return agent response
         
         Args:
-            message: User's request message
-            file_paths: Optional list or files to analyze
-            context: Additional context information
+            message (str): User input message
+            context (ContextData): Optional conversation context
             
         Returns:
-            AgentResponse with results and any file modifications
+            AgentResponse: Response from appropriate agent
         """
-        
-    def add_tool(self, tool_name: str, tool_function: Callable) -> None:
+    
+    def get_active_agent(self) -> str:
         """
-        Register a new tool with the agent.
-        
-        Args:
-            tool_name: Name or the tool
-            tool_function: Tool implementation function
-        """
-        
-    def get_available_tools(self) -> List[str]:
-        """
-        Get list or available tools.
+        Get currently active agent name
         
         Returns:
-            List or tool names available to this agent
+            str: 'code_agent' or 'architect_agent'
+        """
+    
+    def switch_agent(self, agent_name: str, context: ContextData = None) -> bool:
+        """
+        Manually switch to specified agent
+        
+        Args:
+            agent_name (str): Target agent name
+            context (ContextData): Context for handoff
+            
+        Returns:
+            bool: Success status
         """
 ```
 
-### ArchitectAgent Class
+### Agent Base Classes
 
-The specialized Architect Agent for project analysis.
+#### BaseAgent
+
+Abstract base class for all agents.
 
 ```python
-class ArchitectAgent:
+class BaseAgent(ABC):
     """
-    Specialized agent for architectural analysis and project understanding.
-    
-    Provides tools for project structure analysis, design pattern detection,
-    and architectural recommendations.
+    Abstract base class for SingleAgent agents
     """
     
-    def __init__(
-        self,
-        model: str = "gpt-4", 
-        max_tokens: int = 8000,
-        analysis_depth: str = "standard",
-        context_manager: ContextManager = None
-    ):
+    def __init__(self, client: OpenAI, config: Dict[str, Any]):
         """
-        Initialize the Architect Agent.
+        Initialize agent with OpenAI client and configuration
         
         Args:
-            model: OpenAI model to use
-            max_tokens: Maximum context window size
-            analysis_depth: Analysis depth ("basic", "standard", "deep")
-            context_manager: Context management instance
+            client (OpenAI): OpenAI client instance
+            config (Dict[str, Any]): Agent configuration
         """
-        
-    async def analyze_project(
-        self,
-        project_path: str,
-        analysis_type: str = "full"
-    ) -> ProjectAnalysis:
+    
+    @abstractmethod
+    def process_message(self, message: str, context: ContextData) -> AgentResponse:
         """
-        Perform comprehensive project analysis.
+        Process user message and generate response
         
         Args:
-            project_path: Path to project root
-            analysis_type: Type or analysis ("structure", "patterns", "full")
+            message (str): User input
+            context (ContextData): Conversation context
             
         Returns:
-            ProjectAnalysis object with findings and recommendations
+            AgentResponse: Agent response
         """
+    
+    @abstractmethod
+    def get_capabilities(self) -> List[str]:
+        """
+        Get list of agent capabilities
         
-    async def detect_patterns(
-        self,
-        file_paths: List[str]
-    ) -> List[DesignPattern]:
+        Returns:
+            List[str]: Capability descriptions
         """
-        Detect design patterns in specified files.
+    
+    def can_handle_request(self, message: str, context: ContextData) -> float:
+        """
+        Determine if agent can handle the request
         
         Args:
-            file_paths: List or Python files to analyze
+            message (str): User message
+            context (ContextData): Conversation context
             
         Returns:
-            List or detected design patterns with confidence scores
+            float: Confidence score (0.0 to 1.0)
         """
 ```
 
-### AgentOrchestrator Class
+#### CodeAgent
 
-Manages dual-agent interaction and switching.
+Implementation agent for coding tasks.
 
 ```python
-class AgentOrchestrator:
+class CodeAgent(BaseAgent):
     """
-    Orchestrates interaction between Code and Architect agents.
+    Agent specialized in code implementation and technical tasks
     """
     
-    def __init__(
-        self,
-        config: AgentConfig = None,
-        context_manager: ContextManager = None
-    ):
+    def __init__(self, client: OpenAI, config: Dict[str, Any]):
         """
-        Initialize the agent orchestrator.
+        Initialize Code Agent
+        """
+        super().__init__(client, config)
+        self.tools = self._initialize_tools()
+    
+    def process_message(self, message: str, context: ContextData) -> AgentResponse:
+        """
+        Process implementation requests
+        """
+    
+    def execute_tool(self, tool_name: str, **kwargs) -> ToolResult:
+        """
+        Execute a specific tool
         
         Args:
-            config: Configuration for both agents
-            context_manager: Shared context manager
-        """
-        
-    async def process_message(
-        self,
-        message: str,
-        current_agent: str = "code"
-    ) -> AgentResponse:
-        """
-        Process message with appropriate agent.
-        
-        Args:
-            message: User message
-            current_agent: Currently active agent ("code" or "architect")
+            tool_name (str): Name of tool to execute
+            **kwargs: Tool parameters
             
         Returns:
-            Response from the appropriate agent
+            ToolResult: Tool execution result
         """
-        
-    def switch_agent(self, target_agent: str) -> str:
+    
+    def analyze_code(self, filepath: str) -> CodeAnalysis:
         """
-        Switch to specified agent.
+        Analyze code file structure and complexity
         
         Args:
-            target_agent: Agent to switch to ("code" or "architect")
+            filepath (str): Path to code file
             
         Returns:
-            Confirmation message
+            CodeAnalysis: Analysis results
+        """
+    
+    def generate_tests(self, source_file: str, test_type: str = "unit") -> List[str]:
+        """
+        Generate test cases for source file
+        
+        Args:
+            source_file (str): Source file path
+            test_type (str): Type of tests to generate
+            
+        Returns:
+            List[str]: Generated test file paths
         """
 ```
 
-## Tools API
+#### ArchitectAgent
 
-### Tool Registration
+Planning and design agent for system architecture.
+
+```python
+class ArchitectAgent(BaseAgent):
+    """
+    Agent specialized in system design and architectural planning
+    """
+    
+    def __init__(self, client: OpenAI, config: Dict[str, Any]):
+        """
+        Initialize Architect Agent
+        """
+        super().__init__(client, config)
+        self.design_patterns = self._load_design_patterns()
+    
+    def process_message(self, message: str, context: ContextData) -> AgentResponse:
+        """
+        Process architectural and design requests
+        """
+    
+    def create_system_design(self, requirements: List[str]) -> SystemDesign:
+        """
+        Create system architecture design
+        
+        Args:
+            requirements (List[str]): System requirements
+            
+        Returns:
+            SystemDesign: Architecture design
+        """
+    
+    def suggest_patterns(self, problem_domain: str) -> List[DesignPattern]:
+        """
+        Suggest design patterns for problem domain
+        
+        Args:
+            problem_domain (str): Problem description
+            
+        Returns:
+            List[DesignPattern]: Recommended patterns
+        """
+    
+    def create_project_structure(self, project_type: str, language: str) -> ProjectStructure:
+        """
+        Create project directory structure
+        
+        Args:
+            project_type (str): Type of project
+            language (str): Programming language
+            
+        Returns:
+            ProjectStructure: Project structure
+        """
+```
+
+## Context Management APIs
+
+### ContextData Class
+
+Manages conversation context and entity tracking.
+
+```python
+class ContextData:
+    """
+    Container for conversation context and entity information
+    """
+    
+    def __init__(self):
+        """
+        Initialize empty context
+        """
+        self.entities: Dict[str, Entity] = {}
+        self.relationships: Dict[str, List[Relationship]] = {}
+        self.conversation_history: List[Message] = []
+        self.current_focus: Optional[str] = None
+        self.metadata: Dict[str, Any] = {}
+    
+    def add_entity(self, text: str, label: str, confidence: float = 1.0) -> Entity:
+        """
+        Add entity to context
+        
+        Args:
+            text (str): Entity text
+            label (str): Entity label/type
+            confidence (float): Recognition confidence
+            
+        Returns:
+            Entity: Created entity object
+        """
+    
+    def get_entities_by_type(self, entity_type: str) -> List[Entity]:
+        """
+        Get all entities of specific type
+        
+        Args:
+            entity_type (str): Entity type to filter by
+            
+        Returns:
+            List[Entity]: Matching entities
+        """
+    
+    def add_relationship(self, source: str, relation: str, target: str) -> Relationship:
+        """
+        Add relationship between entities
+        
+        Args:
+            source (str): Source entity
+            relation (str): Relationship type
+            target (str): Target entity
+            
+        Returns:
+            Relationship: Created relationship
+        """
+    
+    def find_related_entities(self, entity_text: str, max_depth: int = 2) -> List[Entity]:
+        """
+        Find entities related to given entity
+        
+        Args:
+            entity_text (str): Source entity text
+            max_depth (int): Maximum relationship depth
+            
+        Returns:
+            List[Entity]: Related entities
+        """
+    
+    def add_message(self, role: str, content: str, entities: List[str] = None) -> Message:
+        """
+        Add message to conversation history
+        
+        Args:
+            role (str): Message role (user, assistant, system)
+            content (str): Message content
+            entities (List[str]): Associated entities
+            
+        Returns:
+            Message: Created message object
+        """
+    
+    def get_conversation_summary(self, last_n_messages: int = 10) -> str:
+        """
+        Get summary of recent conversation
+        
+        Args:
+            last_n_messages (int): Number of recent messages
+            
+        Returns:
+            str: Conversation summary
+        """
+    
+    def export_to_dict(self) -> Dict[str, Any]:
+        """
+        Export context to dictionary
+        
+        Returns:
+            Dict[str, Any]: Serialized context
+        """
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContextData':
+        """
+        Create context from dictionary
+        
+        Args:
+            data (Dict[str, Any]): Serialized context data
+            
+        Returns:
+            ContextData: Reconstructed context
+        """
+```
+
+### Entity Class
+
+Represents recognized entities in context.
+
+```python
+class Entity:
+    """
+    Represents a recognized entity in conversation context
+    """
+    
+    def __init__(self, text: str, label: str, confidence: float = 1.0):
+        """
+        Initialize entity
+        
+        Args:
+            text (str): Entity text
+            label (str): Entity type/label
+            confidence (float): Recognition confidence
+        """
+        self.text = text
+        self.label = label
+        self.confidence = confidence
+        self.mentions = 1
+        self.first_seen = datetime.now()
+        self.last_seen = datetime.now()
+        self.context_mentions: List[str] = []
+    
+    def update_mention(self, context: str = None):
+        """
+        Update entity mention information
+        
+        Args:
+            context (str): Context where entity was mentioned
+        """
+    
+    def get_relevance_score(self) -> float:
+        """
+        Calculate entity relevance score
+        
+        Returns:
+            float: Relevance score (0.0 to 1.0)
+        """
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert entity to dictionary
+        
+        Returns:
+            Dict[str, Any]: Entity data
+        """
+```
+
+## Tools System APIs
+
+### Tool Base Classes
+
+#### BaseTool
+
+Abstract base class for all tools.
+
+```python
+class BaseTool(ABC):
+    """
+    Abstract base class for SingleAgent tools
+    """
+    
+    def __init__(self):
+        """
+        Initialize tool
+        """
+        self.name: str = ""
+        self.description: str = ""
+        self.parameters: Dict[str, Any] = {}
+    
+    @abstractmethod
+    def execute(self, **kwargs) -> ToolResult:
+        """
+        Execute tool with given parameters
+        
+        Args:
+            **kwargs: Tool parameters
+            
+        Returns:
+            ToolResult: Execution result
+        """
+    
+    @abstractmethod
+    def validate_parameters(self, **kwargs) -> bool:
+        """
+        Validate tool parameters
+        
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            bool: Validation result
+        """
+    
+    def get_parameter_schema(self) -> Dict[str, Any]:
+        """
+        Get JSON schema for tool parameters
+        
+        Returns:
+            Dict[str, Any]: Parameter schema
+        """
+```
+
+#### ToolResult
+
+Represents the result of tool execution.
+
+```python
+class ToolResult:
+    """
+    Represents the result of tool execution
+    """
+    
+    def __init__(self, success: bool, data: Any = None, error: str = None):
+        """
+        Initialize tool result
+        
+        Args:
+            success (bool): Execution success status
+            data (Any): Result data
+            error (str): Error message if failed
+        """
+        self.success = success
+        self.data = data
+        self.error = error
+        self.execution_time: float = 0.0
+        self.timestamp = datetime.now()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert result to dictionary
+        
+        Returns:
+            Dict[str, Any]: Result data
+        """
+```
+
+### Tool Registry
+
+Manages available tools and their execution.
 
 ```python
 class ToolRegistry:
     """
-    Registry for managing and executing tools.
+    Registry for managing and executing tools
     """
     
-    @staticmethod
-    def register_tool(
-        name: str,
-        function: Callable,
-        agent_types: List[str] = None,
-        schema: Dict[str, Any] = None
-    ) -> None:
+    def __init__(self):
         """
-        Register a new tool.
+        Initialize tool registry
+        """
+        self._tools: Dict[str, BaseTool] = {}
+        self._permissions: Dict[str, ToolPermissions] = {}
+    
+    def register_tool(self, name: str, tool: BaseTool) -> bool:
+        """
+        Register a tool in the registry
         
         Args:
-            name: Tool name
-            function: Tool implementation
-            agent_types: Compatible agent types
-            schema: JSON schema for parameters
-        """
-        
-    @staticmethod
-    def get_tool(name: str) -> Optional[Callable]:
-        """
-        Retrieve a registered tool.
-        
-        Args:
-            name: Tool name
+            name (str): Tool name
+            tool (BaseTool): Tool instance
             
         Returns:
-            Tool function or None if not found
+            bool: Registration success
         """
-        
-    @staticmethod
-    async def execute_tool(
-        name: str,
-        parameters: Dict[str, Any],
-        context: ToolContext = None
-    ) -> ToolResult:
+    
+    def unregister_tool(self, name: str) -> bool:
         """
-        Execute a tool with given parameters.
+        Remove tool from registry
         
         Args:
-            name: Tool name
-            parameters: Tool parameters
-            context: Execution context
+            name (str): Tool name
             
         Returns:
-            Tool execution result
+            bool: Removal success
         """
-```
-
-### Code Quality Tools
-
-#### Ruff Tool
-
-```python
-async def run_ruff(
-    file_path: str,
-    fix: bool = False,
-    config_file: str = None
-) -> ToolResult:
-    """
-    Run Ruff linter/formatter on Python file.
     
-    Args:
-        file_path: Path to Python file
-        fix: Whether to apply automatic fixes
-        config_file: Custom config file path
-        
-    Returns:
-        ToolResult with linting results and any fixes applied
-    """
-```
-
-#### Pylint Tool
-
-```python
-async def run_pylint(
-    file_path: str,
-    config_file: str = None,
-    score_threshold: float = None
-) -> ToolResult:
-    """
-    Run Pylint analysis on Python file.
-    
-    Args:
-        file_path: Path to Python file
-        config_file: Custom config file path
-        score_threshold: Minimum acceptable score
-        
-    Returns:
-        ToolResult with detailed analysis results
-    """
-```
-
-#### Pyright Tool
-
-```python
-async def run_pyright(
-    file_path: str,
-    config_file: str = None,
-    strict_mode: bool = False
-) -> ToolResult:
-    """
-    Run Pyright type checker on Python file.
-    
-    Args:
-        file_path: Path to Python file
-        config_file: Custom config file path
-        strict_mode: Enable strict type checking
-        
-    Returns:
-        ToolResult with type checking results
-    """
-```
-
-### File Operations Tools
-
-```python
-async def read_file(file_path: str) -> str:
-    """
-    Read file contents.
-    
-    Args:
-        file_path: Path to file
-        
-    Returns:
-        File contents as string
-        
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        PermissionError: If file not readable
-    """
-
-async def write_file(file_path: str, content: str, backup: bool = True) -> bool:
-    """
-    Write content to file.
-    
-    Args:
-        file_path: Path to file
-        content: Content to write
-        backup: Create backup before writing
-        
-    Returns:
-        True if successful
-        
-    Raises:
-        PermissionError: If file not writable
-    """
-
-async def list_files(
-    directory_path: str,
-    pattern: str = "*",
-    recursive: bool = False
-) -> List[str]:
-    """
-    List files in directory.
-    
-    Args:
-        directory_path: Directory to list
-        pattern: File pattern to match
-        recursive: Include subdirectories
-        
-    Returns:
-        List or file paths
-    """
-```
-
-### Analysis Tools
-
-#### AST Analysis
-
-```python
-async def analyze_ast(file_path: str) -> ASTAnalysis:
-    """
-    Perform AST analysis on Python file.
-    
-    Args:
-        file_path: Path to Python file
-        
-    Returns:
-        ASTAnalysis object with structural information
-    """
-
-class ASTAnalysis:
-    """Result or AST analysis."""
-    
-    classes: List[ClassInfo]
-    functions: List[FunctionInfo]
-    imports: List[ImportInfo]
-    complexity_metrics: Dict[str, float]
-    dependencies: List[str]
-```
-
-#### Project Structure Analysis
-
-```python
-async def analyze_project_structure(project_path: str) -> ProjectStructure:
-    """
-    Analyze project structure and organization.
-    
-    Args:
-        project_path: Path to project root
-        
-    Returns:
-        ProjectStructure with hierarchy and organization info
-    """
-
-class ProjectStructure:
-    """Project structure analysis result."""
-    
-    directory_tree: Dict[str, Any]
-    file_types: Dict[str, int]
-    module_relationships: List[Tuple[str, str]]
-    configuration_files: List[str]
-    test_organization: Dict[str, Any]
-```
-
-## Context API
-
-### ContextManager Class
-
-```python
-class ContextManager:
-    """
-    Manages conversation context, entity tracking, and memory.
-    """
-    
-    def __init__(
-        self,
-        max_tokens: int = 8000,
-        entity_cache_size: int = 1000,
-        session_cache_size: int = 500
-    ):
+    def execute_tool(self, name: str, **kwargs) -> ToolResult:
         """
-        Initialize context manager.
+        Execute tool by name
         
         Args:
-            max_tokens: Maximum context window size
-            entity_cache_size: Maximum entities to cache
-            session_cache_size: Maximum session items to cache
-        """
-        
-    def add_message(
-        self,
-        role: str,
-        content: str,
-        metadata: Dict[str, Any] = None
-    ) -> None:
-        """
-        Add message to conversation history.
-        
-        Args:
-            role: Message role ("user", "assistant", "system")
-            content: Message content
-            metadata: Additional metadata
-        """
-        
-    def add_entity(
-        self,
-        entity_type: str,
-        entity_name: str,
-        entity_info: Dict[str, Any]
-    ) -> None:
-        """
-        Add or update entity information.
-        
-        Args:
-            entity_type: Type or entity ("class", "function", "variable")
-            entity_name: Entity identifier
-            entity_info: Entity details and metadata
-        """
-        
-    def get_relevant_context(
-        self,
-        query: str,
-        max_items: int = 10
-    ) -> List[ContextItem]:
-        """
-        Retrieve context relevant to query.
-        
-        Args:
-            query: Search query
-            max_items: Maximum items to return
+            name (str): Tool name
+            **kwargs: Tool parameters
             
         Returns:
-            List or relevant context items
+            ToolResult: Execution result
         """
-        
-    def optimize_context(self) -> None:
-        """
-        Optimize context for token limits and relevance.
-        """
-```
-
-### Entity Tracking
-
-```python
-class EntityTracker:
-    """
-    Tracks code entities and their relationships.
-    """
     
-    def track_file(self, file_path: str) -> None:
+    def get_available_tools(self) -> List[str]:
         """
-        Extract and track entities from file.
+        Get list of available tool names
         
-        Args:
-            file_path: Path to file to analyze
-        """
-        
-    def get_entity_relationships(
-        self,
-        entity_name: str
-    ) -> List[EntityRelationship]:
-        """
-        Get relationships for specified entity.
-        
-        Args:
-            entity_name: Name or entity
-            
         Returns:
-            List or relationships
+            List[str]: Tool names
         """
-        
-    def find_related_entities(
-        self,
-        entity_name: str,
-        relationship_types: List[str] = None
-    ) -> List[str]:
-        """
-        Find entities related to specified entity.
-        
-        Args:
-            entity_name: Source entity name
-            relationship_types: Types or relationships to consider
-            
-        Returns:
-            List or related entity names
-        """
-```
-
-## Configuration API
-
-### ConfigManager Class
-
-```python
-class ConfigManager:
-    """
-    Manages runtime configuration for agents and tools.
-    """
     
-    def __init__(self, config_file: str = None):
+    def get_tool_info(self, name: str) -> Dict[str, Any]:
         """
-        Initialize configuration manager.
+        Get information about a specific tool
         
         Args:
-            config_file: Path to configuration file
-        """
-        
-    def get_config(self, key: str, default: Any = None) -> Any:
-        """
-        Get configuration value.
-        
-        Args:
-            key: Configuration key (dot-separated)
-            default: Default value if key not found
+            name (str): Tool name
             
         Returns:
-            Configuration value
-        """
-        
-    def set_config(self, key: str, value: Any) -> None:
-        """
-        Set configuration value.
-        
-        Args:
-            key: Configuration key (dot-separated)
-            value: Value to set
-        """
-        
-    def reload_config(self) -> None:
-        """
-        Reload configuration from file.
-        """
-        
-    def validate_config(self) -> List[str]:
-        """
-        Validate current configuration.
-        
-        Returns:
-            List or validation errors (empty if valid)
+            Dict[str, Any]: Tool information
         """
 ```
 
-## Data Models
+## Response Types
 
-### Core Response Types
+### AgentResponse
+
+Standard response format from agents.
 
 ```python
-@dataclass
 class AgentResponse:
-    """Response from agent processing."""
+    """
+    Standard response format from SingleAgent agents
+    """
     
-    success: bool
-    message: str
-    files_modified: List[str] = field(default_factory=list)
-    tool_results: List[ToolResult] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-@dataclass
-class ToolResult:
-    """Result from tool execution."""
+    def __init__(self, content: str, agent_name: str, tools_used: List[str] = None):
+        """
+        Initialize agent response
+        
+        Args:
+            content (str): Response content
+            agent_name (str): Name of responding agent
+            tools_used (List[str]): Tools used in response generation
+        """
+        self.content = content
+        self.agent_name = agent_name
+        self.tools_used = tools_used or []
+        self.timestamp = datetime.now()
+        self.context_updates: List[ContextUpdate] = []
+        self.suggested_actions: List[str] = []
     
-    tool_name: str
-    success: bool
-    output: str
-    errors: List[str] = field(default_factory=list)
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    execution_time: float = 0.0
-
-@dataclass
-class DesignPattern:
-    """Detected design pattern information."""
+    def add_context_update(self, update: ContextUpdate):
+        """
+        Add context update to response
+        
+        Args:
+            update (ContextUpdate): Context update
+        """
     
-    pattern_name: str
-    confidence: float
-    location: str
-    description: str
-    examples: List[str] = field(default_factory=list)
-    recommendations: List[str] = field(default_factory=list)
+    def add_suggested_action(self, action: str):
+        """
+        Add suggested action to response
+        
+        Args:
+            action (str): Suggested action
+        """
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert response to dictionary
+        
+        Returns:
+            Dict[str, Any]: Response data
+        """
 ```
 
-### Configuration Models
+### CodeAnalysis
+
+Results from code analysis operations.
 
 ```python
-@dataclass
-class AgentConfig:
-    """Configuration for agents."""
+class CodeAnalysis:
+    """
+    Results from code analysis operations
+    """
     
-    model: str = "gpt-4"
-    max_tokens: int = 8000
-    enabled_tools: List[str] = field(default_factory=list)
-    tool_configs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    def __init__(self, filepath: str):
+        """
+        Initialize code analysis
+        
+        Args:
+            filepath (str): Analyzed file path
+        """
+        self.filepath = filepath
+        self.language: str = ""
+        self.lines_of_code: int = 0
+        self.complexity_score: float = 0.0
+        self.classes: List[ClassInfo] = []
+        self.functions: List[FunctionInfo] = []
+        self.imports: List[ImportInfo] = []
+        self.dependencies: List[str] = []
+        self.issues: List[CodeIssue] = []
     
-@dataclass
-class ToolConfig:
-    """Configuration for individual tools."""
+    def get_complexity_rating(self) -> str:
+        """
+        Get human-readable complexity rating
+        
+        Returns:
+            str: Complexity rating (low, medium, high)
+        """
     
-    enabled: bool = True
-    timeout: int = 30
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    def get_maintainability_score(self) -> float:
+        """
+        Calculate maintainability score
+        
+        Returns:
+            float: Maintainability score (0.0 to 1.0)
+        """
 ```
 
-## Error Handling
+### SystemDesign
 
-### Exception Classes
+Architectural design representation.
+
+```python
+class SystemDesign:
+    """
+    Represents a system architecture design
+    """
+    
+    def __init__(self, name: str):
+        """
+        Initialize system design
+        
+        Args:
+            name (str): Design name
+        """
+        self.name = name
+        self.description: str = ""
+        self.components: List[Component] = []
+        self.relationships: List[ComponentRelationship] = []
+        self.patterns: List[DesignPattern] = []
+        self.technologies: List[str] = []
+        self.quality_attributes: Dict[str, str] = {}
+    
+    def add_component(self, component: Component):
+        """
+        Add component to design
+        
+        Args:
+            component (Component): System component
+        """
+    
+    def add_relationship(self, relationship: ComponentRelationship):
+        """
+        Add relationship between components
+        
+        Args:
+            relationship (ComponentRelationship): Component relationship
+        """
+    
+    def export_to_plantuml(self) -> str:
+        """
+        Export design as PlantUML diagram
+        
+        Returns:
+            str: PlantUML diagram code
+        """
+    
+    def export_to_mermaid(self) -> str:
+        """
+        Export design as Mermaid diagram
+        
+        Returns:
+            str: Mermaid diagram code
+        """
+```
+
+## Configuration APIs
+
+### Configuration Classes
+
+```python
+class SingleAgentConfig:
+    """
+    Main configuration class for SingleAgent
+    """
+    
+    def __init__(self):
+        """
+        Initialize configuration with defaults
+        """
+        self.openai_api_key: str = ""
+        self.model_name: str = "gpt-4"
+        self.max_tokens: int = 2000
+        self.temperature: float = 0.7
+        self.context_window: int = 1000
+        self.enable_tools: bool = True
+        self.log_level: str = "INFO"
+        self.log_file: str = "singleagent.log"
+    
+    @classmethod
+    def from_env(cls) -> 'SingleAgentConfig':
+        """
+        Create configuration from environment variables
+        
+        Returns:
+            SingleAgentConfig: Configuration instance
+        """
+    
+    @classmethod
+    def from_file(cls, filepath: str) -> 'SingleAgentConfig':
+        """
+        Load configuration from file
+        
+        Args:
+            filepath (str): Configuration file path
+            
+        Returns:
+            SingleAgentConfig: Configuration instance
+        """
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert configuration to dictionary
+        
+        Returns:
+            Dict[str, Any]: Configuration data
+        """
+    
+    def validate(self) -> List[str]:
+        """
+        Validate configuration
+        
+        Returns:
+            List[str]: Validation errors
+        """
+```
+
+## Exception Classes
+
+### Custom Exceptions
 
 ```python
 class SingleAgentError(Exception):
-    """Base exception for SingleAgent system."""
+    """Base exception for SingleAgent errors"""
+    pass
+
+class AgentNotFoundError(SingleAgentError):
+    """Raised when specified agent is not found"""
     pass
 
 class ToolExecutionError(SingleAgentError):
-    """Error during tool execution."""
-    
-    def __init__(self, tool_name: str, message: str, details: Dict[str, Any] = None):
-        self.tool_name = tool_name
-        self.details = details or {}
-        super().__init__(message)
+    """Raised when tool execution fails"""
+    pass
 
-class ConfigurationError(SingleAgentError):
-    """Error in configuration."""
-    
-    def __init__(self, key: str, message: str):
-        self.key = key
-        super().__init__(message)
+class InvalidParameterError(SingleAgentError):
+    """Raised when invalid parameters are provided"""
+    pass
 
 class ContextError(SingleAgentError):
-    """Error in context management."""
+    """Raised when context operations fail"""
+    pass
+
+class ConfigurationError(SingleAgentError):
+    """Raised when configuration is invalid"""
+    pass
+
+class OpenAIAPIError(SingleAgentError):
+    """Raised when OpenAI API calls fail"""
     pass
 ```
 
-## Integration Interfaces
+## Utility Functions
 
-### CLI Interface
+### Helper Functions
 
 ```python
-class CLIInterface:
-    """Command-line interface for SingleAgent."""
+def load_spacy_model(model_name: str = "en_core_web_sm") -> spacy.Language:
+    """
+    Load SpaCy language model
     
-    def __init__(self, config: AgentConfig = None):
-        """Initialize CLI interface."""
+    Args:
+        model_name (str): SpaCy model name
         
-    async def run_interactive(self) -> None:
-        """Run interactive CLI session."""
-        
-    async def run_batch(self, commands: List[str]) -> List[AgentResponse]:
-        """Run batch commands."""
-        
-    def parse_command(self, command: str) -> Tuple[str, Dict[str, Any]]:
-        """Parse CLI command."""
-```
+    Returns:
+        spacy.Language: Loaded model
+    """
 
-### API Server Interface
-
-```python
-class APIServer:
-    """REST API server for SingleAgent."""
+def extract_entities(text: str, nlp: spacy.Language) -> List[Entity]:
+    """
+    Extract entities from text using SpaCy
     
-    def __init__(self, host: str = "localhost", port: int = 8000):
-        """Initialize API server."""
+    Args:
+        text (str): Input text
+        nlp (spacy.Language): SpaCy model
         
-    async def start(self) -> None:
-        """Start the API server."""
-        
-    async def process_request(
-        self,
-        request: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Process API request."""
-```
+    Returns:
+        List[Entity]: Extracted entities
+    """
 
-### Plugin Interface
-
-```python
-class Plugin:
-    """Base class for SingleAgent plugins."""
+def calculate_text_similarity(text1: str, text2: str) -> float:
+    """
+    Calculate similarity between two texts
     
-    @abstractmethod
-    def get_name(self) -> str:
-        """Get plugin name."""
+    Args:
+        text1 (str): First text
+        text2 (str): Second text
         
-    @abstractmethod
-    def get_tools(self) -> List[Tuple[str, Callable]]:
-        """Get tools provided by this plugin."""
+    Returns:
+        float: Similarity score (0.0 to 1.0)
+    """
+
+def format_code_response(code: str, language: str = "python") -> str:
+    """
+    Format code response with syntax highlighting
+    
+    Args:
+        code (str): Code content
+        language (str): Programming language
         
-    @abstractmethod
-    def initialize(self, config: Dict[str, Any]) -> None:
-        """Initialize plugin with configuration."""
+    Returns:
+        str: Formatted code
+    """
+
+def validate_file_path(filepath: str, allowed_extensions: List[str] = None) -> bool:
+    """
+    Validate file path for security
+    
+    Args:
+        filepath (str): File path to validate
+        allowed_extensions (List[str]): Allowed file extensions
+        
+    Returns:
+        bool: Validation result
+    """
 ```
 
-## Usage Examples
+## Type Definitions
 
-### Basic Agent Usage
+### Type Aliases
 
 ```python
-from singleagent import SingleAgent, ArchitectAgent
+from typing import Dict, List, Any, Optional, Union, Callable
 
-# Initialize Code Agent
-code_agent = SingleAgent(model="gpt-4", max_tokens=8000)
+# Common type aliases
+ConfigDict = Dict[str, Any]
+ParameterDict = Dict[str, Any]
+EntityDict = Dict[str, Entity]
+ToolFunction = Callable[..., ToolResult]
+AgentCapabilities = List[str]
+MessageHistory = List[Message]
+EntityRelationships = Dict[str, List[Relationship]]
 
-# Process request
-response = await code_agent.process_request(
-    "Please analyze and fix code quality issues in src/main.py",
-    file_paths=["src/main.py"]
-)
-
-print(f"Success: {response.success}")
-print(f"Modified files: {response.files_modified}")
+# Response types
+AgentResponseData = Dict[str, Any]
+ToolResultData = Dict[str, Any]
+AnalysisResult = Union[CodeAnalysis, SystemDesign]
 ```
 
-### Tool Registration
+### Enums
 
 ```python
-from singleagent import ToolRegistry
+from enum import Enum
 
-async def custom_tool(file_path: str, option: str = "default") -> ToolResult:
-    """Custom tool implementation."""
-    # Tool logic here
-    return ToolResult(
-        tool_name="custom_tool",
-        success=True,
-        output="Tool completed successfully"
-    )
+class AgentType(Enum):
+    """Agent type enumeration"""
+    CODE_AGENT = "code_agent"
+    ARCHITECT_AGENT = "architect_agent"
 
-# Register tool
-ToolRegistry.register_tool(
-    "custom_tool",
-    custom_tool,
-    agent_types=["code"],
-    schema={
-        "type": "object",
-        "properties": {
-            "file_path": {"type": "string"},
-            "option": {"type": "string", "default": "default"}
-        },
-        "required": ["file_path"]
-    }
-)
+class EntityType(Enum):
+    """Entity type enumeration"""
+    PERSON = "PERSON"
+    ORGANIZATION = "ORG"
+    LOCATION = "GPE"
+    PRODUCT = "PRODUCT"
+    TECHNOLOGY = "TECH"
+    FEATURE = "FEATURE"
+    BUG = "BUG"
+    TASK = "TASK"
+
+class ToolCategory(Enum):
+    """Tool category enumeration"""
+    FILE_SYSTEM = "file_system"
+    CODE_ANALYSIS = "code_analysis"
+    SYSTEM = "system"
+    DATABASE = "database"
+    WEB = "web"
+    TESTING = "testing"
+    DOCUMENTATION = "documentation"
+
+class LogLevel(Enum):
+    """Logging level enumeration"""
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 ```
 
-### Context Management
+---
 
-```python
-from singleagent import ContextManager
-
-# Initialize context manager
-context_mgr = ContextManager(max_tokens=8000)
-
-# Add entity information
-context_mgr.add_entity(
-    "class",
-    "UserManager", 
-    {
-        "file": "src/models.py",
-        "methods": ["create_user", "delete_user"],
-        "dependencies": ["Database"]
-    }
-)
-
-# Get relevant context for query
-relevant_context = context_mgr.get_relevant_context(
-    "How do I modify user creation?",
-    max_items=5
-)
-```
-
-This API reference provides complete technical documentation for integrating with and extending the SingleAgent system.
+*For implementation examples and usage patterns, see [Examples](examples.md) and [Tools Reference](tools.md).*

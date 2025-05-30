@@ -1,557 +1,336 @@
-# Code Agent
+# Code Agent Documentation
 
-The Code Agent (SingleAgent) is specialized in direct code manipulation, analysis, and debugging. It is designed for developers who need detailed help with programming tasks.
+The Code Agent (SingleAgent) is specialized for code analysis, implementation, debugging, and file operations. This agent focuses on concrete, actionable development tasks.
 
 ## Overview
 
-The Code Agent provides an extensive set of tools for:
-- **Code Quality Analysis**: Linting, type checking, and style analysis
-- **File Operations**: Reading, writing, and manipulating files
-- **Debugging Support**: Error analysis and context-aware debugging
-- **Patch Management**: Diff creation and patch application
-- **Command Execution**: Shell command integration
+The Code Agent is designed to be your primary programming companion, handling everything from analyzing existing code to implementing new features. It excels at:
 
-## Activation
-
-```bash
-# Switch to Code Agent mode
-!code
-```
-
-The system starts in Code Agent mode by default.
+- **Code Analysis**: Understanding and explaining code structure and functionality
+- **Implementation**: Writing new code and features
+- **Debugging**: Identifying and fixing issues
+- **File Operations**: Managing project files and directories
+- **Testing**: Creating and running tests
+- **Refactoring**: Improving code quality and structure
 
 ## Core Capabilities
 
-### 1. Code Quality Analysis
+### 1. Code Analysis and Understanding
 
-#### Ruff - Modern Python Linting
+The Code Agent can analyze your codebase and provide insights:
 
-```python
-# Basic usage
-"Run ruff on all Python files"
-
-# Specific files
-"Use ruff to check main.py and utils.py"
-
-# With custom flags
-"Run ruff with --fix flag to apply automatic corrections"
+```
+SingleAgent> Analyze the main.py file structure
+SingleAgent> Explain how the context management works
+SingleAgent> What are the dependencies in this project?
 ```
 
-**Ruff Features:**
-- Fast linting (100x faster than flake8)
-- Combined functionality of flake8, isort, pyupgrade
-- Automatic fixes for many issues
-- Configurable via pyproject.toml
-
-#### Pylint - Comprehensive Analysis
-
-```python
-# Deep analysis
-"Run pylint on the entire codebase for a comprehensive analysis"
-
-# Specifieke modules
-"Gebruik pylint om The_Agents module te analyze"
-```
-
-**Pylint Features:**
-- Code quality metrics
-- Design pattern violations
-- Complexity analysis
-- Documentation checking
-
-#### Pyright - Static Type Checking
-
-```python
-# Type checking
-"Run pyright om type errors te vinden"
-
-# Met specifieke configuration
-"Check types in alle Python files with pyright"
-```
-
-**Pyright Features:**
-- Fast static type checking
-- Integration with VS Code
-- Advanced type inference
-- Configuration via pyproject.toml
+**Features:**
+- **Syntax Analysis**: Understands code syntax and structure
+- **Dependency Mapping**: Identifies relationships between files and modules
+- **Pattern Recognition**: Recognizes design patterns and architectural styles
+- **Code Quality Assessment**: Evaluates code quality and suggests improvements
 
 ### 2. File Operations
 
-#### Intelligent File Reading
+Comprehensive file management capabilities:
 
-```python
-# Basis file reading
-"Lees the bestand main.py"
-"Wat staat er in requirements.txt?"
-
-# Context-aware reading
-"Lees the SingleAgent.py and leg from hoe the context management werkt"
-
-# Multiple files
-"Lees main.py and ArchitectAgent.py and vergelijk hun structuur"
+```
+SingleAgent> Show me the contents of config.py
+SingleAgent> Create a new utility function in utils.py
+SingleAgent> Move the old tests to a backup directory
 ```
 
-**Features:**
-- Automatische syntax highlighting
-- Context integration
-- Large file handling
-- Binary file detection
+**Available Operations:**
+- **Read Files**: Display and analyze file contents
+- **Write Files**: Create new files or modify existing ones
+- **Directory Operations**: List, create, and manage directories
+- **File Search**: Find files by name, content, or pattern
+- **Backup and Recovery**: Safely manage file versions
 
-#### File Writing & Modification
+### 3. Code Implementation
 
-De Code Agent kan files create and wijzigen:
+The Code Agent can write and implement code:
 
-```python
-# Bestand aancreate
-"Create a nieuwe test file for the SingleAgent class"
-
-# Content modification
-"Voeg a docstring toe aan the run methode in SingleAgent.py"
-
-# Configuration files
-"Create a pyproject.toml with ruff configuration"
+```
+SingleAgent> Implement a function to parse configuration files
+SingleAgent> Add error handling to the database connection
+SingleAgent> Create a test suite for the user authentication module
 ```
 
-### 3. Patch Management
+**Implementation Capabilities:**
+- **Function Creation**: Write new functions and methods
+- **Class Implementation**: Create and modify classes
+- **Module Development**: Build complete modules
+- **API Integration**: Implement API calls and integrations
+- **Database Operations**: Create database queries and operations
 
-#### Diff Creation
+### 4. Debugging and Problem Solving
 
-```python
-# Visual diffs
-"Create a colored diff of the wijzigingen in main.py"
+Expert debugging assistance:
 
-# Compare files
-"Vergelijk the oude and nieuwe versie of deze functie"
+```
+SingleAgent> This function is returning None, help me debug it
+SingleAgent> Why is my API call failing?
+SingleAgent> Find the source of this memory leak
 ```
 
-**Diff Features:**
-- Color-coded output
-- Line-by-line comparison
-- Context preservation
-- Multiple format support
-
-#### Patch Application
-
-```python
-# Apply patches
-"Pas deze patch toe on the bestand"
-
-# Verification
-"Verifieer or the patch correct is toegepast"
-```
-
-### 4. Context-Aware Debugging
-
-#### Error Analysis
-
-```python
-# Error help
-"Ik krijg a AttributeError in line 42, kun je helpen?"
-
-# Stack trace analysis
-"Analyze theze stack trace and geef suggestions"
-
-# Performance issues
-"This function is traag, kun je optimalisatie voorstellen?"
-```
-
-#### Code Understanding
-
-```python
-# Function explanation
-"Leg from hoe the _extract_entities_from_input methode werkt"
-
-# Flow analysis
-"Trace the execution flow of main.py to SingleAgent"
-
-# Dependency analysis
-"Welke modules used SingleAgent and waarom?"
-```
-
-### 5. Command Integration
-
-#### Shell Command Execution
-
-```python
-# Git operations
-"Voer git status uit"
-
-# Build commands
-"Run the tests with pytest"
-
-# File operations
-"Create a backup of the config files"
-```
-
-## Tool Reference
-
-### Development Tools
-
-#### `run_ruff`
-
-**Purpose**: Python code linting and formatting
-
-**Parameters:**
-- `paths`: List of file/directory paths
-- `flags`: Extra command line flags
-
-**Example Usage:**
-```python
-# Via natural language
-"Run ruff on alle Python files"
-"Gebruik ruff --fix om automatische correcties toe te passen"
-
-# Direct tool call equivalent
-run_ruff(paths=[".", "tests/"], flags=["--check"])
-```
-
-**Common Flags:**
-- `--fix`: Automatische correcties
-- `--check`: Check-only mode
-- `--config`: Custom config file
-- `--select`: Specifieke rules selecteren
-
-#### `run_pylint`
-
-**Purpose**: Comprehensive Python code analysis
-
-**Parameters:**
-- `paths`: Files or directories om te analyze
-- `flags`: Pylint command line options
-
-**Example Usage:**
-```python
-"Run pylint on the The_Agents module"
-"Gebruik pylint with --disable=missing-docstring"
-```
-
-**Common Flags:**
-- `--disable`: Disable specifieke checks
-- `--enable`: Enable specifieke checks
-- `--rcfile`: Custom configuration
-- `--output-format`: Output format (text, json, etc.)
-
-#### `run_pyright`
-
-**Purpose**: Static type checking
-
-**Parameters:**
-- `paths`: Paths om te type checken
-- `flags`: Pyright options
-
-**Example Usage:**
-```python
-"Check types with pyright"
-"Run pyright --verbose for gedetailleerde output"
-```
-
-### File Operations Tools
-
-#### `read_file`
-
-**Purpose**: Bestand inhoud lezen with context tracking
-
-**Parameters:**
-- `file_path`: Path to the bestand
-- `start_line`: Start line (optional)
-- `end_line`: End line (optional)
-
-**Features:**
-- Automatische encoding detection
-- Large file handling
-- Context integration
-- Entity tracking
-
-#### `create_colored_diff`
-
-**Purpose**: Visual diff creation tussen files or content
-
-**Parameters:**
-- `original_content`: Original content
-- `modified_content`: Modified content
-- `original_filename`: Original file name
-- `modified_filename`: Modified file name
-
-**Output:**
-- Color-coded differences
-- Line numbers
-- Context lines
-- Statistics
-
-#### `apply_patch`
-
-**Purpose**: Patch toepassing on files
-
-**Parameters:**
-- `file_path`: Target file
-- `patch_content`: Patch content (unified diff format)
-
-**Features:**
-- Dry-run mode
-- Backup creation
-- Verification
-- Rollback capability
-
-### System Tools
-
-#### `run_command`
-
-**Purpose**: Shell command execution with output capture
-
-**Parameters:**
-- `command`: Command om from te voeren
-- `working_dir`: Working directory (optional)
-
-**Features:**
-- Real-time output
-- Error handling
-- Environment preservation
-- Command history tracking
-
-#### `os_command`
-
-**Purpose**: OS-specific command operations
-
-**Parameters:**
-- `command`: OS command
-- `capture_output`: Whether to capture output
-
-#### `change_dir`
-
-**Purpose**: Working directory wijzigen
-
-**Parameters:**
-- `path`: New working directory
-
-## Advanced Features
-
-### 1. Smart Context Integration
-
-De Code Agent tracked automatisch:
-
-```python
-# File access patterns
-"Recently accessed files: main.py, SingleAgent.py, tools.py"
-
-# Command history  
-"Recently run commands: ruff check ., pylint The_Agents/"
-
-# Active tasks
-"Current task: debugging entity extraction"
-```
-
-### 2. Multi-file Analysis
-
-```python
-# Cross-file analysis
-"Vergelijk the error handling in alle agent files"
-
-# Dependency tracking
-"Welke files importeren of agents module?"
-
-# Pattern detection
-"Zoek to inconsistente naming patterns in the codebase"
-```
-
-### 3. Intelligent Suggestions
-
-```python
-# Code improvements
-"This function kan worden gerefactored for betere leesbaarheid"
-
-# Performance optimizations
-"Dit loop kan worden geoptimaliseerd with list comprehension"
-
-# Best practices
-"Overweeg the gebruik of type hints for deze functie"
-```
-
-### 4. Integration with Development Workflow
-
-```python
-# Pre-commit checks
-"Run alle quality checks voordat ik commit"
-
-# Testing integration
-"Create a test for deze nieuwe functie"
-
-# Documentation
-"Genereer docstrings for alle publieke methodes"
-```
-
-## Configuration
-
-### Model Settings
-
-```python
-# Code Agent used deterministic settings
-model_settings=ModelSettings(temperature=0.0)
-```
-
-**Rationale**: Temperature 0.0 zorgt for consistente, reproduceerbare code analysis.
-
-### Tool Configuration
-
-#### Ruff Configuration (pyproject.toml)
-
-```toml
-[tool.ruff]
-line-length = 120
-select = ["E", "F", "B", "UP", "I", "SIM", "D"]
-ignore = ["D203", "D213"]
-```
-
-#### Pylint Configuration
-
-```ini
-[MASTER]
-load-plugins = pylint_pydantic
-
-[MESSAGES CONTROL]
-disable = missing-docstring,too-few-public-methods
-```
+**Debugging Features:**
+- **Error Analysis**: Interpret error messages and stack traces
+- **Logic Debugging**: Identify logical errors in code flow
+- **Performance Analysis**: Find performance bottlenecks
+- **Testing Assistance**: Create test cases to isolate issues
+
+## Available Tools
+
+The Code Agent has access to a comprehensive set of tools:
+
+### File System Tools
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `read_file` | Read file contents | Examining source code |
+| `write_file` | Create/modify files | Implementing new features |
+| `list_directory` | List directory contents | Exploring project structure |
+| `create_directory` | Create new directories | Organizing project layout |
+| `delete_file` | Remove files safely | Cleaning up old files |
+| `move_file` | Move/rename files | Restructuring projects |
+
+### Code Analysis Tools
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `analyze_syntax` | Check syntax validity | Code review and validation |
+| `find_functions` | Locate function definitions | Code navigation |
+| `trace_dependencies` | Map module dependencies | Architecture analysis |
+| `check_imports` | Validate import statements | Dependency management |
+| `measure_complexity` | Assess code complexity | Quality assessment |
+
+### Search and Navigation Tools
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `search_code` | Search for code patterns | Finding similar implementations |
+| `grep_files` | Text search across files | Locating specific functionality |
+| `find_references` | Find all references to symbols | Refactoring assistance |
+| `locate_definition` | Find where symbols are defined | Code navigation |
+
+### Execution and Testing Tools
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `run_code` | Execute Python code | Testing implementations |
+| `run_tests` | Execute test suites | Validation and QA |
+| `validate_syntax` | Check code syntax | Pre-commit validation |
+| `profile_performance` | Measure execution performance | Optimization |
+
+### Git and Version Control Tools
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `git_status` | Check repository status | Version control management |
+| `git_diff` | Show file differences | Change review |
+| `git_log` | View commit history | Project history analysis |
+| `git_branch` | Manage branches | Feature development |
+
+## Usage Patterns
+
+### 1. Code Review and Analysis
+
+**Typical Workflow:**
+1. **Project Overview**: "Analyze the overall project structure"
+2. **Specific Analysis**: "Explain how the authentication system works"
+3. **Quality Assessment**: "Review this function for potential improvements"
+4. **Documentation**: "Generate documentation for this module"
+
+### 2. Feature Implementation
+
+**Typical Workflow:**
+1. **Requirements Analysis**: "I need to add user registration functionality"
+2. **Planning**: "What files need to be modified for this feature?"
+3. **Implementation**: "Implement the registration endpoint"
+4. **Testing**: "Create tests for the new registration feature"
+5. **Integration**: "Update the main application to use the new feature"
+
+### 3. Debugging and Troubleshooting
+
+**Typical Workflow:**
+1. **Problem Description**: "The application crashes when uploading files"
+2. **Error Analysis**: "Analyze this stack trace"
+3. **Investigation**: "Check the file upload handling code"
+4. **Solution**: "Fix the file validation logic"
+5. **Verification**: "Test the fix with various file types"
+
+### 4. Refactoring and Optimization
+
+**Typical Workflow:**
+1. **Assessment**: "Analyze code quality in the user module"
+2. **Identification**: "Find areas that need refactoring"
+3. **Planning**: "Plan the refactoring approach"
+4. **Implementation**: "Refactor the user authentication logic"
+5. **Testing**: "Ensure all tests still pass after refactoring"
 
 ## Best Practices
 
-### 1. Incremental Analysis
+### 1. Providing Context
 
-```python
-# Start breed, ga dan specifiek
-"Geef a algemeen overzicht of the code quality" 
-→ "Focus on the error handling in SingleAgent.py"
-→ "Bekijk specifiek the _extract_entities_from_input methode"
+Always provide sufficient context for better assistance:
+
+**Good:**
+```
+SingleAgent> I'm working on a Flask web application. The user login function 
+in auth.py is not validating passwords correctly. Can you help me debug it?
 ```
 
-### 2. Tool Combinatie
-
-```python
-# Combineer tools for complete analyse
-"Run ruff for style, pylint for logic, and pyright for types"
+**Less Effective:**
+```
+SingleAgent> Fix my login function
 ```
 
-### 3. Context Behoud
+### 2. Incremental Approach
 
-```python
-# Gebruik context for follow-up vragen
-"Na the vorige analyse, wat are the prioriteiten for fixes?"
+Break complex tasks into smaller steps:
+
+**Good:**
+```
+SingleAgent> First, show me the current authentication system
+SingleAgent> Now, help me add two-factor authentication
+SingleAgent> Finally, update the tests for the new auth flow
 ```
 
-### 4. Documentation Integration
+### 3. Specify Requirements
 
-```python
-# Vraag om explanations at code analysis
-"Leg from waarom pylint deze warning geeft and hoe the on te lossen"
+Be clear about requirements and constraints:
+
+**Good:**
+```
+SingleAgent> Create a function to validate email addresses. It should use regex,
+handle international domains, and return both validity and error messages.
 ```
 
-## Performance Tips
+### 4. Request Explanations
 
-### 1. Selective Analysis
+Ask for explanations to learn and verify:
 
-```python
-# Analyseer specifieke delen for snellere results
-"Run ruff alleen on the Tools/ directory"
+**Good:**
+```
+SingleAgent> Implement the feature and explain how it works
+SingleAgent> Why did you choose this approach over alternatives?
 ```
 
-### 2. Cached Results
+## Working with Specific Technologies
 
-De Code Agent cached tool results wanneer mogelijk:
+### Python Projects
 
-```python
-# Hergebruik of recente analysis results
-"Gebaseerd on the eerdere ruff check..."
+The Code Agent excels with Python projects:
+
+```
+SingleAgent> Analyze the Python package structure
+SingleAgent> Add type hints to the user module
+SingleAgent> Create a requirements.txt file
+SingleAgent> Set up pytest configuration
 ```
 
-### 3. Parallel Execution
+### Web Development
 
-```python
-# Multiple tools can parallel draaien
-"Run ruff and pylint tegelijkertijd"
+Strong support for web development:
+
+```
+SingleAgent> Review the API endpoint security
+SingleAgent> Add CORS handling to the Flask app
+SingleAgent> Implement rate limiting middleware
+SingleAgent> Create database migration scripts
 ```
 
-## Common Workflows
+### Data Science
 
-### 1. Code Review Workflow
+Helpful for data science projects:
 
-```python
-1. "Analyseer alle Python files with ruff"
-2. "Run pylint for diepere analyse" 
-3. "Check types with pyright"
-4. "Create a samenvatting of alle gevonden issues"
-5. "Prioriteer the fixes on basis of impact"
+```
+SingleAgent> Analyze this data processing pipeline
+SingleAgent> Optimize the pandas operations
+SingleAgent> Add data validation checks
+SingleAgent> Create visualization functions
 ```
 
-### 2. Debugging Workflow
+## Integration with Architect Agent
 
-```python
-1. "Lees the bestand waar the error optreedt"
-2. "Analyze the error message and stack trace"
-3. "Bekijk gerelateerde files and dependencies"
-4. "Stel a fix for and maak a patch"
-5. "Verifieer the fix with relevante tools"
+The Code Agent works seamlessly with the Architect Agent:
+
+**Typical Collaboration:**
+1. **Planning** (Architect): High-level system design
+2. **Implementation** (Code): Detailed code implementation
+3. **Review** (Both): Architecture and code review
+4. **Optimization** (Code): Performance and quality improvements
+
+**Switching Example:**
+```
+SingleAgent> Implement the user authentication system
+SingleAgent> !architect
+Architect> How does this authentication fit into the overall security architecture?
+Architect> !code
+SingleAgent> Update the implementation based on the architectural feedback
 ```
 
-### 3. Refactoring Workflow
+## Advanced Features
 
-```python
-1. "Analyze the huidige code structure"
-2. "Identificeer refactoring opportunities"
-3. "Create a plan for the wijzigingen"
-4. "Implementeer incrementele changes"
-5. "Verifieer with tests and quality checks"
-```
+### 1. Context-Aware Assistance
 
-## Troubleshooting
+The Code Agent maintains context about your project:
 
-### Common Issues
+- **Project Understanding**: Remembers your project structure and technologies
+- **Conversation History**: Builds on previous discussions
+- **Entity Tracking**: Tracks important code entities and relationships
+- **Pattern Recognition**: Learns your coding patterns and preferences
 
-#### Tool Execution Errors
-```python
-# Zorg that tools geïnstalleerd are
-"Run pip install ruff pylint pyright"
+### 2. Intelligent Suggestions
 
-# Check working directory
-"Wat is the huidige working directory?"
-```
+Proactive suggestions based on context:
 
-#### File Access Issues
-```python
-# Check file permissions
-"Kan ik dit bestand lezen/schrijven?"
+- **Best Practices**: Suggests improvements following best practices
+- **Error Prevention**: Warns about potential issues
+- **Optimization Opportunities**: Identifies performance improvements
+- **Security Considerations**: Highlights security implications
 
-# Verify file paths
-"Bestaat dit bestand on the verwachte pad?"
-```
+### 3. Multi-file Operations
 
-#### Context Confusion
-```python
-# Reset context indien nodig  
-"!clear"
+Handle complex operations across multiple files:
 
-# Manual context addition
-"!manualctx"
-```
+- **Refactoring**: Safe refactoring across multiple files
+- **Feature Implementation**: Coordinate changes across the codebase
+- **Testing**: Create comprehensive test suites
+- **Documentation**: Generate and maintain documentation
 
-For more troubleshooting, zie [Troubleshooting Guide](troubleshooting.md).
+## Limitations and Considerations
 
-## Extensibility
+### 1. Code Execution Safety
 
-### Adding New Tools
+- Always review generated code before execution
+- Be cautious with file operations in production environments
+- Test changes in development environments first
+- Backup important files before major modifications
 
-Nieuwe tools can worden toegevoegd via the `@function_tool` decorator:
+### 2. Technology Scope
 
-```python
-@function_tool
-async def my_custom_tool(wrapper: RunContextWrapper, params: MyParams) -> str:
-    # Tool implementation
-    return result
-```
+While the Code Agent is knowledgeable about many technologies:
+- Primary expertise is in Python and web technologies
+- May need guidance for specialized or newer technologies
+- Always verify suggestions against official documentation
 
-### Custom Workflows
+### 3. Project Complexity
 
-Implementeer custom workflows through tools te combineren in agent instructions.
+For very large or complex projects:
+- Break down tasks into smaller components
+- Provide additional context about project constraints
+- Consider using the Architect Agent for high-level planning
 
-### Integration with External Tools
+## Getting Help
 
-Tools can externe systemen aanroepen for uitgebreide functionaliteit.
+If you need assistance with the Code Agent:
 
-De Code Agent vormt a krachtige basis for elke development workflow and kan aangepast worden aan specifieke project behoeften.
+1. **Type `!help`** for available commands
+2. **Be specific** about your needs and context
+3. **Ask for explanations** when you need to understand the reasoning
+4. **Provide feedback** about the quality of assistance
+
+The Code Agent is designed to be your intelligent coding partner, helping you write better code faster while learning and adapting to your specific needs and preferences.

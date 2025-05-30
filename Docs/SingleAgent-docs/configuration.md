@@ -1,498 +1,387 @@
 # Configuration
 
-This document covers all configuration options for the SingleAgent system, including environment setup, agent behavior, tools, and performance tuning.
+This guide covers all configuration options and settings for the SingleAgent system.
 
-## Configuration Overview
+## Table of Contents
 
-SingleAgent uses multiple configuration methods:
-- **Environment variables** for runtime settings
-- **pyproject.toml** for project-specific configuration  
-- **Command-line arguments** for session overrides
-- **Runtime configuration** for dynamic adjustments
+- [Configuration Files](#configuration-files)
+- [Environment Variables](#environment-variables)
+- [Model Settings](#model-settings)
+- [Agent Configuration](#agent-configuration)
+- [Tool Configuration](#tool-configuration)
+- [Logging Configuration](#logging-configuration)
+- [Advanced Settings](#advanced-settings)
+
+## Configuration Files
+
+### pyproject.toml
+
+The main project configuration is defined in `pyproject.toml`:
+
+```toml
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "singleagent"
+version = "0.1.0"
+description = "A dual-agent system for code and architecture tasks"
+dependencies = [
+    "openai",
+    "python-dotenv",
+    "requests",
+    "spacy",
+    "networkx",
+    "toml"
+]
+```
+
+### requirements.txt
+
+Runtime dependencies are listed in `requirements.txt`:
+
+```
+openai
+python-dotenv
+requests
+spacy
+networkx
+toml
+prompt-toolkit
+tiktoken
+```
 
 ## Environment Variables
 
-### Required Environment Variables
+Create a `.env` file in your project root with the following variables:
+
+### Required Variables
 
 ```bash
 # OpenAI API Configuration
-OPENAI_API_KEY="sk-your-api-key-here"
+OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional: Custom OpenAI endpoint
-OPENAI_BASE_URL="https://api.openai.com/v1"
+# Model Configuration
+OPENAI_MODEL=gpt-4  # Default model for agents
+ARCHITECT_MODEL=gpt-4  # Model for Architect Agent
+CODE_MODEL=gpt-4  # Model for Code Agent
 ```
 
-### Optional Environment Variables
+### Optional Variables
 
 ```bash
-# Agent Configuration
-SINGLEAGENT_DEFAULT_AGENT="code"          # Default agent: "code" or "architect"
-SINGLEAGENT_MODEL="gpt-4"                 # OpenAI model to use
-SINGLEAGENT_MAX_TOKENS=8000               # Maximum context tokens
+# API Configuration
+OPENAI_BASE_URL=https://api.openai.com/v1  # Custom API endpoint
+OPENAI_ORGANIZATION=your_org_id  # Organization ID
 
-# Logging Configuration  
-SINGLEAGENT_LOG_LEVEL="INFO"              # Log level: DEBUG, INFO, WARN, ERROR
-SINGLEAGENT_LOG_FILE="singleagent.log"    # Log file path
+# Performance Settings
+MAX_TOKENS=4096  # Maximum tokens per response
+TEMPERATURE=0.1  # Model temperature (0.0-1.0)
+TIMEOUT=30  # API request timeout in seconds
 
-# Performance Configuration
-SINGLEAGENT_CACHE_DIR="~/.singleagent/cache"  # Cache directory
-SINGLEAGENT_TIMEOUT=30                    # Tool execution timeout (seconds)
-SINGLEAGENT_MAX_RETRIES=3                 # Maximum retry attempts
+# Logging Configuration
+LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR
+LOG_FILE=logs/main.log  # Log file path
 
-# Development Configuration
-SINGLEAGENT_DEBUG=false                   # Enable debug mode
-SINGLEAGENT_PROFILE=false                 # Enable performance profiling
+# Tool Configuration
+ENABLE_WEB_SEARCH=true  # Enable web search tools
+ENABLE_FILE_OPERATIONS=true  # Enable file operation tools
 ```
 
-## pyproject.toml Configuration
+## Model Settings
 
-### Basic Configuration
+### Model Configuration Class
 
-```toml
-[tool.singleagent]
-# Project information
-name = "my-project"
-description = "Project description"
-version = "1.0.0"
+The system uses a centralized model configuration system defined in `agents/model_settings.py`:
 
-# Default settings
-default_agent = "code"
-model = "gpt-4"
-max_tokens = 8000
-
-# Working directory
-project_root = "."
-source_dirs = ["src", "lib"]
-test_dirs = ["tests", "test"]
-docs_dirs = ["docs", "documentation"]
+```python
+class ModelSettings:
+    def __init__(self):
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4")
+        self.max_tokens = int(os.getenv("MAX_TOKENS", "4096"))
+        self.temperature = float(os.getenv("TEMPERATURE", "0.1"))
+        self.timeout = int(os.getenv("TIMEOUT", "30"))
 ```
 
-### Agent Configuration
+### Agent-Specific Models
 
-```toml
-[tool.singleagent.agents]
+You can configure different models for different agents:
 
-[tool.singleagent.agents.code]
-# Code Agent specific settings
-enabled = true
-tools = ["ruff", "pylint", "pyright", "file_ops", "patch"]
-auto_format = true
-auto_lint = true
-strict_type_checking = false
+```python
+# Code Agent Configuration
+code_settings = ModelSettings()
+code_settings.model = "gpt-4"
+code_settings.temperature = 0.1  # Lower temperature for precise code
 
-[tool.singleagent.agents.architect]
-# Architect Agent specific settings
-enabled = true
-tools = ["ast_analysis", "project_structure", "design_patterns", "todo_generation"]
-deep_analysis = true
-pattern_detection = true
-generate_todos = true
+# Architect Agent Configuration
+architect_settings = ModelSettings()
+architect_settings.model = "gpt-4"
+architect_settings.temperature = 0.3  # Higher temperature for creativity
 ```
 
-### Tool Configuration
+## Agent Configuration
 
-```toml
-[tool.singleagent.tools]
+### SingleAgent Configuration
 
-# Code Quality Tools
-[tool.singleagent.tools.ruff]
-enabled = true
-config_file = "pyproject.toml"
-auto_fix = true
-ignore_errors = ["E501"]  # Line too long
-select_rules = ["E", "W", "F"]
+The main SingleAgent class accepts various configuration options:
 
-[tool.singleagent.tools.pylint]
-enabled = true
-config_file = ".pylintrc"
-score_threshold = 8.0
-disable_warnings = ["missing-docstring"]
+```python
+from The_Agents.SingleAgent import SingleAgent
 
-[tool.singleagent.tools.pyright]
-enabled = true
-config_file = "pyrightconfig.json"
-strict_mode = false
-type_checking_mode = "basic"
-
-# File Operations
-[tool.singleagent.tools.file_ops]
-enabled = true
-backup_enabled = true
-backup_dir = ".backups"
-max_file_size = "10MB"
-allowed_extensions = [".py", ".txt", ".md", ".json", ".yaml", ".toml"]
-
-# Patch Management
-[tool.singleagent.tools.patch]
-enabled = true
-auto_backup = true
-dry_run_first = true
-max_patch_size = "1MB"
-
-# Analysis Tools
-[tool.singleagent.tools.ast_analysis]
-enabled = true
-cache_results = true
-deep_analysis = true
-track_dependencies = true
-
-[tool.singleagent.tools.project_structure]
-enabled = true
-ignore_dirs = [".git", "__pycache__", "node_modules", ".venv"]
-max_depth = 10
-analyze_config_files = true
-
-[tool.singleagent.tools.design_patterns]
-enabled = true
-custom_patterns = []
-confidence_threshold = 0.7
+agent = SingleAgent(
+    model="gpt-4",
+    temperature=0.1,
+    max_tokens=4096,
+    timeout=30,
+    enable_logging=True,
+    log_level="INFO"
+)
 ```
+
+### ArchitectAgent Configuration
+
+The ArchitectAgent has specialized configuration options:
+
+```python
+from The_Agents.ArchitectAgent import ArchitectAgent
+
+architect = ArchitectAgent(
+    model="gpt-4",
+    temperature=0.3,
+    max_design_iterations=5,
+    enable_tools=True,
+    tools_config={
+        "web_search": True,
+        "file_analysis": True,
+        "diagram_generation": False
+    }
+)
+```
+
+### Configuration Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` | str | "gpt-4" | OpenAI model to use |
+| `temperature` | float | 0.1 | Response creativity (0.0-1.0) |
+| `max_tokens` | int | 4096 | Maximum response length |
+| `timeout` | int | 30 | API request timeout |
+| `enable_logging` | bool | True | Enable detailed logging |
+| `log_level` | str | "INFO" | Logging verbosity level |
+
+## Tool Configuration
+
+### Tool Registry
+
+Tools are configured in the `Tools/` directory with specific settings:
+
+```python
+# tools_single_agent.py
+TOOL_CONFIGS = {
+    "file_operations": {
+        "enabled": True,
+        "max_file_size": "10MB",
+        "allowed_extensions": [".py", ".md", ".txt", ".json"]
+    },
+    "web_search": {
+        "enabled": True,
+        "max_results": 10,
+        "timeout": 15
+    },
+    "code_analysis": {
+        "enabled": True,
+        "max_complexity": 100,
+        "include_metrics": True
+    }
+}
+```
+
+### Architect Tools Configuration
+
+Specialized tools for the Architect Agent:
+
+```python
+# architect_tools.py
+ARCHITECT_TOOL_CONFIGS = {
+    "system_design": {
+        "enabled": True,
+        "max_components": 50,
+        "include_patterns": True
+    },
+    "technology_research": {
+        "enabled": True,
+        "search_depth": "comprehensive",
+        "include_comparisons": True
+    }
+}
+```
+
+### Tool Security Settings
+
+```python
+SECURITY_SETTINGS = {
+    "sandbox_mode": True,  # Run tools in sandbox
+    "allowed_paths": ["/workspace", "/project"],  # Restricted file access
+    "blocked_commands": ["rm", "del", "format"],  # Dangerous commands
+    "require_confirmation": True  # Ask before destructive operations
+}
+```
+
+## Logging Configuration
+
+### Log Levels
+
+Configure logging verbosity:
+
+- `DEBUG`: Detailed debugging information
+- `INFO`: General operational messages
+- `WARNING`: Warning messages for potential issues
+- `ERROR`: Error messages for failures
+
+### Log File Configuration
+
+```python
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/main.log'),
+        logging.StreamHandler()  # Console output
+    ]
+)
+```
+
+### Agent-Specific Logging
+
+Each agent can have its own log file:
+
+```python
+# Architect Agent logging
+architect_logger = logging.getLogger('ArchitectAgent')
+architect_handler = logging.FileHandler('logs/architectagent.log')
+architect_logger.addHandler(architect_handler)
+
+# Tool logging
+tool_logger = logging.getLogger('ArchitectTools')
+tool_handler = logging.FileHandler('logs/architect_tools.log')
+tool_logger.addHandler(tool_handler)
+```
+
+## Advanced Settings
 
 ### Context Management
 
-```toml
-[tool.singleagent.context]
-# Token Management
-max_context_tokens = 8000
-context_window_buffer = 500
-priority_threshold = 0.5
-summarization_ratio = 0.3
-
-# Entity Tracking
-track_all_variables = false
-track_local_variables = false
-deep_dependency_analysis = true
-max_entity_depth = 5
-entity_cache_size = 1000
-
-# Conversation Management
-max_conversation_history = 100
-conversation_summary_threshold = 50
-auto_summarize = true
-
-# Memory Management
-session_cache_size = 1000
-file_cache_size = 500
-persistent_cache = true
-cache_ttl = 3600  # 1 hour
-```
-
-### Performance Tuning
-
-```toml
-[tool.singleagent.performance]
-# Concurrency
-max_concurrent_tools = 3
-tool_timeout = 30
-enable_parallel_analysis = true
-
-# Caching
-enable_caching = true
-cache_directory = "~/.singleagent/cache"
-cache_compression = true
-cache_max_size = "100MB"
-
-# Background Processing
-enable_background_tasks = true
-background_analysis = true
-preemptive_caching = false
-
-# Resource Limits
-max_memory_usage = "500MB"
-max_cpu_percentage = 80
-disk_space_threshold = "1GB"
-```
-
-### Logging Configuration
-
-```toml
-[tool.singleagent.logging]
-# Basic Logging
-level = "INFO"
-file = "singleagent.log"
-max_file_size = "10MB"
-backup_count = 5
-
-# Advanced Logging
-format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-date_format = "%Y-%m-%d %H:%M:%S"
-
-# Component Logging
-[tool.singleagent.logging.components]
-agents = "INFO"
-tools = "DEBUG"
-context = "INFO"
-performance = "WARN"
-
-# Log Filtering
-[tool.singleagent.logging.filters]
-exclude_modules = ["urllib3", "requests"]
-sensitive_data_masking = true
-```
-
-## Command-Line Configuration
-
-### Global Options
-
-```bash
-# Model and API configuration
-python -m singleagent --model gpt-4-turbo --max-tokens 16000
-
-# Agent selection
-python -m singleagent --agent architect
-
-# Logging configuration
-python -m singleagent --log-level DEBUG --log-file debug.log
-
-# Performance options
-python -m singleagent --timeout 60 --max-retries 5
-```
-
-### Tool-Specific Options
-
-```bash
-# Code quality tools
-python -m singleagent --enable-ruff --disable-pylint --strict-typing
-
-# Analysis tools
-python -m singleagent --deep-analysis --pattern-detection
-
-# File operations
-python -m singleagent --backup-files --max-file-size 50MB
-```
-
-## Runtime Configuration
-
-### Dynamic Configuration Updates
-
-Configuration can be updated during runtime:
+Configure how agents handle context:
 
 ```python
-# Update agent settings
-!config set agents.code.auto_format true
-!config set context.max_tokens 12000
-
-# Update tool settings  
-!config set tools.ruff.auto_fix false
-!config set tools.pylint.score_threshold 9.0
-
-# View current configuration
-!config show
-!config show agents.code
-!config show tools.ruff
+CONTEXT_SETTINGS = {
+    "max_context_length": 8192,  # Maximum context tokens
+    "context_window": 4096,  # Working context window
+    "auto_summarize": True,  # Auto-summarize long contexts
+    "preserve_entities": True,  # Keep important entities
+    "compression_ratio": 0.3  # Context compression ratio
+}
 ```
 
-### Session-Specific Overrides
+### Performance Settings
+
+Optimize system performance:
 
 ```python
-# Temporary overrides for current session
-!set max_tokens 16000
-!set agent architect
-!set debug_mode true
-
-# Reset to defaults
-!reset config
+PERFORMANCE_SETTINGS = {
+    "enable_caching": True,  # Cache API responses
+    "cache_duration": 3600,  # Cache duration in seconds
+    "parallel_requests": 3,  # Max parallel API calls
+    "retry_attempts": 3,  # Failed request retries
+    "backoff_factor": 2  # Exponential backoff multiplier
+}
 ```
 
-## Configuration Profiles
+### Memory Management
 
-### Development Profile
+Configure memory usage:
 
-```toml
-[tool.singleagent.profiles.development]
-extends = "default"
-
-# More verbose logging
-logging.level = "DEBUG"
-logging.components.tools = "DEBUG"
-
-# Aggressive analysis
-tools.ast_analysis.deep_analysis = true
-tools.design_patterns.confidence_threshold = 0.5
-
-# Performance settings for development
-performance.enable_background_tasks = false
-performance.preemptive_caching = false
-```
-
-### Production Profile
-
-```toml
-[tool.singleagent.profiles.production]
-extends = "default"
-
-# Minimal logging
-logging.level = "WARN"
-logging.file = "/var/log/singleagent.log"
-
-# Conservative analysis
-tools.ast_analysis.deep_analysis = false
-tools.design_patterns.confidence_threshold = 0.8
-
-# Performance optimization
-performance.enable_caching = true
-performance.cache_compression = true
-performance.max_concurrent_tools = 5
-```
-
-### CI/CD Profile
-
-```toml
-[tool.singleagent.profiles.ci]
-extends = "production"
-
-# Non-interactive mode
-interactive = false
-auto_confirm = true
-
-# Focus on code quality
-agents.code.auto_format = true
-agents.code.auto_lint = true
-agents.code.strict_type_checking = true
-
-# Faster execution
-performance.tool_timeout = 15
-context.max_context_tokens = 4000
+```python
+MEMORY_SETTINGS = {
+    "max_memory_mb": 1024,  # Maximum memory usage
+    "gc_threshold": 0.8,  # Garbage collection threshold
+    "context_cleanup": True,  # Auto-cleanup old contexts
+    "tool_result_limit": 100  # Max stored tool results
+}
 ```
 
 ## Configuration Validation
 
-### Schema Validation
+### Validating Settings
 
-The system validates configuration against a schema:
+The system includes configuration validation:
 
 ```python
-# Validate current configuration
-!config validate
-
-# Check specific section
-!config validate tools.ruff
-
-# Show validation errors
-!config validate --verbose
+def validate_config():
+    """Validate all configuration settings."""
+    required_vars = ["OPENAI_API_KEY"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        raise ConfigurationError(f"Missing required variables: {missing_vars}")
+    
+    # Validate model settings
+    if not isinstance(float(os.getenv("TEMPERATURE", "0.1")), float):
+        raise ConfigurationError("TEMPERATURE must be a float")
+    
+    # Validate paths
+    log_dir = os.path.dirname(os.getenv("LOG_FILE", "logs/main.log"))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 ```
 
 ### Configuration Testing
 
-```bash
-# Test configuration with dry run
-python -m singleagent --config-test --dry-run
+Test your configuration:
 
-# Validate tool configuration
-python -m singleagent --validate-tools
+```python
+from utilities.config_validator import validate_config
 
-# Check performance settings
-python -m singleagent --benchmark-config
+try:
+    validate_config()
+    print("✓ Configuration is valid")
+except ConfigurationError as e:
+    print(f"✗ Configuration error: {e}")
 ```
 
-## Advanced Configuration
-
-### Custom Tool Configuration
-
-```toml
-[tool.singleagent.custom_tools]
-
-[tool.singleagent.custom_tools.my_linter]
-command = "my-custom-linter {file_path}"
-enabled = true
-timeout = 30
-output_format = "json"
-error_patterns = ["ERROR:", "CRITICAL:"]
-```
-
-### Plugin Configuration
-
-```toml
-[tool.singleagent.plugins]
-enabled = ["custom_analyzer", "project_templates"]
-
-[tool.singleagent.plugins.custom_analyzer]
-module = "my_plugins.analyzer"
-config = {threshold = 0.8, mode = "strict"}
-
-[tool.singleagent.plugins.project_templates]
-module = "my_plugins.templates"
-templates_dir = "~/.singleagent/templates"
-```
-
-### Integration Configuration
-
-```toml
-[tool.singleagent.integrations]
-
-# Version Control
-[tool.singleagent.integrations.git]
-enabled = true
-auto_stage = false
-commit_message_template = "SingleAgent: {summary}"
-
-# IDE Integration
-[tool.singleagent.integrations.vscode]
-enabled = true
-extension_id = "singleagent.vscode"
-auto_format_on_save = true
-
-# CI/CD Integration
-[tool.singleagent.integrations.github_actions]
-enabled = true
-workflow_file = ".github/workflows/singleagent.yml"
-```
-
-## Configuration Best Practices
+## Best Practices
 
 ### Security
 
-1. **Environment Variables**: Store sensitive data in environment variables
-2. **File Permissions**: Secure configuration files (600 permissions)
-3. **API Keys**: Use key rotation and access controls
-4. **Logging**: Avoid logging sensitive information
+1. **Never commit API keys** to version control
+2. **Use environment variables** for sensitive data
+3. **Restrict file access** with allowed paths
+4. **Enable sandbox mode** for tool execution
 
 ### Performance
 
-1. **Caching**: Enable caching for better performance
-2. **Resource Limits**: Set appropriate limits for your environment
-3. **Background Tasks**: Use background processing for non-critical tasks
-4. **Tool Selection**: Enable only necessary tools
+1. **Set appropriate timeouts** to prevent hanging
+2. **Use caching** for repeated API calls
+3. **Limit context length** to control costs
+4. **Monitor memory usage** for long-running sessions
 
 ### Maintenance
 
-1. **Profile Usage**: Use configuration profiles for different environments
-2. **Regular Updates**: Keep configuration in sync with system updates
-3. **Documentation**: Document custom configuration changes
-4. **Validation**: Regularly validate configuration integrity
+1. **Regular log rotation** to prevent disk space issues
+2. **Monitor API usage** and costs
+3. **Update models** as new versions become available
+4. **Test configuration** after changes
 
-### Example Complete Configuration
+## Next Steps
 
-```toml
-[tool.singleagent]
-name = "my-awesome-project"
-default_agent = "code"
-model = "gpt-4"
-max_tokens = 8000
+- [Context Management](context-management.md) - Learn about context handling
+- [Tools Documentation](tools.md) - Explore available tools
+- [Troubleshooting](troubleshooting.md) - Solve common issues
+- [Examples](examples.md) - See practical configurations
 
-[tool.singleagent.agents.code]
-enabled = true
-tools = ["ruff", "pylint", "pyright"]
-auto_format = true
+---
 
-[tool.singleagent.tools.ruff]
-enabled = true
-auto_fix = true
-config_file = "pyproject.toml"
-
-[tool.singleagent.context]
-max_context_tokens = 8000
-track_all_variables = false
-deep_dependency_analysis = true
-
-[tool.singleagent.performance]
-max_concurrent_tools = 3
-enable_caching = true
-cache_directory = "~/.singleagent/cache"
-
-[tool.singleagent.logging]
-level = "INFO"
-file = "singleagent.log"
-```
-
-This configuration system provides flexible and comprehensive control about all aspects or the SingleAgent system while maintaining sensible defaults for common use cases.
+For more information, see the [main documentation](index.md) or [installation guide](installation.md).

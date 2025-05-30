@@ -1,339 +1,349 @@
-# Installation
+# Installation Guide
 
-This page contains detailed installation instructions for SingleAgent on different platforms.
+This guide provides detailed instructions for installing and setting up SingleAgent on your system.
 
 ## System Requirements
 
-### Hardware
-- **RAM**: Minimum 4GB, recommended 8GB+ (for spaCy model)
-- **Disk Space**: Approximately 500MB for all dependencies
-- **CPU**: No specific requirements
+### Minimum Requirements
 
-### Software
-- **Python**: 3.8 or higher (3.9+ recommended)
-- **pip**: For package management
-- **Internet**: For OpenAI API calls and package downloads
+- **Python**: 3.8 or higher
+- **Operating System**: Windows, macOS, or Linux
+- **RAM**: 4GB minimum (8GB recommended)
+- **Storage**: 500MB free space
+- **Internet**: Required for OpenAI API access
 
-## Platform-Specific Instructions
+### Recommended Requirements
 
-### macOS
+- **Python**: 3.9 or higher
+- **RAM**: 8GB or more
+- **Storage**: 1GB free space
+- **Terminal**: Modern terminal with Unicode support
 
-```bash
-# Check Python version
-python3 --version
+## Prerequisites
 
-# Install Homebrew (if you don't have it)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+### 1. Python Installation
 
-# Update pip
-python3 -m pip install --upgrade pip
-
-# Clone/download the project
-# Navigate to the project directory
-
-# Install requirements
-pip3 install -r requirements.txt
-
-# Download spaCy model
-python3 -m spacy download en_core_web_lg
-```
-
-### Linux (Ubuntu/Debian)
+Ensure you have Python 3.8+ installed:
 
 ```bash
-# Update package list
-sudo apt update
-
-# Install Python and pip (if not present)
-sudo apt install python3 python3-pip python3-venv
-
-# Check version
-python3 --version
-
-# Clone/download the project
-# Navigate to the project directory
-
-# Create virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate
-
-# Install requirements
-pip install -r requirements.txt
-
-# Download spaCy model
-python -m spacy download en_core_web_lg
-```
-
-### Windows
-
-```cmd
-REM Check Python version
 python --version
+# or
+python3 --version
+```
 
-REM Navigate to project directory
-cd path\to\your\project
+If you need to install Python:
+- **Windows**: Download from [python.org](https://python.org)
+- **macOS**: Use Homebrew: `brew install python`
+- **Linux**: Use your package manager: `sudo apt install python3`
 
-REM Create virtual environment (recommended)
+### 2. OpenAI API Key
+
+You'll need an OpenAI API key:
+
+1. Go to [OpenAI Platform](https://platform.openai.com)
+2. Sign up or log in to your account
+3. Navigate to API Keys section
+4. Create a new API key
+5. Save the key securely (you'll need it later)
+
+## Installation Steps
+
+### Method 1: Standard Installation
+
+1. **Clone the Repository**
+   ```bash
+   git clone <repository-url>
+   cd SingleAgent
+   ```
+
+2. **Create Virtual Environment** (Recommended)
+   ```bash
+   python -m venv venv
+   
+   # Activate virtual environment
+   # On Windows:
+   venv\Scripts\activate
+   
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Method 2: Development Installation
+
+For development with editable installation:
+
+```bash
+git clone <repository-url>
+cd SingleAgent
 python -m venv venv
-venv\Scripts\activate
-
-REM Install requirements
-pip install -r requirements.txt
-
-REM Download spaCy model
-python -m spacy download en_core_web_lg
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -e .
 ```
 
-## Virtual Environment Setup (Recommended)
+## Configuration
 
-It's strongly recommended to use a virtual environment:
+### 1. Environment Variables
 
-### Why Virtual Environment?
-- Prevents conflicts with other Python projects
-- Keeps dependencies organized
-- Easier to manage different versions
+Set up your OpenAI API key:
 
-### Setup
-
+**Option A: Environment Variable**
 ```bash
-# Create virtual environment
-python -m venv singleagent-env
+# Linux/macOS
+export OPENAI_API_KEY="your-api-key-here"
 
-# Activeer (macOS/Linux)
-source singleagent-env/bin/activate
+# Windows Command Prompt
+set OPENAI_API_KEY=your-api-key-here
 
-# Activeer (Windows)
-singleagent-env\Scripts\activate
-
-# Installeer dependencies
-pip install -r requirements.txt
-
-# Deactiveer wanneer klaar
-deactivate
+# Windows PowerShell
+$env:OPENAI_API_KEY="your-api-key-here"
 ```
 
-## Package Dependencies Uitleg
-
-Hier is wat elke dependency doet:
-
-### Core Dependencies
-
-```python
-openai                  # OpenAI API client for LLM calls
-prompt_toolkit         # Geavanceerde CLI interface with history
-pydantic              # Data validatie and serialisatie
-tiktoken              # Token counting for OpenAI models
-```
-
-### Advanced Features
-
-```python
-spacy                 # Natural Language Processing for entity extraction
-networkx              # Graph analysis for dependency mapping
-typing_extensions     # Extended type hints ondersteuning
-toml                  # TOML configuration file parsing
-```
-
-### Development Tools
-
-```python
-ruff                  # Python linter and formatter (vervanger for flake8)
-pylint                # Uitgebreide Python code analysis
-pyright               # Static type checker of Microsoft
-```
-
-## OpenAI API Setup
-
-### API Key verkrijgen
-
-1. Ga to [OpenAI Platform](https://platform.openai.com)
-2. Log in or maak a account
-3. Navigeer to API keys sectie
-4. Genereer a nieuwe API key
-5. Bewaar deze veilig!
-
-### API Key Configureren
-
-#### Methode 1: Environment Variable (Aanbevolen)
-
-```bash
-# macOS/Linux - voeg toe aan ~/.bashrc or ~/.zshrc
-export OPENAI_API_KEY=sk-your-api-key-here
-
-# Windows - voeg toe aan environment variables
-set OPENAI_API_KEY=sk-your-api-key-here
-```
-
-#### Methode 2: .env File
-
-Create a `.env` bestand in the project root:
-
+**Option B: .env File**
+Create a `.env` file in the project root:
 ```env
-OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_API_KEY=your-api-key-here
 ```
 
-**Waarschuwing**: Voeg `.env` toe aan je `.gitignore`!
+### 2. SpaCy Model Installation
 
-### API Gebruik Monitoring
-
-- Monitor je usage on [OpenAI Platform](https://platform.openai.com/usage)
-- Stel usage limits in as gewenst
-- SingleAgent used standaard GPT-4.1
-
-## SpaCy Model Setup
-
-### Standaard Model (Aanbevolen)
+SingleAgent uses SpaCy for entity recognition. Install the required model:
 
 ```bash
-# Download large English model (beste accuracy)
-python -m spacy download en_core_web_lg
-```
-
-### Alternatieve Models
-
-```bash
-# Medium model (balans tussen grootte and accuracy)
-python -m spacy download en_core_web_md
-
-# Small model (snelste, minder accurate)
 python -m spacy download en_core_web_sm
 ```
 
-### Model Selectie Aanpassen
+### 3. Optional Configuration
 
-In `The_Agents/spacy_singleton.py` kun je the model wijzigen:
-
-```python
-# Wijzig deze regel for a ander model
-await nlp_singleton.initialize(model_name="en_core_web_md", disable=["parser"])
-```
-
-## Verificatie of Installatie
-
-Test or alles correct geïnstalleerd is:
-
-### 1. Python Environment Test
+Create a configuration file if you want to customize settings:
 
 ```bash
-python -c "
-import sys
-print(f'Python version: {sys.version}')
-
-try:
-    import openai, prompt_toolkit, pydantic, tiktoken, spacy, networkx
-    print('✓ All core packages imported successfully')
-except ImportError as e:
-    print(f'✗ Import error: {e}')
-"
+cp config/config.example.yaml config/config.yaml
 ```
 
-### 2. SpaCy Model Test
+Edit the configuration file as needed.
+
+## Verification
+
+### 1. Test Installation
+
+Run a quick test to verify everything is working:
 
 ```bash
-python -c "
-import spacy
-try:
-    nlp = spacy.load('en_core_web_lg')
-    print('✓ SpaCy model loaded successfully')
-except OSError:
-    print('✗ SpaCy model not found - run: python -m spacy download en_core_web_lg')
-"
+python main.py --test
 ```
 
-### 3. OpenAI API Test
+### 2. Check Dependencies
+
+Verify all dependencies are installed correctly:
 
 ```bash
-python -c "
-import os
-from openai import OpenAI
-
-if 'OPENAI_API_KEY' in os.environ:
-    print('✓ OpenAI API key found')
-    try:
-        client = OpenAI()
-        print('✓ OpenAI client initialized')
-    except Exception as e:
-        print(f'✗ OpenAI client error: {e}')
-else:
-    print('✗ OPENAI_API_KEY environment variable not set')
-"
+pip list | grep -E "(openai|spacy|prompt-toolkit)"
 ```
 
-### 4. Volledige Systeem Test
+You should see the required packages listed.
+
+### 3. Launch SingleAgent
+
+Start the system:
 
 ```bash
-# Start SingleAgent in test mode
-python -c "
-from The_Agents.SingleAgent import SingleAgent
-from The_Agents.ArchitectAgent import ArchitectAgent
-
-try:
-    code_agent = SingleAgent()
-    arch_agent = ArchitectAgent()
-    print('✓ Both agents initialized successfully')
-    print('Ready to start main.py!')
-except Exception as e:
-    print(f'✗ Agent initialization error: {e}')
-"
+python main.py
 ```
 
-## Troubleshooting Installatie
-
-### Veel voorkomende problemen
-
-#### "No module named 'agents'"
-```bash
-# Zorg that je in the juiste directory bent
-ls -la  # Moet agents/ directory bevatten
-
-# Herinstalleer requirements
-pip install -r requirements.txt --force-reinstall
+You should see the SingleAgent prompt:
+```
+SingleAgent>
 ```
 
-#### SpaCy SSL Certificaat Errors
-```bash
-# macOS fix
-/Applications/Python\ 3.x/Install\ Certificates.command
+## Troubleshooting Installation Issues
 
-# Alternatief: download handmatig
-pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.1/en_core_web_lg-3.7.1-py3-none-any.whl
+### Common Issues
+
+#### Python Version Error
+```
+Error: Python 3.8+ required
+```
+**Solution**: Upgrade Python or use `python3` instead of `python`
+
+#### OpenAI API Key Missing
+```
+Error: OpenAI API key not found
+```
+**Solutions**:
+- Verify the API key is set correctly
+- Check the environment variable name
+- Ensure the `.env` file is in the correct location
+
+#### SpaCy Model Not Found
+```
+OSError: [E050] Can't find model 'en_core_web_sm'
+```
+**Solution**: 
+```bash
+python -m spacy download en_core_web_sm
+```
+
+#### Permission Errors (Linux/macOS)
+```
+Permission denied: /usr/local/...
+```
+**Solution**: Use virtual environment or `--user` flag:
+```bash
+pip install --user -r requirements.txt
 ```
 
 #### Windows Path Issues
-- Gebruik forward slashes `/` in plaats of backslashes `\`
-- Activeer virtual environment for elke nieuwe terminal sessie
-- Controleer PATH environment variable
+```
+'python' is not recognized...
+```
+**Solutions**:
+- Add Python to PATH during installation
+- Use `py` instead of `python`
+- Reinstall Python with "Add to PATH" option
 
-#### Permission Errors (Linux/macOS)
+### Dependency Conflicts
+
+If you encounter dependency conflicts:
+
+1. **Clear pip cache**:
+   ```bash
+   pip cache purge
+   ```
+
+2. **Use fresh virtual environment**:
+   ```bash
+   deactivate
+   rm -rf venv
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+3. **Check for conflicting packages**:
+   ```bash
+   pip check
+   ```
+
+## Advanced Installation Options
+
+### Docker Installation
+
+If you prefer Docker:
+
+```dockerfile
+FROM python:3.9
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN python -m spacy download en_core_web_sm
+
+COPY . .
+CMD ["python", "main.py"]
+```
+
+Build and run:
 ```bash
-# Gebruik --user flag
-pip install --user -r requirements.txt
-
-# Of gebruik sudo (niet aanbevolen)
-sudo pip install -r requirements.txt
+docker build -t singleagent .
+docker run -e OPENAI_API_KEY=your-key -it singleagent
 ```
 
-### Performance Optimalisatie
+### Conda Installation
 
-#### Voor Snellere Startup
-```python
-# In spacy_singleton.py, disable meer components:
-await nlp_singleton.initialize(
-    model_name="en_core_web_lg", 
-    disable=["parser", "tagger", "lemmatizer"]
-)
+If you use Conda:
+
+```bash
+conda create -n singleagent python=3.9
+conda activate singleagent
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 ```
 
-#### Voor Minder Memory Gebruik
-- Gebruik `en_core_web_md` in plaats of `en_core_web_lg`
-- Verhoog token limits in context management
+## Post-Installation Setup
+
+### 1. Initialize Context Storage
+
+On first run, SingleAgent will create necessary directories:
+- Context storage: `~/.singleagent/context/`
+- Configuration: `~/.singleagent/config/`
+- Logs: `~/.singleagent/logs/`
+
+### 2. Test Both Agents
+
+Verify both agents work correctly:
+
+```bash
+# Test Code Agent (default)
+SingleAgent> help
+
+# Test Architect Agent
+SingleAgent> !architect
+Architect> help
+```
+
+### 3. Configure Preferences
+
+Set up your preferences:
+- Preferred output format
+- Default agent
+- Context retention settings
+
+See [Configuration Guide](configuration.md) for details.
+
+## Updating SingleAgent
+
+To update to the latest version:
+
+```bash
+git pull origin main
+pip install -r requirements.txt --upgrade
+```
+
+## Uninstallation
+
+To remove SingleAgent:
+
+1. **Deactivate virtual environment**:
+   ```bash
+   deactivate
+   ```
+
+2. **Remove project directory**:
+   ```bash
+   rm -rf /path/to/SingleAgent
+   ```
+
+3. **Remove virtual environment**:
+   ```bash
+   rm -rf venv
+   ```
+
+4. **Clean up user data** (optional):
+   ```bash
+   rm -rf ~/.singleagent
+   ```
 
 ## Next Steps
 
-Na succesvolle installation:
+After successful installation:
 
-1. Lees the [Snelstart Gids](quickstart.md)
-2. Verken the [Architectuur Overview](architecture.md)
-3. Probeer enkele [Voorbeelden](examples.md)
+1. Read the [Quick Start Guide](quickstart.md)
+2. Review [Configuration Options](configuration.md)
+3. Explore [Architecture Overview](architecture.md)
+4. Try the [Examples](examples.md)
 
-Voor problemen die hier niet staan, zie [Troubleshooting](troubleshooting.md).
+## Getting Help
+
+If you encounter issues during installation:
+
+1. Check the [Troubleshooting Guide](troubleshooting.md)
+2. Review the error messages carefully
+3. Ensure all prerequisites are met
+4. Try the installation in a fresh virtual environment
+
+The SingleAgent system is now ready to use!

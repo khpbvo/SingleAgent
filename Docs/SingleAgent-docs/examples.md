@@ -1,566 +1,828 @@
-# Examples and Use Cases
+# Examples and Workflows
 
-This document provides practical examples and real-world use cases for the SingleAgent system, demonstrating how to effectively use both agents for different development scenarios.
-
-## Overview
-
-The SingleAgent system excels at various development tasks through its dual-agent architecture:
-- **Code Agent**: Focused on code quality, formatting, and direct code operations
-- **Architect Agent**: Specialized in project analysis, design patterns, and architectural insights
+This guide provides practical examples and common workflows for using SingleAgent effectively. Learn through real-world scenarios and step-by-step tutorials.
 
 ## Getting Started Examples
 
-### Basic Code Quality Check
+### Basic Project Setup
 
-**Scenario**: You want to check and fix code quality issues in a Python file.
-
-```bash
-# Start SingleAgent (defaults to Code Agent)
-python -m singleagent
-
-# Check and fix a file
-User: Please analyze and fix any issues in src/user_manager.py
-
-Code Agent: I'll analyze the file for code quality issues and apply fixes.
-
-# The agent will:
-# 1. Run Ruff linter with auto-fix
-# 2. Run Pylint for detailed analysis  
-# 3. Run Pyright for type checking
-# 4. Provide a summary or changes made
-```
-
-### Project Architecture Analysis
-
-**Scenario**: You want to understand the architecture or an existing project.
+**Scenario**: Setting up a new Python web application with authentication.
 
 ```bash
-# Switch to Architect Agent
-!architect
+# Start SingleAgent
+python main.py
 
-# Analyze project structure
-User: Can you analyze the overall architecture or this project and identify any design patterns?
+# User interaction
+User: "I want to create a Flask web application with user authentication"
 
-Architect Agent: I'll perform a comprehensive architectural analysis.
+# Architect Agent Response
+Architect: "I'll help you design a Flask application with authentication. Let me create the project structure and plan the implementation."
 
-# The agent will:
-# 1. Analyze project structure and organization
-# 2. Identify design patterns in use
-# 3. Generate entity relationship mappings
-# 4. Provide architectural recommendations
+# The system creates:
+# - Project directory structure
+# - Requirements file
+# - Basic Flask application
+# - Authentication blueprints
+# - Database models
 ```
 
-## Code Quality Workflows
+**Resulting Project Structure**:
+```
+my_flask_app/
+├── app/
+│   ├── __init__.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── user.py
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   ├── routes.py
+│   │   └── forms.py
+│   └── main/
+│       ├── __init__.py
+│       └── routes.py
+├── migrations/
+├── tests/
+├── config.py
+├── requirements.txt
+└── run.py
+```
 
-### Complete Code Quality Pipeline
+### Code Implementation Workflow
 
-**Use Case**: Establish a comprehensive code quality workflow for a Python project.
+**Scenario**: Implementing a specific feature with the Code Agent.
 
+```bash
+User: "Implement JWT-based authentication for the login endpoint"
+
+# Code Agent Response
+Code Agent: "I'll implement JWT authentication for your login endpoint. Let me create the necessary code."
+```
+
+The Code Agent creates:
+
+1. **Authentication Service** (`app/services/auth_service.py`):
 ```python
-# File: src/models/user.py (before)
-class user:
-    def __init__(self,name,email):
-        self.name=name
-        self.email=email
-    def validate_email(self,email):
-        if "@" in email:return True
-        else:return False
-```
+import jwt
+from datetime import datetime, timedelta
+from werkzeug.security import check_password_hash
+from app.models.user import User
 
-**Workflow**:
-```bash
-# 1. Start with Code Agent
-python -m singleagent
-
-# 2. Request comprehensive analysis
-User: Please perform a complete code quality analysis on src/models/user.py and fix all issues
-
-# 3. Code Agent performs:
-# - Ruff formatting (PEP 8 compliance)
-# - Pylint analysis (code quality)  
-# - Pyright type checking
-# - Applies automatic fixes
-```
-
-**Result**:
-```python
-# File: src/models/user.py (after)
-"""User model with email validation."""
-import re
-from typing import Optional
-
-
-class User:
-    """User class for managing user data."""
+class AuthService:
+    def __init__(self, secret_key):
+        self.secret_key = secret_key
     
-    def __init__(self, name: str, email: str) -> None:
-        """Initialize user with name and email.
-        
-        Args:
-            name: User's full name
-            email: User's email address
-        """
-        self.name = name
-        self.email = email
+    def authenticate_user(self, email, password):
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password_hash, password):
+            return self.generate_token(user)
+        return None
     
-    def validate_email(self, email: Optional[str] = None) -> bool:
-        """Validate email address format.
-        
-        Args:
-            email: Email address to validate (uses self.email if None)
-            
-        Returns:
-            True if email is valid, False otherwise
-        """
-        email_to_check = email or self.email
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(pattern, email_to_check))
-```
-
-### Pre-commit Hook Integration
-
-**Use Case**: Integrate SingleAgent into pre-commit hooks for automatic code quality checks.
-
-```yaml
-# .pre-commit-config.yaml
-repos:
-  - repo: local
-    hooks:
-      - id: singleagent-quality
-        name: SingleAgent Code Quality
-        entry: python -m singleagent --batch-mode --agent code
-        language: system
-        files: \.py$
-        pass_filenames: true
-```
-
-## Architectural Analysis Workflows
-
-### Legacy Code Understanding
-
-**Use Case**: Understanding and documenting a legacy codebase.
-
-```bash
-# Switch to Architect Agent
-!architect
-
-# Comprehensive legacy analysis
-User: This is a legacy Django project. Can you help me understand its architecture and identify areas for improvement?
-
-# Architect Agent workflow:
-# 1. Analyze project structure
-# 2. Identify Django patterns and anti-patterns
-# 3. Map model relationships
-# 4. Identify technical debt
-# 5. Generate improvement recommendations
-```
-
-**Example Output**:
-```markdown
-# Legacy Django Project Analysis
-
-## Project Structure
-```
-myproject/
-├── apps/
-│   ├── users/          # User management (follows Django patterns)
-│   ├── orders/         # Order processing (needs refactoring)
-│   └── legacy_utils/   # Contains deprecated code
-├── config/             # Django settings (well organized)
-└── static/            # Static files (needs optimization)
-```
-
-## Design Patterns Identified
-- **Model-View-Template**: Standard Django pattern
-- **Factory Pattern**: Used in `order_factory.py`
-- **Singleton**: Database connection manager (anti-pattern - use Django's built-in)
-
-## Recommendations
-1. Refactor `legacy_utils` module
-2. Replace Singleton pattern with Django connection pooling
-3. Add type hints to model fields
-4. Implement proper error handling in views
-```
-
-### Microservices Architecture Planning
-
-**Use Case**: Planning the decomposition or a monolith into microservices.
-
-```bash
-# Use Architect Agent for analysis
-!architect
-
-User: I have a large monolithic e-commerce application. Can you help me identify potential microservice boundaries?
-
-# Analysis workflow:
-# 1. Identify domain boundaries
-# 2. Analyze coupling between modules
-# 3. Identify shared dependencies
-# 4. Recommend service boundaries
-```
-
-**Example Analysis**:
-```markdown
-# Microservices Decomposition Analysis
-
-## Identified Domain Boundaries
-
-### User Service
-- Files: `users/models.py`, `users/views.py`, `authentication/`
-- Responsibilities: User management, authentication, profiles
-- Dependencies: Minimal external dependencies
-- **Recommendation**: Strong candidate for separate service
-
-### Product Catalog Service  
-- Files: `products/`, `inventory/`, `categories/`
-- Responsibilities: Product information, inventory management
-- Dependencies: Media storage, search indexing
-- **Recommendation**: Can be extracted with careful dependency management
-
-### Order Processing Service
-- Files: `orders/`, `payments/`, `shipping/`
-- Responsibilities: Order lifecycle, payment processing
-- Dependencies: User Service, Product Service, external payment APIs
-- **Recommendation**: Extract after User and Product services
-```
-
-## Refactoring Workflows
-
-### Design Pattern Implementation
-
-**Use Case**: Implementing the Strategy pattern to replace conditional logic.
-
-**Before**:
-```python
-# File: src/payment_processor.py
-class PaymentProcessor:
-    def process_payment(self, amount, method):
-        if method == "credit_card":
-            # Credit card processing logic
-            return self._process_credit_card(amount)
-        elif method == "paypal":
-            # PayPal processing logic  
-            return self._process_paypal(amount)
-        elif method == "bank_transfer":
-            # Bank transfer logic
-            return self._process_bank_transfer(amount)
-        else:
-            raise ValueError(f"Unsupported payment method: {method}")
-```
-
-**Agent-Assisted Refactoring**:
-```bash
-# Start with Architect Agent
-!architect
-
-User: The payment processor class has too many conditionals. Can you help me refactor it using the Strategy pattern?
-
-# Architect Agent identifies the pattern opportunity and suggests refactoring
-# Then switch to Code Agent for implementation
-!code
-
-User: Please implement the Strategy pattern refactoring suggested by the Architect Agent
-```
-
-**After**:
-```python
-# File: src/payment_strategies.py
-from abc import ABC, abstractmethod
-
-class PaymentStrategy(ABC):
-    """Abstract base class for payment strategies."""
-    
-    @abstractmethod
-    def process_payment(self, amount: float) -> dict:
-        """Process payment with specific strategy."""
-        pass
-
-class CreditCardStrategy(PaymentStrategy):
-    """Credit card payment strategy."""
-    
-    def process_payment(self, amount: float) -> dict:
-        # Credit card processing logic
-        return {"status": "success", "method": "credit_card", "amount": amount}
-
-class PayPalStrategy(PaymentStrategy):
-    """PayPal payment strategy."""
-    
-    def process_payment(self, amount: float) -> dict:
-        # PayPal processing logic
-        return {"status": "success", "method": "paypal", "amount": amount}
-
-# File: src/payment_processor.py
-from .payment_strategies import PaymentStrategy, CreditCardStrategy, PayPalStrategy
-
-class PaymentProcessor:
-    """Payment processor using Strategy pattern."""
-    
-    def __init__(self):
-        self._strategies = {
-            "credit_card": CreditCardStrategy(),
-            "paypal": PayPalStrategy(),
+    def generate_token(self, user):
+        payload = {
+            'user_id': user.id,
+            'exp': datetime.utcnow() + timedelta(hours=24)
         }
+        return jwt.encode(payload, self.secret_key, algorithm='HS256')
+```
+
+2. **Login Route** (`app/auth/routes.py`):
+```python
+from flask import request, jsonify
+from app.auth import bp
+from app.services.auth_service import AuthService
+
+@bp.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
     
-    def process_payment(self, amount: float, method: str) -> dict:
-        """Process payment using appropriate strategy."""
-        strategy = self._strategies.get(method)
-        if not strategy:
-            raise ValueError(f"Unsupported payment method: {method}")
-        return strategy.process_payment(amount)
+    auth_service = AuthService(current_app.config['SECRET_KEY'])
+    token = auth_service.authenticate_user(email, password)
+    
+    if token:
+        return jsonify({'token': token}), 200
+    else:
+        return jsonify({'error': 'Invalid credentials'}), 401
 ```
 
-## Testing and Quality Assurance
-
-### Test Coverage Analysis
-
-**Use Case**: Identifying untested code and improving test coverage.
-
-```bash
-# Use Code Agent for test analysis
-!code
-
-User: Can you analyze test coverage and identify areas that need more tests?
-
-# Agent performs:
-# 1. Runs coverage analysis
-# 2. Identifies untested functions/classes
-# 3. Suggests test cases
-# 4. Generates test templates
-```
-
-### Automated Test Generation
-
-**Use Case**: Generating unit tests for existing code.
-
+3. **Tests** (`tests/test_auth.py`):
 ```python
-# File: src/calculator.py
-def calculate_discount(price: float, discount_percent: float) -> float:
-    """Calculate discounted price."""
-    if discount_percent < 0 or discount_percent > 100:
-        raise ValueError("Discount must be between 0 and 100")
-    return price * (1 - discount_percent / 100)
-```
-
-**Agent-Generated Tests**:
-```python
-# File: tests/test_calculator.py
 import pytest
-from src.calculator import calculate_discount
+from app import create_app
+from app.models.user import User
 
-class TestCalculateDiscount:
-    """Test cases for calculate_discount function."""
-    
-    def test_calculate_discount_valid_input(self):
-        """Test discount calculation with valid inputs."""
-        assert calculate_discount(100.0, 10.0) == 90.0
-        assert calculate_discount(50.0, 20.0) == 40.0
-    
-    def test_calculate_discount_zero_discount(self):
-        """Test with zero discount."""
-        assert calculate_discount(100.0, 0.0) == 100.0
-    
-    def test_calculate_discount_full_discount(self):
-        """Test with 100% discount."""
-        assert calculate_discount(100.0, 100.0) == 0.0
-    
-    def test_calculate_discount_invalid_negative(self):
-        """Test with negative discount percentage."""
-        with pytest.raises(ValueError, match="Discount must be between 0 and 100"):
-            calculate_discount(100.0, -10.0)
-    
-    def test_calculate_discount_invalid_over_100(self):
-        """Test with discount about 100%."""
-        with pytest.raises(ValueError, match="Discount must be between 0 and 100"):
-            calculate_discount(100.0, 150.0)
+def test_login_success(client):
+    response = client.post('/auth/login', json={
+        'email': 'test@example.com',
+        'password': 'password123'
+    })
+    assert response.status_code == 200
+    assert 'token' in response.json
+
+def test_login_invalid_credentials(client):
+    response = client.post('/auth/login', json={
+        'email': 'test@example.com',
+        'password': 'wrongpassword'
+    })
+    assert response.status_code == 401
+    assert 'error' in response.json
 ```
 
-## Documentation Workflows
+## Advanced Workflows
 
-### API Documentation Generation
+### Multi-Agent Collaboration
 
-**Use Case**: Generating comprehensive API documentation from code.
+**Scenario**: Building a complex feature that requires both architectural planning and implementation.
 
 ```bash
-# Use Architect Agent for documentation
-!architect
+User: "I need to add a real-time chat feature to my web application"
 
-User: Please generate comprehensive API documentation for the user management module
-
-# Agent analyzes code and generates:
-# 1. Class and method documentation
-# 2. Parameter descriptions
-# 3. Return value specifications
-# 4. Usage examples
-# 5. Error handling documentation
+# Architect Agent starts
+Architect: "I'll design the real-time chat architecture. This will require WebSocket connections, message persistence, and room management."
 ```
 
-### Code Review Assistance
-
-**Use Case**: Automated code review for pull requests.
-
+**Phase 1: Architecture Planning**
 ```bash
-# Review specific changes
-!code
+Architect: "Here's the proposed architecture:
 
-User: Please review the changes in this pull request and provide feedback
+1. WebSocket server using Flask-SocketIO
+2. Message storage with Redis for real-time features
+3. Database persistence for chat history
+4. Room-based chat organization
+5. User presence tracking
 
-# Agent performs:
-# 1. Analyzes changed files
-# 2. Checks code quality standards
-# 3. Identifies potential issues
-# 4. Suggests improvements
-# 5. Validates test coverage
+Let me create the system design and hand over to the Code Agent for implementation."
 ```
 
-## Performance Optimization
-
-### Performance Analysis
-
-**Use Case**: Identifying performance bottlenecks in code.
-
+**Phase 2: Implementation**
 ```bash
-# Use Architect Agent for performance analysis
-!architect
-
-User: Can you identify potential performance issues in this Django application?
-
-# Agent analyzes:
-# 1. Database query patterns
-# 2. N+1 query problems
-# 3. Inefficient algorithms
-# 4. Memory usage patterns
-# 5. Caching opportunities
+# Automatic handoff to Code Agent
+Code Agent: "I'll implement the chat feature based on the architecture design. Starting with the WebSocket server setup."
 ```
 
-### Optimization Implementation
+The Code Agent implements:
 
-**Use Case**: Implementing performance improvements.
-
-**Before** (N+1 Query Problem):
+1. **WebSocket Configuration**:
 ```python
-# Inefficient - causes N+1 queries
-def get_user_orders():
-    users = User.objects.all()
-    for user in users:
-        orders = user.orders.all()  # N additional queries
-        print(f"{user.name}: {len(orders)} orders")
+# app/__init__.py
+from flask_socketio import SocketIO
+
+socketio = SocketIO()
+
+def create_app():
+    app = Flask(__name__)
+    socketio.init_app(app, cors_allowed_origins="*")
+    return app
 ```
 
-**After** (Optimized):
+2. **Chat Events Handler**:
 ```python
-# Efficient - uses prefetch_related
-def get_user_orders():
-    users = User.objects.prefetch_related('orders').all()
-    for user in users:
-        orders = user.orders.all()  # No additional queries
-        print(f"{user.name}: {len(orders)} orders")
+# app/chat/events.py
+from flask_socketio import emit, join_room, leave_room
+from app import socketio
+from app.models.message import Message
+
+@socketio.on('join_room')
+def handle_join_room(data):
+    room = data['room']
+    username = data['username']
+    join_room(room)
+    emit('user_joined', {'username': username}, room=room)
+
+@socketio.on('send_message')
+def handle_message(data):
+    room = data['room']
+    message = data['message']
+    username = data['username']
+    
+    # Save to database
+    msg = Message(content=message, username=username, room=room)
+    msg.save()
+    
+    # Broadcast to room
+    emit('new_message', {
+        'message': message,
+        'username': username,
+        'timestamp': msg.timestamp.isoformat()
+    }, room=room)
 ```
 
-## CI/CD Integration
+### API Development Workflow
 
-### Automated Quality Gates
+**Scenario**: Creating a RESTful API with proper documentation and testing.
 
-**Use Case**: Implementing quality gates in CI/CD pipeline.
+```bash
+User: "Create a RESTful API for a task management system"
 
+# Architect Agent designs the API structure
+Architect: "I'll design a RESTful API for task management with the following endpoints:
+
+- GET /api/tasks - List all tasks
+- POST /api/tasks - Create new task
+- GET /api/tasks/{id} - Get specific task
+- PUT /api/tasks/{id} - Update task
+- DELETE /api/tasks/{id} - Delete task
+
+The API will include proper error handling, validation, and documentation."
+```
+
+**Implementation by Code Agent**:
+
+1. **Task Model** (`app/models/task.py`):
+```python
+from app import db
+from datetime import datetime
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    completed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'completed': self.completed,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+```
+
+2. **API Routes** (`app/api/tasks.py`):
+```python
+from flask import Blueprint, request, jsonify
+from app.models.task import Task
+from app import db
+
+bp = Blueprint('tasks', __name__)
+
+@bp.route('/tasks', methods=['GET'])
+def get_tasks():
+    tasks = Task.query.all()
+    return jsonify([task.to_dict() for task in tasks])
+
+@bp.route('/tasks', methods=['POST'])
+def create_task():
+    data = request.get_json()
+    
+    if not data or 'title' not in data:
+        return jsonify({'error': 'Title is required'}), 400
+    
+    task = Task(
+        title=data['title'],
+        description=data.get('description', '')
+    )
+    db.session.add(task)
+    db.session.commit()
+    
+    return jsonify(task.to_dict()), 201
+
+@bp.route('/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    return jsonify(task.to_dict())
+
+@bp.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json()
+    
+    if 'title' in data:
+        task.title = data['title']
+    if 'description' in data:
+        task.description = data['description']
+    if 'completed' in data:
+        task.completed = data['completed']
+    
+    db.session.commit()
+    return jsonify(task.to_dict())
+
+@bp.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return '', 204
+```
+
+3. **API Tests** (`tests/test_api.py`):
+```python
+import pytest
+import json
+
+def test_create_task(client):
+    response = client.post('/api/tasks', 
+        json={'title': 'Test Task', 'description': 'Test Description'})
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data['title'] == 'Test Task'
+
+def test_get_tasks(client):
+    response = client.get('/api/tasks')
+    assert response.status_code == 200
+    assert isinstance(response.get_json(), list)
+
+def test_update_task(client):
+    # Create task first
+    create_response = client.post('/api/tasks', json={'title': 'Original Title'})
+    task_id = create_response.get_json()['id']
+    
+    # Update task
+    response = client.put(f'/api/tasks/{task_id}', 
+        json={'title': 'Updated Title', 'completed': True})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['title'] == 'Updated Title'
+    assert data['completed'] == True
+```
+
+### Database Migration Workflow
+
+**Scenario**: Adding new features that require database changes.
+
+```bash
+User: "Add user profiles with avatar support to the existing user system"
+
+# Architect Agent plans the database changes
+Architect: "I'll design the user profile extension:
+
+1. Create UserProfile model linked to User
+2. Add avatar upload functionality
+3. Create migration scripts
+4. Update API endpoints
+
+This requires careful database migration to preserve existing data."
+```
+
+**Migration Implementation**:
+
+1. **New Profile Model** (`app/models/profile.py`):
+```python
+from app import db
+
+class UserProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
+    bio = db.Column(db.Text)
+    avatar_filename = db.Column(db.String(255))
+    location = db.Column(db.String(100))
+    website = db.Column(db.String(200))
+    
+    user = db.relationship('User', backref=db.backref('profile', uselist=False))
+```
+
+2. **Migration Script** (`migrations/add_user_profiles.py`):
+```python
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade():
+    op.create_table('user_profile',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=True),
+        sa.Column('bio', sa.Text(), nullable=True),
+        sa.Column('avatar_filename', sa.String(length=255), nullable=True),
+        sa.Column('location', sa.String(length=100), nullable=True),
+        sa.Column('website', sa.String(length=200), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('user_id')
+    )
+
+def downgrade():
+    op.drop_table('user_profile')
+```
+
+3. **Avatar Upload Service** (`app/services/upload_service.py`):
+```python
+import os
+from werkzeug.utils import secure_filename
+from PIL import Image
+
+class UploadService:
+    def __init__(self, upload_folder, allowed_extensions):
+        self.upload_folder = upload_folder
+        self.allowed_extensions = allowed_extensions
+    
+    def save_avatar(self, file, user_id):
+        if not self.allowed_file(file.filename):
+            raise ValueError("Invalid file type")
+        
+        filename = f"avatar_{user_id}_{secure_filename(file.filename)}"
+        filepath = os.path.join(self.upload_folder, filename)
+        
+        # Resize and save image
+        image = Image.open(file)
+        image.thumbnail((200, 200))
+        image.save(filepath)
+        
+        return filename
+    
+    def allowed_file(self, filename):
+        return '.' in filename and \
+               filename.rsplit('.', 1)[1].lower() in self.allowed_extensions
+```
+
+## Testing Workflows
+
+### Test-Driven Development
+
+**Scenario**: Implementing a feature using TDD approach.
+
+```bash
+User: "Implement a password reset feature using test-driven development"
+
+# Code Agent starts with tests
+Code Agent: "I'll implement password reset using TDD. Starting with writing the tests first."
+```
+
+**Test First Approach**:
+
+1. **Write Tests First** (`tests/test_password_reset.py`):
+```python
+import pytest
+from app.services.password_reset_service import PasswordResetService
+
+def test_generate_reset_token():
+    service = PasswordResetService()
+    token = service.generate_reset_token('user@example.com')
+    assert token is not None
+    assert len(token) == 64  # Expected token length
+
+def test_validate_reset_token():
+    service = PasswordResetService()
+    token = service.generate_reset_token('user@example.com')
+    is_valid = service.validate_reset_token(token, 'user@example.com')
+    assert is_valid == True
+
+def test_reset_password():
+    service = PasswordResetService()
+    token = service.generate_reset_token('user@example.com')
+    result = service.reset_password(token, 'user@example.com', 'new_password')
+    assert result == True
+```
+
+2. **Implement Service** (`app/services/password_reset_service.py`):
+```python
+import secrets
+import hashlib
+from datetime import datetime, timedelta
+from app.models.user import User
+from app import db
+
+class PasswordResetService:
+    def __init__(self):
+        self.token_expiry_hours = 24
+    
+    def generate_reset_token(self, email):
+        token = secrets.token_urlsafe(48)
+        # Store token with expiry
+        return token
+    
+    def validate_reset_token(self, token, email):
+        # Validate token and check expiry
+        return True
+    
+    def reset_password(self, token, email, new_password):
+        if self.validate_reset_token(token, email):
+            user = User.query.filter_by(email=email).first()
+            user.set_password(new_password)
+            db.session.commit()
+            return True
+        return False
+```
+
+### Integration Testing
+
+**Scenario**: Testing the complete authentication flow.
+
+```bash
+User: "Create integration tests for the complete authentication system"
+
+# Code Agent creates comprehensive integration tests
+Code Agent: "I'll create integration tests that cover the entire authentication flow from registration to protected endpoint access."
+```
+
+**Integration Test Suite** (`tests/test_auth_integration.py`):
+```python
+import pytest
+from app import create_app, db
+from app.models.user import User
+
+@pytest.fixture
+def app():
+    app = create_app('testing')
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.drop_all()
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+def test_complete_auth_flow(client):
+    # 1. Register new user
+    registration_data = {
+        'email': 'test@example.com',
+        'password': 'password123',
+        'confirm_password': 'password123'
+    }
+    response = client.post('/auth/register', json=registration_data)
+    assert response.status_code == 201
+    
+    # 2. Login with credentials
+    login_data = {
+        'email': 'test@example.com',
+        'password': 'password123'
+    }
+    response = client.post('/auth/login', json=login_data)
+    assert response.status_code == 200
+    token = response.json['token']
+    
+    # 3. Access protected endpoint
+    headers = {'Authorization': f'Bearer {token}'}
+    response = client.get('/api/profile', headers=headers)
+    assert response.status_code == 200
+    
+    # 4. Test token expiry (mock time advancement)
+    # 5. Test refresh token functionality
+    # 6. Test logout
+```
+
+## Deployment Workflows
+
+### Docker Deployment
+
+**Scenario**: Preparing application for containerized deployment.
+
+```bash
+User: "Prepare my Flask application for Docker deployment"
+
+# Architect Agent designs deployment strategy
+Architect: "I'll create a Docker deployment setup with multi-stage builds, environment configuration, and production optimizations."
+```
+
+**Docker Configuration**:
+
+1. **Dockerfile**:
+```dockerfile
+# Multi-stage build
+FROM python:3.9-slim as builder
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --user -r requirements.txt
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Copy dependencies from builder stage
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY . .
+
+# Make sure scripts are executable
+RUN chmod +x boot.sh
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app
+USER app
+
+EXPOSE 5000
+
+ENTRYPOINT ["./boot.sh"]
+```
+
+2. **Docker Compose** (`docker-compose.yml`):
 ```yaml
-# .github/workflows/quality.yml
-name: Code Quality Check
+version: '3.8'
 
-on: [push, pull_request]
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/myapp
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./uploads:/app/uploads
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=myapp
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6-alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+3. **Boot Script** (`boot.sh`):
+```bash
+#!/bin/bash
+set -e
+
+# Wait for database
+while ! nc -z db 5432; do
+  echo "Waiting for database..."
+  sleep 1
+done
+
+# Run migrations
+flask db upgrade
+
+# Start application
+exec gunicorn -w 4 -b 0.0.0.0:5000 "app:create_app()"
+```
+
+### CI/CD Pipeline
+
+**Scenario**: Setting up automated testing and deployment.
+
+```bash
+User: "Set up CI/CD pipeline for automated testing and deployment"
+
+# Code Agent creates GitHub Actions workflow
+Code Agent: "I'll create a CI/CD pipeline using GitHub Actions with testing, security scanning, and automated deployment."
+```
+
+**GitHub Actions Workflow** (`.github/workflows/ci-cd.yml`):
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  quality:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run tests
+      run: |
+        pytest --cov=app tests/
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+
+  security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-          
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          
-      - name: Run SingleAgent Quality Check
-        run: |
-          python -m singleagent --batch-mode --agent code --strict
-          
-      - name: Run Architecture Analysis
-        run: |
-          python -m singleagent --batch-mode --agent architect --generate-report
+    - uses: actions/checkout@v3
+    - name: Run security scan
+      run: |
+        pip install safety bandit
+        safety check
+        bandit -r app/
+
+  deploy:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: |
+        # Deployment script here
+        echo "Deploying to production..."
 ```
 
-## Advanced Use Cases
+## Common Patterns and Best Practices
 
-### Custom Tool Integration
+### Error Handling Pattern
 
-**Use Case**: Integrating domain-specific analysis tools.
+```python
+# Consistent error handling across the application
+from functools import wraps
+from flask import jsonify
 
-```toml
-# pyproject.toml
-[tool.singleagent.custom_tools]
-
-[tool.singleagent.custom_tools.security_scanner]
-command = "bandit -r {project_path} -f json"
-enabled = true
-agent = "code"
-output_format = "json"
-
-[tool.singleagent.custom_tools.complexity_analyzer]
-command = "radon cc {file_path} --json"
-enabled = true
-agent = "architect"
-threshold = 10
+def handle_errors(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ValidationError as e:
+            return jsonify({'error': 'Validation failed', 'details': str(e)}), 400
+        except NotFoundError as e:
+            return jsonify({'error': 'Resource not found'}), 404
+        except Exception as e:
+            # Log the error
+            app.logger.error(f"Unexpected error: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
+    return decorated_function
 ```
 
-### Multi-Project Analysis
+### Configuration Management Pattern
 
-**Use Case**: Analyzing multiple related projects for consistency.
+```python
+# Environment-based configuration
+import os
 
-```bash
-# Analyze multiple projects
-!architect
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
+    DATABASE_URL = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
+    
+class DevelopmentConfig(Config):
+    DEBUG = True
+    TESTING = False
 
-User: I have three microservices in different directories. Can you analyze them for consistency in patterns and standards?
+class ProductionConfig(Config):
+    DEBUG = False
+    TESTING = False
 
-# Agent performs cross-project analysis:
-# 1. Compares project structures
-# 2. Identifies pattern inconsistencies
-# 3. Suggests standardization opportunities
-# 4. Generates unified documentation
+class TestingConfig(Config):
+    TESTING = True
+    DATABASE_URL = 'sqlite:///:memory:'
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}
 ```
 
-## Best Practices from Examples
+### Service Layer Pattern
 
-### Effective Agent Usage
+```python
+# Service layer for business logic
+class UserService:
+    def __init__(self, user_repository, email_service):
+        self.user_repository = user_repository
+        self.email_service = email_service
+    
+    def create_user(self, email, password):
+        # Validate input
+        if not self._is_valid_email(email):
+            raise ValidationError("Invalid email format")
+        
+        # Check if user exists
+        if self.user_repository.find_by_email(email):
+            raise ConflictError("User already exists")
+        
+        # Create user
+        user = User(email=email)
+        user.set_password(password)
+        self.user_repository.save(user)
+        
+        # Send welcome email
+        self.email_service.send_welcome_email(user.email)
+        
+        return user
+```
 
-1. **Start with the right agent**:
-   - Use Code Agent for immediate code quality issues
-   - Use Architect Agent for understanding and planning
+---
 
-2. **Leverage agent switching**:
-   - Switch between agents for different perspectives
-   - Use `!code` and `!architect` commands strategically
-
-3. **Provide context**:
-   - Describe your goals clearly
-   - Mention specific technologies and frameworks
-   - Provide relevant background information
-
-### Workflow Optimization
-
-1. **Batch similar operations**:
-   - Group related code quality checks
-   - Perform architectural analysis in focused sessions
-
-2. **Use configuration profiles**:
-   - Set up different profiles for different project types
-   - Customize tool selection based on needs
-
-3. **Integrate with existing tools**:
-   - Combine with IDEs, CI/CD, and other development tools
-   - Use as part or larger development workflows
-
-These examples demonstrate the versatility and power or the SingleAgent system across various development scenarios, from basic code quality checks to complex architectural analysis and refactoring tasks.
+*For more examples and advanced patterns, see [Tools Reference](tools.md) and [API Reference](api-reference.md).*
