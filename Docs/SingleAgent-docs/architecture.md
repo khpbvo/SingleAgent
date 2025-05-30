@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This page provides a detailed overview of how SingleAgent is designed and how the different components work together.
+This page provides a detailed overview or how SingleAgent is designed and how the different components work together.
 
 ## High-Level Architecture
 
@@ -53,7 +53,7 @@ This page provides a detailed overview of how SingleAgent is designed and how th
 ### 1. Entry Point (main.py)
 
 **Verantwoordelijkheden:**
-- Agent orchestration en mode switching
+- Agent orchestration and mode switching
 - CLI interface management
 - Session management
 - Command processing (`!code`, `!architect`, etc.)
@@ -61,7 +61,7 @@ This page provides a detailed overview of how SingleAgent is designed and how th
 **Key Features:**
 - Dual-agent mode switching
 - Persistent session state
-- Interactive CLI met prompt_toolkit
+- Interactive CLI with prompt_toolkit
 - Real-time streaming output
 
 ```python
@@ -78,12 +78,12 @@ current_agent = code_agent if current_mode == AgentMode.CODE else architect_agen
 
 #### Code Agent (SingleAgent)
 
-**Primaire Focus:** Directe code manipulatie en analyse
+**Primaire Focus:** Directe code manipulatie and analyse
 
 **Capabilities:**
 - Code quality analysis (ruff, pylint, pyright)
 - File reading/writing operations
-- Patch creation en application
+- Patch creation and application
 - Context-aware debugging assistance
 - Command execution
 
@@ -106,7 +106,7 @@ tools=[
 
 #### Architect Agent (ArchitectAgent)
 
-**Primaire Focus:** High-level architectuur en design analyse
+**Primaire Focus:** High-level architectuur and design analyse
 
 **Capabilities:**
 - Project structure analysis
@@ -135,21 +135,21 @@ tools=[
 
 #### EnhancedContextData
 
-Het hart van het geheugen systeem van SingleAgent:
+Het hart of the geheugen systeem of SingleAgent:
 
 **Features:**
-- **Entity Tracking**: Automatische detectie en tracking van files, commands, URLs, etc.
-- **Chat History**: Volledige conversatie geschiedenis met role-based messages
-- **Token Management**: Automatische token counting en context summarization
-- **State Management**: Key-value state storage voor session data
-- **Persistent Storage**: Context wordt opgeslagen tussen sessies
+- **Entity Tracking**: Automatische detectie and tracking of files, commands, URLs, etc.
+- **Chat History**: Volledige conversatie geschiedenis with role-based messages
+- **Token Management**: Automatische token counting and context summarization
+- **State Management**: Key-value state storage for session data
+- **Persistent Storage**: Context is opgeslagen tussen sessies
 
 **Entity Types:**
 ```python
 ENTITY_TYPES = [
     "file",                # Bestanden in conversaties
-    "command",             # Uitgevoerde commando's  
-    "url",                 # URLs en links
+    "command",             # Uitgevoerde commands  
+    "url",                 # URLs and links
     "search_query",        # Zoekopdrachten
     "task",                # Actieve taken
     "programming_language", # Talen in gebruik
@@ -163,7 +163,7 @@ ENTITY_TYPES = [
 
 **Token Management:**
 ```python
-# Automatische summarization wanneer token limit wordt bereikt
+# Automatische summarization wanneer token limit is bereikt
 if self.token_count > self.max_tokens * 0.8:
     await self.summarize_if_needed(openai_client)
 ```
@@ -172,7 +172,7 @@ if self.token_count > self.max_tokens * 0.8:
 
 #### Function Tool Decorator
 
-Alle tools gebruiken de `@function_tool` decorator uit de OpenAI Agents SDK:
+Alle tools use the `@function_tool` decorator from the OpenAI Agents SDK:
 
 ```python
 @function_tool
@@ -206,10 +206,10 @@ async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
 
 #### SpaCy Integration
 
-SingleAgent gebruikt spaCy voor geavanceerde entity recognition:
+SingleAgent used spaCy for geavanceerde entity recognition:
 
 ```python
-# SpaCy singleton voor performance
+# SpaCy singleton for performance
 from The_Agents.spacy_singleton import nlp_singleton
 
 # Entity extraction
@@ -221,7 +221,7 @@ entities = await entity_recognizer.extract_entities_async(
 
 #### Fallback Recognition
 
-Als spaCy faalt, gebruikt het systeem regex-based fallback:
+Als spaCy faalt, used the systeem regex-based fallback:
 
 ```python
 def _extract_entities_fallback(self, user_input: str):
@@ -239,7 +239,7 @@ def _extract_entities_fallback(self, user_input: str):
 
 #### Real-time Output
 
-SingleAgent gebruikt async streaming voor real-time feedback:
+SingleAgent used async streaming for real-time feedback:
 
 ```python
 async def _run_streamed(self, user_input: str) -> str:
@@ -299,7 +299,7 @@ Agent Request → Tool Selection → Parameter Validation → Execution → Resu
 ### Token Counting
 
 ```python
-# Automatische token counting met tiktoken
+# Automatische token counting with tiktoken
 import tiktoken
 
 def count_tokens(self, text: str) -> int:
@@ -309,7 +309,7 @@ def count_tokens(self, text: str) -> int:
 
 ### Context Summarization
 
-Wanneer de context te groot wordt:
+Wanneer the context te groot is:
 
 ```python
 async def summarize_if_needed(self, openai_client) -> bool:
@@ -326,11 +326,11 @@ async def summarize_if_needed(self, openai_client) -> bool:
 ### Model Settings
 
 ```python
-# Code Agent configuratie
-model_settings=ModelSettings(temperature=0.0)  # Deterministic voor code
+# Code Agent configuration
+model_settings=ModelSettings(temperature=0.0)  # Deterministic for code
 
-# Architect Agent configuratie  
-model="gpt-4.1"  # Krachtig model voor architectuur analyse
+# Architect Agent configuration  
+model="gpt-4.1"  # Krachtig model for architectuur analyse
 ```
 
 ### File Persistence
@@ -347,7 +347,7 @@ ARCHITECT_CONTEXT_FILE = os.path.join(os.path.expanduser("~"), ".architectagent_
 
 - SpaCy entity extraction → Regex fallback
 - OpenAI API errors → Local processing waar mogelijk
-- Tool failures → Error reporting met continue execution
+- Tool failures → Error reporting with continue execution
 
 ### Logging Strategy
 
@@ -365,29 +365,29 @@ logging.debug(json.dumps({
 
 ### Optimization Strategies
 
-1. **Lazy Loading**: SpaCy model wordt alleen geladen wanneer nodig
+1. **Lazy Loading**: SpaCy model is alleen geladen wanneer nodig
 2. **Caching**: Entity results worden gecached
-3. **Streaming**: Real-time output voor betere UX
+3. **Streaming**: Real-time output for betere UX
 4. **Selective Tools**: Agents laden alleen relevante tools
 5. **Context Pruning**: Automatische context summarization
 
 ### Scalability
 
-- **Modular Design**: Nieuwe agents kunnen eenvoudig worden toegevoegd
-- **Tool Extensibility**: Tools kunnen onafhankelijk worden ontwikkeld
-- **Context Partitioning**: Context kan worden gesegmenteerd voor grote projecten
+- **Modular Design**: Nieuwe agents can eenvoudig worden toegevoegd
+- **Tool Extensibility**: Tools can onafhankelijk worden ontwikkeld
+- **Context Partitioning**: Context kan worden gesegmenteerd for grote projecten
 
 ## Design Principles
 
-### 1. Separation of Concerns
-- Agents focussen op hun domein (code vs architectuur)
-- Tools zijn single-purpose en composable
+### 1. Separation or Concerns
+- Agents focussen on hun domein (code vs architectuur)
+- Tools are single-purpose and composable
 - Context management is centralized
 
 ### 2. Extensibility
-- Nieuwe tools kunnen eenvoudig worden toegevoegd
-- Agents kunnen nieuwe capabilities krijgen
-- Context types kunnen worden uitgebreid
+- Nieuwe tools can eenvoudig worden toegevoegd
+- Agents can nieuwe capabilities krijgen
+- Context types can worden uitgebreid
 
 ### 3. User Experience
 - Intuitive command structure (`!code`, `!architect`)
@@ -399,4 +399,4 @@ logging.debug(json.dumps({
 - Fallback mechanisms
 - Persistent state management
 
-Deze architectuur maakt SingleAgent een krachtig, uitbreidbaar en gebruiksvriendelijk systeem voor software development en analyse taken.
+Deze architectuur maakt SingleAgent a krachtig, uitbreidbaar and gebruiksvriendelijk systeem for software development and analyse taken.

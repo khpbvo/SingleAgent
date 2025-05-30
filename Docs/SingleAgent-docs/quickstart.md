@@ -97,7 +97,7 @@ Can you analyze the main.py file?
 Run ruff on all Python files
 
 # Debugging help
-I'm getting an error on line 45 of SingleAgent.py, can you help?
+I'm getting an error on line 45 or SingleAgent.py, can you help?
 ```
 
 ### Architect Agent Tasks
@@ -108,7 +108,7 @@ Switch to Architect mode and try:
 !architect
 
 # Project structure analysis
-Analyze the project structure of this codebase
+Analyze the project structure or this codebase
 
 # Design pattern detection
 What design patterns do you see in ArchitectAgent.py?
@@ -136,7 +136,7 @@ Here's a typical workflow for analyzing a Python project:
 ### 1. Project Exploration (Architect Agent)
 ```
 !architect
-Analyze the project structure and give me an overview of the architecture
+Analyze the project structure and give me an overview or the architecture
 ```
 
 ### 2. Code Quality Check (Code Agent)

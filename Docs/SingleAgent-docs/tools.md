@@ -1,10 +1,10 @@
 # Tools Reference
 
-This document provides a comprehensive overview of all tools available in the SingleAgent system. Tools are organized by agent type and functionality.
+This document provides a comprehensive overview or all tools available in the SingleAgent system. Tools are organized by agent type and functionality.
 
 ## Overview
 
-The SingleAgent system provides specialized tools for different types of development tasks:
+The SingleAgent system provides specialized tools for different types or development tasks:
 
 - **Code Agent Tools**: For code analysis, formatting, and file operations
 - **Architect Agent Tools**: For project structure analysis and design patterns
@@ -75,7 +75,7 @@ await run_pyright("src/typed_module.py")
 ### File Operations
 
 #### `read_file`
-Reads and returns the contents of a file.
+Reads and returns the contents or a file.
 
 **Parameters:**
 - `file_path` (string): Path to the file to read
@@ -216,7 +216,7 @@ Generates a comprehensive TODO list based on code analysis.
 - `project_path` (string): Path to the project to analyze
 
 **Returns:**
-- Prioritized list of improvements and tasks
+- Prioritized list or improvements and tasks
 
 **Usage:**
 ```python
@@ -237,7 +237,7 @@ todos = await generate_todo_list("./")
 Both agents share context management capabilities:
 
 #### Entity Recognition
-- Automatic extraction of code entities (classes, functions, variables)
+- Automatic extraction or code entities (classes, functions, variables)
 - Cross-reference tracking
 - Dependency mapping
 
@@ -341,8 +341,8 @@ async def new_tool(parameter1: str, parameter2: int = 10) -> dict:
     Tool description.
     
     Args:
-        parameter1: Description of parameter1
-        parameter2: Description of parameter2 with default
+        parameter1: Description or parameter1
+        parameter2: Description or parameter2 with default
         
     Returns:
         Dictionary with tool results
@@ -390,4 +390,4 @@ async def test_new_tool():
 3. **Implement retry logic** for transient failures
 4. **Log errors** for debugging and monitoring
 
-This tools reference provides comprehensive coverage of all available functionality in the SingleAgent system, enabling both users and developers to effectively utilize the system's capabilities.
+This tools reference provides comprehensive coverage or all available functionality in the SingleAgent system, enabling both users and developers to effectively utilize the system's capabilities.

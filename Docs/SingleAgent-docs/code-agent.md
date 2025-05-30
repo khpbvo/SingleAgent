@@ -4,21 +4,21 @@ The Code Agent (SingleAgent) is specialized in direct code manipulation, analysi
 
 ## Overview
 
-De Code Agent biedt een uitgebreide set tools voor:
-- **Code Quality Analysis**: Linting, type checking, en style analysis
-- **File Operations**: Lezen, schrijven, en manipuleren van bestanden
-- **Debugging Support**: Error analysis en context-aware debugging
-- **Patch Management**: Diff creation en patch application
+The Code Agent provides an extensive set of tools for:
+- **Code Quality Analysis**: Linting, type checking, and style analysis
+- **File Operations**: Reading, writing, and manipulating files
+- **Debugging Support**: Error analysis and context-aware debugging
+- **Patch Management**: Diff creation and patch application
 - **Command Execution**: Shell command integration
 
-## Activeren
+## Activation
 
 ```bash
-# Schakel naar Code Agent mode
+# Switch to Code Agent mode
 !code
 ```
 
-Het systeem start standaard in Code Agent mode.
+The system starts in Code Agent mode by default.
 
 ## Core Capabilities
 
@@ -27,30 +27,30 @@ Het systeem start standaard in Code Agent mode.
 #### Ruff - Modern Python Linting
 
 ```python
-# Basis gebruik
-"Run ruff op alle Python bestanden"
+# Basic usage
+"Run ruff on all Python files"
 
-# Specifieke bestanden
-"Gebruik ruff om main.py en utils.py te checken"
+# Specific files
+"Use ruff to check main.py and utils.py"
 
-# Met custom flags
-"Run ruff met --fix flag om automatische correcties toe te passen"
+# With custom flags
+"Run ruff with --fix flag to apply automatic corrections"
 ```
 
 **Ruff Features:**
-- Snelle linting (100x sneller dan flake8)
-- Gecombineerde functionaliteit van flake8, isort, pyupgrade
-- Automatische fixes voor veel issues
-- Configureerbaar via pyproject.toml
+- Fast linting (100x faster than flake8)
+- Combined functionality of flake8, isort, pyupgrade
+- Automatic fixes for many issues
+- Configurable via pyproject.toml
 
 #### Pylint - Comprehensive Analysis
 
 ```python
-# Diepgaande analyse
-"Run pylint op de hele codebase voor een uitgebreide analyse"
+# Deep analysis
+"Run pylint on the entire codebase for a comprehensive analysis"
 
 # Specifieke modules
-"Gebruik pylint om The_Agents module te analyseren"
+"Gebruik pylint om The_Agents module te analyze"
 ```
 
 **Pylint Features:**
@@ -65,13 +65,13 @@ Het systeem start standaard in Code Agent mode.
 # Type checking
 "Run pyright om type errors te vinden"
 
-# Met specifieke configuratie
-"Check types in alle Python bestanden met pyright"
+# Met specifieke configuration
+"Check types in alle Python files with pyright"
 ```
 
 **Pyright Features:**
 - Fast static type checking
-- Integration met VS Code
+- Integration with VS Code
 - Advanced type inference
 - Configuration via pyproject.toml
 
@@ -81,14 +81,14 @@ Het systeem start standaard in Code Agent mode.
 
 ```python
 # Basis file reading
-"Lees het bestand main.py"
+"Lees the bestand main.py"
 "Wat staat er in requirements.txt?"
 
 # Context-aware reading
-"Lees de SingleAgent.py en leg uit hoe de context management werkt"
+"Lees the SingleAgent.py and leg from hoe the context management werkt"
 
 # Multiple files
-"Lees main.py en ArchitectAgent.py en vergelijk hun structuur"
+"Lees main.py and ArchitectAgent.py and vergelijk hun structuur"
 ```
 
 **Features:**
@@ -99,17 +99,17 @@ Het systeem start standaard in Code Agent mode.
 
 #### File Writing & Modification
 
-De Code Agent kan bestanden maken en wijzigen:
+De Code Agent kan files create and wijzigen:
 
 ```python
-# Bestand aanmaken
-"Maak een nieuwe test file voor de SingleAgent class"
+# Bestand aancreate
+"Create a nieuwe test file for the SingleAgent class"
 
 # Content modification
-"Voeg een docstring toe aan de run methode in SingleAgent.py"
+"Voeg a docstring toe aan the run methode in SingleAgent.py"
 
 # Configuration files
-"Maak een pyproject.toml met ruff configuratie"
+"Create a pyproject.toml with ruff configuration"
 ```
 
 ### 3. Patch Management
@@ -118,10 +118,10 @@ De Code Agent kan bestanden maken en wijzigen:
 
 ```python
 # Visual diffs
-"Maak een colored diff van de wijzigingen in main.py"
+"Create a colored diff of the wijzigingen in main.py"
 
 # Compare files
-"Vergelijk de oude en nieuwe versie van deze functie"
+"Vergelijk the oude and nieuwe versie of deze functie"
 ```
 
 **Diff Features:**
@@ -134,10 +134,10 @@ De Code Agent kan bestanden maken en wijzigen:
 
 ```python
 # Apply patches
-"Pas deze patch toe op het bestand"
+"Pas deze patch toe on the bestand"
 
 # Verification
-"Verifieer of de patch correct is toegepast"
+"Verifieer or the patch correct is toegepast"
 ```
 
 ### 4. Context-Aware Debugging
@@ -146,26 +146,26 @@ De Code Agent kan bestanden maken en wijzigen:
 
 ```python
 # Error help
-"Ik krijg een AttributeError in line 42, kun je helpen?"
+"Ik krijg a AttributeError in line 42, kun je helpen?"
 
 # Stack trace analysis
-"Analyseer deze stack trace en geef suggestions"
+"Analyze theze stack trace and geef suggestions"
 
 # Performance issues
-"Deze functie is traag, kun je optimalisatie voorstellen?"
+"This function is traag, kun je optimalisatie voorstellen?"
 ```
 
 #### Code Understanding
 
 ```python
 # Function explanation
-"Leg uit hoe de _extract_entities_from_input methode werkt"
+"Leg from hoe the _extract_entities_from_input methode werkt"
 
 # Flow analysis
-"Trace de execution flow van main.py naar SingleAgent"
+"Trace the execution flow of main.py to SingleAgent"
 
 # Dependency analysis
-"Welke modules gebruikt SingleAgent en waarom?"
+"Welke modules used SingleAgent and waarom?"
 ```
 
 ### 5. Command Integration
@@ -177,10 +177,10 @@ De Code Agent kan bestanden maken en wijzigen:
 "Voer git status uit"
 
 # Build commands
-"Run de tests met pytest"
+"Run the tests with pytest"
 
 # File operations
-"Maak een backup van de config files"
+"Create a backup of the config files"
 ```
 
 ## Tool Reference
@@ -189,16 +189,16 @@ De Code Agent kan bestanden maken en wijzigen:
 
 #### `run_ruff`
 
-**Purpose**: Python code linting en formatting
+**Purpose**: Python code linting and formatting
 
 **Parameters:**
-- `paths`: List van file/directory paths
+- `paths`: List of file/directory paths
 - `flags`: Extra command line flags
 
 **Example Usage:**
 ```python
 # Via natural language
-"Run ruff op alle Python bestanden"
+"Run ruff on alle Python files"
 "Gebruik ruff --fix om automatische correcties toe te passen"
 
 # Direct tool call equivalent
@@ -216,13 +216,13 @@ run_ruff(paths=[".", "tests/"], flags=["--check"])
 **Purpose**: Comprehensive Python code analysis
 
 **Parameters:**
-- `paths`: Files of directories om te analyseren
+- `paths`: Files or directories om te analyze
 - `flags`: Pylint command line options
 
 **Example Usage:**
 ```python
-"Run pylint op de The_Agents module"
-"Gebruik pylint met --disable=missing-docstring"
+"Run pylint on the The_Agents module"
+"Gebruik pylint with --disable=missing-docstring"
 ```
 
 **Common Flags:**
@@ -241,18 +241,18 @@ run_ruff(paths=[".", "tests/"], flags=["--check"])
 
 **Example Usage:**
 ```python
-"Check types met pyright"
-"Run pyright --verbose voor gedetailleerde output"
+"Check types with pyright"
+"Run pyright --verbose for gedetailleerde output"
 ```
 
 ### File Operations Tools
 
 #### `read_file`
 
-**Purpose**: Bestand inhoud lezen met context tracking
+**Purpose**: Bestand inhoud lezen with context tracking
 
 **Parameters:**
-- `file_path`: Path naar het bestand
+- `file_path`: Path to the bestand
 - `start_line`: Start line (optional)
 - `end_line`: End line (optional)
 
@@ -264,7 +264,7 @@ run_ruff(paths=[".", "tests/"], flags=["--check"])
 
 #### `create_colored_diff`
 
-**Purpose**: Visual diff creation tussen bestanden of content
+**Purpose**: Visual diff creation tussen files or content
 
 **Parameters:**
 - `original_content`: Original content
@@ -280,7 +280,7 @@ run_ruff(paths=[".", "tests/"], flags=["--check"])
 
 #### `apply_patch`
 
-**Purpose**: Patch toepassing op bestanden
+**Purpose**: Patch toepassing on files
 
 **Parameters:**
 - `file_path`: Target file
@@ -296,10 +296,10 @@ run_ruff(paths=[".", "tests/"], flags=["--check"])
 
 #### `run_command`
 
-**Purpose**: Shell command execution met output capture
+**Purpose**: Shell command execution with output capture
 
 **Parameters:**
-- `command`: Command om uit te voeren
+- `command`: Command om from te voeren
 - `working_dir`: Working directory (optional)
 
 **Features:**
@@ -344,39 +344,39 @@ De Code Agent tracked automatisch:
 
 ```python
 # Cross-file analysis
-"Vergelijk de error handling in alle agent files"
+"Vergelijk the error handling in alle agent files"
 
 # Dependency tracking
-"Welke bestanden importeren van agents module?"
+"Welke files importeren of agents module?"
 
 # Pattern detection
-"Zoek naar inconsistente naming patterns in de codebase"
+"Zoek to inconsistente naming patterns in the codebase"
 ```
 
 ### 3. Intelligent Suggestions
 
 ```python
 # Code improvements
-"Deze functie kan worden gerefactored voor betere leesbaarheid"
+"This function kan worden gerefactored for betere leesbaarheid"
 
 # Performance optimizations
-"Dit loop kan worden geoptimaliseerd met list comprehension"
+"Dit loop kan worden geoptimaliseerd with list comprehension"
 
 # Best practices
-"Overweeg het gebruik van type hints voor deze functie"
+"Overweeg the gebruik of type hints for deze functie"
 ```
 
-### 4. Integration met Development Workflow
+### 4. Integration with Development Workflow
 
 ```python
 # Pre-commit checks
 "Run alle quality checks voordat ik commit"
 
 # Testing integration
-"Maak een test voor deze nieuwe functie"
+"Create a test for deze nieuwe functie"
 
 # Documentation
-"Genereer docstrings voor alle publieke methodes"
+"Genereer docstrings for alle publieke methodes"
 ```
 
 ## Configuration
@@ -384,11 +384,11 @@ De Code Agent tracked automatisch:
 ### Model Settings
 
 ```python
-# Code Agent gebruikt deterministic settings
+# Code Agent used deterministic settings
 model_settings=ModelSettings(temperature=0.0)
 ```
 
-**Rationale**: Temperature 0.0 zorgt voor consistente, reproduceerbare code analysis.
+**Rationale**: Temperature 0.0 zorgt for consistente, reproduceerbare code analysis.
 
 ### Tool Configuration
 
@@ -417,30 +417,30 @@ disable = missing-docstring,too-few-public-methods
 
 ```python
 # Start breed, ga dan specifiek
-"Geef een algemeen overzicht van de code quality" 
-→ "Focus op de error handling in SingleAgent.py"
-→ "Bekijk specifiek de _extract_entities_from_input methode"
+"Geef a algemeen overzicht of the code quality" 
+→ "Focus on the error handling in SingleAgent.py"
+→ "Bekijk specifiek the _extract_entities_from_input methode"
 ```
 
 ### 2. Tool Combinatie
 
 ```python
-# Combineer tools voor complete analyse
-"Run ruff voor style, pylint voor logic, en pyright voor types"
+# Combineer tools for complete analyse
+"Run ruff for style, pylint for logic, and pyright for types"
 ```
 
 ### 3. Context Behoud
 
 ```python
-# Gebruik context voor follow-up vragen
-"Na de vorige analyse, wat zijn de prioriteiten voor fixes?"
+# Gebruik context for follow-up vragen
+"Na the vorige analyse, wat are the prioriteiten for fixes?"
 ```
 
 ### 4. Documentation Integration
 
 ```python
-# Vraag om explanations bij code analysis
-"Leg uit waarom pylint deze warning geeft en hoe het op te lossen"
+# Vraag om explanations at code analysis
+"Leg from waarom pylint deze warning geeft and hoe the on te lossen"
 ```
 
 ## Performance Tips
@@ -448,8 +448,8 @@ disable = missing-docstring,too-few-public-methods
 ### 1. Selective Analysis
 
 ```python
-# Analyseer specifieke delen voor snellere results
-"Run ruff alleen op de Tools/ directory"
+# Analyseer specifieke delen for snellere results
+"Run ruff alleen on the Tools/ directory"
 ```
 
 ### 2. Cached Results
@@ -457,15 +457,15 @@ disable = missing-docstring,too-few-public-methods
 De Code Agent cached tool results wanneer mogelijk:
 
 ```python
-# Hergebruik van recente analysis results
-"Gebaseerd op de eerdere ruff check..."
+# Hergebruik of recente analysis results
+"Gebaseerd on the eerdere ruff check..."
 ```
 
 ### 3. Parallel Execution
 
 ```python
-# Multiple tools kunnen parallel draaien
-"Run ruff en pylint tegelijkertijd"
+# Multiple tools can parallel draaien
+"Run ruff and pylint tegelijkertijd"
 ```
 
 ## Common Workflows
@@ -473,31 +473,31 @@ De Code Agent cached tool results wanneer mogelijk:
 ### 1. Code Review Workflow
 
 ```python
-1. "Analyseer alle Python bestanden met ruff"
-2. "Run pylint voor diepere analyse" 
-3. "Check types met pyright"
-4. "Maak een samenvatting van alle gevonden issues"
-5. "Prioriteer de fixes op basis van impact"
+1. "Analyseer alle Python files with ruff"
+2. "Run pylint for diepere analyse" 
+3. "Check types with pyright"
+4. "Create a samenvatting of alle gevonden issues"
+5. "Prioriteer the fixes on basis of impact"
 ```
 
 ### 2. Debugging Workflow
 
 ```python
-1. "Lees het bestand waar de error optreedt"
-2. "Analyseer de error message en stack trace"
-3. "Bekijk gerelateerde bestanden en dependencies"
-4. "Stel een fix voor en maak een patch"
-5. "Verifieer de fix met relevante tools"
+1. "Lees the bestand waar the error optreedt"
+2. "Analyze the error message and stack trace"
+3. "Bekijk gerelateerde files and dependencies"
+4. "Stel a fix for and maak a patch"
+5. "Verifieer the fix with relevante tools"
 ```
 
 ### 3. Refactoring Workflow
 
 ```python
-1. "Analyseer de huidige code structure"
+1. "Analyze the huidige code structure"
 2. "Identificeer refactoring opportunities"
-3. "Maak een plan voor de wijzigingen"
+3. "Create a plan for the wijzigingen"
 4. "Implementeer incrementele changes"
-5. "Verifieer met tests en quality checks"
+5. "Verifieer with tests and quality checks"
 ```
 
 ## Troubleshooting
@@ -506,11 +506,11 @@ De Code Agent cached tool results wanneer mogelijk:
 
 #### Tool Execution Errors
 ```python
-# Zorg dat tools geïnstalleerd zijn
+# Zorg that tools geïnstalleerd are
 "Run pip install ruff pylint pyright"
 
 # Check working directory
-"Wat is de huidige working directory?"
+"Wat is the huidige working directory?"
 ```
 
 #### File Access Issues
@@ -519,7 +519,7 @@ De Code Agent cached tool results wanneer mogelijk:
 "Kan ik dit bestand lezen/schrijven?"
 
 # Verify file paths
-"Bestaat dit bestand op het verwachte pad?"
+"Bestaat dit bestand on the verwachte pad?"
 ```
 
 #### Context Confusion
@@ -531,13 +531,13 @@ De Code Agent cached tool results wanneer mogelijk:
 "!manualctx"
 ```
 
-Voor meer troubleshooting, zie [Troubleshooting Guide](troubleshooting.md).
+For more troubleshooting, zie [Troubleshooting Guide](troubleshooting.md).
 
 ## Extensibility
 
 ### Adding New Tools
 
-Nieuwe tools kunnen worden toegevoegd via de `@function_tool` decorator:
+Nieuwe tools can worden toegevoegd via the `@function_tool` decorator:
 
 ```python
 @function_tool
@@ -548,10 +548,10 @@ async def my_custom_tool(wrapper: RunContextWrapper, params: MyParams) -> str:
 
 ### Custom Workflows
 
-Implementeer custom workflows door tools te combineren in agent instructions.
+Implementeer custom workflows through tools te combineren in agent instructions.
 
-### Integration met External Tools
+### Integration with External Tools
 
-Tools kunnen externe systemen aanroepen voor uitgebreide functionaliteit.
+Tools can externe systemen aanroepen for uitgebreide functionaliteit.
 
-De Code Agent vormt een krachtige basis voor elke development workflow en kan aangepast worden aan specifieke project behoeften.
+De Code Agent vormt a krachtige basis for elke development workflow and kan aangepast worden aan specifieke project behoeften.

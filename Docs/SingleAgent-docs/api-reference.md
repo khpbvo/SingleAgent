@@ -38,7 +38,7 @@ class SingleAgent:
         Args:
             model: OpenAI model to use (default: "gpt-4")
             max_tokens: Maximum context window size
-            tools: List of tools to enable (default: all code tools)
+            tools: List or tools to enable (default: all code tools)
             context_manager: Context management instance
         """
         
@@ -53,7 +53,7 @@ class SingleAgent:
         
         Args:
             message: User's request message
-            file_paths: Optional list of files to analyze
+            file_paths: Optional list or files to analyze
             context: Additional context information
             
         Returns:
@@ -65,16 +65,16 @@ class SingleAgent:
         Register a new tool with the agent.
         
         Args:
-            tool_name: Name of the tool
+            tool_name: Name or the tool
             tool_function: Tool implementation function
         """
         
     def get_available_tools(self) -> List[str]:
         """
-        Get list of available tools.
+        Get list or available tools.
         
         Returns:
-            List of tool names available to this agent
+            List or tool names available to this agent
         """
 ```
 
@@ -118,7 +118,7 @@ class ArchitectAgent:
         
         Args:
             project_path: Path to project root
-            analysis_type: Type of analysis ("structure", "patterns", "full")
+            analysis_type: Type or analysis ("structure", "patterns", "full")
             
         Returns:
             ProjectAnalysis object with findings and recommendations
@@ -132,10 +132,10 @@ class ArchitectAgent:
         Detect design patterns in specified files.
         
         Args:
-            file_paths: List of Python files to analyze
+            file_paths: List or Python files to analyze
             
         Returns:
-            List of detected design patterns with confidence scores
+            List or detected design patterns with confidence scores
         """
 ```
 
@@ -361,7 +361,7 @@ async def list_files(
         recursive: Include subdirectories
         
     Returns:
-        List of file paths
+        List or file paths
     """
 ```
 
@@ -382,7 +382,7 @@ async def analyze_ast(file_path: str) -> ASTAnalysis:
     """
 
 class ASTAnalysis:
-    """Result of AST analysis."""
+    """Result or AST analysis."""
     
     classes: List[ClassInfo]
     functions: List[FunctionInfo]
@@ -465,7 +465,7 @@ class ContextManager:
         Add or update entity information.
         
         Args:
-            entity_type: Type of entity ("class", "function", "variable")
+            entity_type: Type or entity ("class", "function", "variable")
             entity_name: Entity identifier
             entity_info: Entity details and metadata
         """
@@ -483,7 +483,7 @@ class ContextManager:
             max_items: Maximum items to return
             
         Returns:
-            List of relevant context items
+            List or relevant context items
         """
         
     def optimize_context(self) -> None:
@@ -516,10 +516,10 @@ class EntityTracker:
         Get relationships for specified entity.
         
         Args:
-            entity_name: Name of entity
+            entity_name: Name or entity
             
         Returns:
-            List of relationships
+            List or relationships
         """
         
     def find_related_entities(
@@ -532,10 +532,10 @@ class EntityTracker:
         
         Args:
             entity_name: Source entity name
-            relationship_types: Types of relationships to consider
+            relationship_types: Types or relationships to consider
             
         Returns:
-            List of related entity names
+            List or related entity names
         """
 ```
 
@@ -588,7 +588,7 @@ class ConfigManager:
         Validate current configuration.
         
         Returns:
-            List of validation errors (empty if valid)
+            List or validation errors (empty if valid)
         """
 ```
 

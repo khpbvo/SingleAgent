@@ -495,4 +495,4 @@ level = "INFO"
 file = "singleagent.log"
 ```
 
-This configuration system provides flexible and comprehensive control over all aspects of the SingleAgent system while maintaining sensible defaults for common use cases.
+This configuration system provides flexible and comprehensive control about all aspects or the SingleAgent system while maintaining sensible defaults for common use cases.

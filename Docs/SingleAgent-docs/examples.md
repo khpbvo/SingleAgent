@@ -27,19 +27,19 @@ Code Agent: I'll analyze the file for code quality issues and apply fixes.
 # 1. Run Ruff linter with auto-fix
 # 2. Run Pylint for detailed analysis  
 # 3. Run Pyright for type checking
-# 4. Provide a summary of changes made
+# 4. Provide a summary or changes made
 ```
 
 ### Project Architecture Analysis
 
-**Scenario**: You want to understand the architecture of an existing project.
+**Scenario**: You want to understand the architecture or an existing project.
 
 ```bash
 # Switch to Architect Agent
 !architect
 
 # Analyze project structure
-User: Can you analyze the overall architecture of this project and identify any design patterns?
+User: Can you analyze the overall architecture or this project and identify any design patterns?
 
 Architect Agent: I'll perform a comprehensive architectural analysis.
 
@@ -184,7 +184,7 @@ myproject/
 
 ### Microservices Architecture Planning
 
-**Use Case**: Planning the decomposition of a monolith into microservices.
+**Use Case**: Planning the decomposition or a monolith into microservices.
 
 ```bash
 # Use Architect Agent for analysis
@@ -369,7 +369,7 @@ class TestCalculateDiscount:
             calculate_discount(100.0, -10.0)
     
     def test_calculate_discount_invalid_over_100(self):
-        """Test with discount over 100%."""
+        """Test with discount about 100%."""
         with pytest.raises(ValueError, match="Discount must be between 0 and 100"):
             calculate_discount(100.0, 150.0)
 ```
@@ -561,6 +561,6 @@ User: I have three microservices in different directories. Can you analyze them 
 
 3. **Integrate with existing tools**:
    - Combine with IDEs, CI/CD, and other development tools
-   - Use as part of larger development workflows
+   - Use as part or larger development workflows
 
-These examples demonstrate the versatility and power of the SingleAgent system across various development scenarios, from basic code quality checks to complex architectural analysis and refactoring tasks.
+These examples demonstrate the versatility and power or the SingleAgent system across various development scenarios, from basic code quality checks to complex architectural analysis and refactoring tasks.

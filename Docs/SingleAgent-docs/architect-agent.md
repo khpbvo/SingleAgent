@@ -6,7 +6,7 @@ The Architect Agent is specialized in high-level software architecture analysis,
 
 The Architect Agent provides advanced tools for:
 - **Project Structure Analysis**: Complete codebase structure analysis  
-- **Design Pattern Detection**: Automatic identification of design patterns
+- **Design Pattern Detection**: Automatic identification or design patterns
 - **Dependency Analysis**: Dependency graphs and cyclic dependencies
 - **Architectural Planning**: TODO lists and roadmap generation
 - **AST-based Analysis**: In-depth code structure analysis
@@ -34,7 +34,7 @@ The system then shows:
 "Analyze the complete project structure"
 
 # Specific directory
-"Give me an overview of the Tools/ directory structure"
+"Give me an overview or the Tools/ directory structure"
 
 # With statistics
 "Analyze the project structure and provide statistics per file type"
@@ -50,13 +50,13 @@ The system then shows:
 
 ```python
 # Visual tree representation
-"Maak een tree view van de project structuur"
+"Create a tree view or the project structure"
 
 # Filtered analysis
-"Toon alleen Python bestanden in de structuur"
+"Show only Python files in the structure"
 
 # Depth control  
-"Analyseer project structuur tot 3 levels diep"
+"Analyze project structure up to 3 levels deep"
 ```
 
 ### 2. AST-Based Code Analysis
@@ -65,32 +65,32 @@ The system then shows:
 
 ```python
 # Complete AST analysis
-"Analyseer de AST van SingleAgent.py"
+"Analyze the AST or SingleAgent.py"
 
 # Specific aspects
-"Welke classes en methods zitten in ArchitectAgent.py?"
+"What classes and methods are in ArchitectAgent.py?"
 
 # Dependency extraction
-"Welke imports en dependencies heeft main.py?"
+"What imports and dependencies does main.py have?"
 ```
 
 **AST Analysis Types:**
 - **Classes**: Class definitions, inheritance, methods
 - **Functions**: Function signatures, parameters, return types
-- **Imports**: Module dependencies en import patterns
-- **Dependencies**: Internal en external dependencies
+- **Imports**: Module dependencies and import patterns
+- **Dependencies**: Internal and external dependencies
 
 #### Method and Class Discovery
 
 ```python
 # Class analysis
-"Geef me alle classes in de The_Agents module"
+"Give me all classes in the The_Agents module"
 
 # Method signatures
-"Wat zijn de method signatures van de SingleAgent class?"
+"What are the method signatures or the SingleAgent class?"
 
 # Inheritance hierarchy
-"Toon de inheritance relationships in de codebase"
+"Show the inheritance relationships in the codebase"
 ```
 
 ### 3. Design Pattern Detection
@@ -99,13 +99,13 @@ The system then shows:
 
 ```python
 # Pattern scanning
-"Welke design patterns zie je in de codebase?"
+"What design patterns do you see in the codebase?"
 
 # Specific pattern analysis
-"Is er een singleton pattern gebruikt in het project?"
+"Is there a singleton pattern used in the project?"
 
 # Anti-pattern detection
-"Zijn er code anti-patterns die geaddresseerd moeten worden?"
+"Are there code anti-patterns that need to be addressed?"
 ```
 
 **Detected Patterns:**
@@ -118,7 +118,7 @@ The system then shows:
 
 ```python
 # Input
-"Analyseer design patterns in ArchitectAgent.py"
+"Analyze the design patterns in ArchitectAgent.py"
 
 # Output  
 {
@@ -139,13 +139,13 @@ The system then shows:
 
 ```python
 # Complete dependency graph
-"Maak een dependency graph van het hele project"
+"Create a dependency graph of the entire project"
 
 # Module-specific dependencies
-"Welke dependencies heeft de Tools module?"
+"What dependencies does the Tools module have?"
 
 # Circular dependency detection
-"Zijn er circular dependencies in de codebase?"
+"Are there circular dependencies in the codebase?"
 ```
 
 **Graph Features:**
@@ -158,13 +158,13 @@ The system then shows:
 
 ```python
 # Import patterns
-"Analyseer alle import statements en hun patterns"
+"Analyze all import statements and their patterns"
 
 # Unused imports
-"Zijn er unused imports die opgeruimd kunnen worden?"
+"Are there unused imports that can be cleaned up?"
 
 # Import optimization
-"Hoe kunnen de imports beter georganiseerd worden?"
+"How can the imports be better organized?"
 ```
 
 ### 5. Architectural Planning
@@ -173,13 +173,13 @@ The system then shows:
 
 ```python
 # Complete roadmap
-"Maak een TODO lijst voor architecturale verbeteringen"
+"Create a TODO list for architectural improvements"
 
 # Specific features
-"Genereer een TODO voor het toevoegen van nieuwe agent types"
+"Generate a TODO for adding new agent types"
 
 # Priority-based planning
-"Maak een geprioriteerde lijst van architectural improvements"
+"Create a prioritized list of architectural improvements"
 ```
 
 **TODO Features:**
@@ -193,13 +193,13 @@ The system then shows:
 
 ```python
 # Strategic planning
-"Wat zijn de belangrijkste architectural debt items?"
+"What are the most important architectural debt items?"
 
 # Scalability analysis
-"Hoe kan dit systeem beter schalen?"
+"How can this system scale better?"
 
 # Modularity assessment
-"Hoe modulair is de huidige architectuur?"
+"Hoe modulair is the huidige architectuur?"
 ```
 
 ## Tool Reference
@@ -208,18 +208,18 @@ The system then shows:
 
 #### `analyze_project_structure`
 
-**Purpose**: Complete project directory en file analysis
+**Purpose**: Complete project directory and file analysis
 
 **Parameters:**
-- `directory`: Root directory om te analyseren
-- `max_depth`: Maximum depth voor tree traversal  
+- `directory`: Root directory om te analyze
+- `max_depth`: Maximum depth for tree traversal  
 - `include_patterns`: File patterns om te includeren (e.g., "*.py")
-- `exclude_patterns`: Patterns om uit te sluiten (e.g., "__pycache__")
+- `exclude_patterns`: Patterns om from te sluiten (e.g., "__pycache__")
 
 **Example Usage:**
 ```python
-"Analyseer de project structuur tot 4 levels diep"
-"Toon alleen Python en Markdown bestanden in de structuur"
+"Analyze the project structure until 4 levels diep"
+"Show only Python and Markdown files in the structuur"
 ```
 
 **Output:**
@@ -242,33 +242,33 @@ The system then shows:
 **Purpose**: AST-based code structure analysis
 
 **Parameters:**
-- `file_path`: Path naar Python bestand
+- `file_path`: Path to Python bestand
 - `analysis_type`: Type analyse (classes, functions, imports, dependencies, all)
 
 **Example Usage:**
 ```python
-"Analyseer de AST van main.py voor alle elementen"
-"Geef me alleen de classes uit SingleAgent.py"
+"Analyze the AST of main.py for alle elementen"
+"Give me alleen the classes from SingleAgent.py"
 ```
 
 **Analysis Types:**
-- `classes`: Class definitions en methods
-- `functions`: Function definitions en signatures  
-- `imports`: Import statements en modules
+- `classes`: Class definitions and methods
+- `functions`: Function definitions and signatures  
+- `imports`: Import statements and modules
 - `dependencies`: Dependency extraction
 - `all`: Complete analysis
 
 #### `detect_code_patterns`
 
-**Purpose**: Design pattern en anti-pattern detectie
+**Purpose**: Design pattern and anti-pattern detectie
 
 **Parameters:**
-- `file_path`: Path naar Python bestand om te analyseren
+- `file_path`: Path to Python bestand om te analyze
 
 **Example Usage:**
 ```python
 "Detecteer design patterns in ArchitectAgent.py"
-"Zijn er anti-patterns in de Tools module?"
+"Zijn er anti-patterns in the Tools module?"
 ```
 
 **Detected Patterns:**
@@ -287,16 +287,16 @@ The system then shows:
 
 #### `analyze_dependencies`
 
-**Purpose**: Dependency graph creation en analysis
+**Purpose**: Dependency graph creation and analysis
 
 **Parameters:**
-- `directory`: Root directory voor dependency analysis
+- `directory`: Root directory for dependency analysis
 - `include_external`: Include external dependencies
 - `max_depth`: Maximum analysis depth
 
 **Example Usage:**
 ```python
-"Maak een dependency graph van de Tools directory"
+"Create a dependency graph of the Tools directory"
 "Analyseer alle dependencies inclusief externe packages"
 ```
 
@@ -306,13 +306,13 @@ The system then shows:
 
 **Parameters:**
 - `description`: Project beschrijving
-- `features`: List van gewenste features
-- `directory`: Project directory voor context
+- `features`: List of gewenste features
+- `directory`: Project directory for context
 
 **Example Usage:**
 ```python
-"Maak een TODO lijst voor het uitbreiden van agent capabilities"
-"Genereer een roadmap voor performance optimizations"
+"Create a TODO lijst for the uitbreiden of agent capabilities"
+"Genereer a roadmap for performance optimizations"
 ```
 
 **TODO Structure:**
@@ -336,7 +336,7 @@ The system then shows:
 
 #### `read_directory`
 
-**Purpose**: Directory content listing met metadata
+**Purpose**: Directory content listing with metadata
 
 **Parameters:**
 - `path`: Directory path
@@ -346,7 +346,7 @@ The system then shows:
 
 #### `write_file`
 
-**Purpose**: File creation voor documentation en planning
+**Purpose**: File creation for documentation and planning
 
 **Parameters:**
 - `file_path`: Output file path
@@ -355,26 +355,26 @@ The system then shows:
 
 **Example Usage:**
 ```python
-"Schrijf de TODO lijst naar een TODO.md bestand"
-"Maak een ARCHITECTURE.md met de project structuur"
+"Schrijf the TODO lijst to a TODO.md bestand"
+"Create a ARCHITECTURE.md with the project structure"
 ```
 
 #### `read_file`
 
 **Purpose**: Context-aware file reading
 
-Identical aan Code Agent versie maar gebruikt voor architectural analysis.
+Identical aan Code Agent versie maar used for architectural analysis.
 
 ### System Tools
 
 #### `run_command`
 
-**Purpose**: Command execution voor build/analysis tools
+**Purpose**: Command execution for build/analysis tools
 
 **Example Usage:**
 ```python
-"Run find . -name '*.py' | wc -l om Python bestanden te tellen"
-"Voer tree command uit voor directory visualization"
+"Run find . -name '*.py' | wc -l om Python files te tellen"
+"Voer tree command from for directory visualization"
 ```
 
 ## Advanced Features
@@ -385,26 +385,26 @@ Identical aan Code Agent versie maar gebruikt voor architectural analysis.
 
 ```python
 # Cyclomatic complexity
-"Analyseer de code complexity van alle modules"
+"Analyze the code complexity of alle modules"
 
 # Coupling analysis  
-"Hoe tight zijn de coupling relationships?"
+"Hoe tight are the coupling relationships?"
 
 # Cohesion assessment
-"Beoordeel de cohesion binnen modules"
+"Beoordeel the cohesion binnen modules"
 ```
 
 #### Maintainability Metrics
 
 ```python
 # Technical debt assessment
-"Wat is de technical debt van dit project?"
+"Wat is the technical debt of dit project?"
 
 # Refactoring opportunities
-"Welke delen van de code kunnen gerefactored worden?"
+"Welke delen of the code can gerefactored worden?"
 
 # Code quality trends
-"Hoe is de code quality over tijd veranderd?"
+"Hoe is the code quality about tijd veranderd?"
 ```
 
 ### 2. Architectural Recommendations
@@ -416,7 +416,7 @@ Identical aan Code Agent versie maar gebruikt voor architectural analysis.
 "Welke design patterns zouden dit project verbeteren?"
 
 # Structural improvements
-"Hoe kan de modulaire structuur verbeterd worden?"
+"Hoe kan the modulaire structuur verbeterd worden?"
 
 # Performance architecture
 "Welke architecturale wijzigingen zouden performance verbeteren?"
@@ -426,10 +426,10 @@ Identical aan Code Agent versie maar gebruikt voor architectural analysis.
 
 ```python
 # SOLID principles
-"Hoe goed volgt de code de SOLID principles?"
+"Hoe goed volgt the code the SOLID principles?"
 
 # Clean architecture
-"Wat zijn de clean architecture violations?"
+"What are the clean architecture violations?"
 
 # Domain-driven design
 "Hoe kan DDD beter toegepast worden?"
@@ -441,33 +441,33 @@ Identical aan Code Agent versie maar gebruikt voor architectural analysis.
 
 ```python
 # Growth planning
-"Hoe moet de architectuur evolueren voor schaalgroei?"
+"Hoe moet the architectuur evolueren for schaalgroei?"
 
 # Technology migration
-"Wat is de strategie voor het adopteren van nieuwe technologieën?"
+"Wat is the strategie for the adopteren of nieuwe technologieën?"
 
 # Legacy modernization
-"Hoe kunnen legacy onderdelen gemoderniseerd worden?"
+"Hoe can legacy onderdelen gemoderniseerd worden?"
 ```
 
 #### Team Coordination
 
 ```python
 # Work distribution
-"Hoe kunnen architectural tasks verdeeld worden over het team?"
+"Hoe can architectural tasks verdeeld worden about the team?"
 
 # Risk assessment
-"Wat zijn de grootste architectural risks?"
+"What are the grootste architectural risks?"
 
 # Timeline planning
-"Wat is een realistische timeline voor deze architectural changes?"
+"Wat is a realistische timeline for deze architectural changes?"
 ```
 
 ## Configuration
 
 ### Agent Instructions
 
-De Architect Agent is geconfigureerd met specifieke architectural focus:
+De Architect Agent is geconfigureerd with specifieke architectural focus:
 
 ```python
 AGENT_INSTRUCTIONS = """
@@ -551,38 +551,38 @@ architecture_state = {
 ### 1. New Project Analysis
 
 ```python
-1. "Analyseer de complete project structuur"
-2. "Identificeer de core architectural patterns"
-3. "Maak een dependency graph"
+1. "Analyze the complete project structure"
+2. "Identificeer the core architectural patterns"
+3. "Create a dependency graph"
 4. "Detecteer potential architectural issues"
-5. "Genereer een improvement roadmap"
+5. "Genereer a improvement roadmap"
 ```
 
 ### 2. Architecture Review
 
 ```python
-1. "Evalueer de huidige architectural decisions"
+1. "Evalueer the huidige architectural decisions"
 2. "Identificeer design pattern usage"
-3. "Assess code organization en modularity"
-4. "Detect anti-patterns en technical debt"
+3. "Assess code organization and modularity"
+4. "Detect anti-patterns and technical debt"
 5. "Recommend structural improvements"
 ```
 
 ### 3. Refactoring Planning
 
 ```python
-1. "Analyseer areas die refactoring nodig hebben"
+1. "Analyseer areas die refactoring nodig have"
 2. "Prioriteer refactoring efforts"
 3. "Plan incremental improvement steps" 
-4. "Estimate effort en impact"
+4. "Estimate effort and impact"
 5. "Create detailed TODO lists"
 ```
 
 ### 4. Scalability Assessment
 
 ```python
-1. "Evaluate current architecture voor scalability"
-2. "Identify bottlenecks en limitations"
+1. "Evaluate current architecture for scalability"
+2. "Identify bottlenecks and limitations"
 3. "Recommend scaling strategies"
 4. "Plan infrastructure improvements"
 5. "Create migration roadmap"
@@ -594,36 +594,36 @@ architecture_state = {
 
 ```python
 # Start with big picture
-"Geef een high-level overzicht van de gehele architectuur"
+"Geef a high-level overzicht of the gehele architectuur"
 
 # Drill down systematically
-"Focus nu op de agent interaction patterns"
+"Focus nu on the agent interaction patterns"
 
 # Cross-cutting concerns
-"Hoe wordt logging en error handling geïmplementeerd?"
+"Hoe is logging and error handling geïmplementeerd?"
 ```
 
 ### 2. Contextual Recommendations
 
 ```python
 # Consider project constraints
-"Gegeven de huidige team size, wat zijn realistische improvements?"
+"Gegive the huidige team size, wat are realistische improvements?"
 
 # Technology stack alignment
-"Hoe passen de voorgestelde changes bij de huidige tech stack?"
+"Hoe passen the voorgestelde changes at the huidige tech stack?"
 
 # Business requirements  
-"Welke architectural changes ondersteunen de business goals?"
+"Welke architectural changes ondersteunen the business goals?"
 ```
 
 ### 3. Incremental Planning
 
 ```python
 # Phase recommendations
-"Deel de architectural improvements op in phases"
+"Deel the architectural improvements on in phases"
 
 # Risk mitigation
-"Wat zijn de risks van elke architectural change?"
+"What are the risks of elke architectural change?"
 
 # Backward compatibility
 "Hoe behouden we backward compatibility tijdens refactoring?"
@@ -633,10 +633,10 @@ architecture_state = {
 
 ### 1. Analysis Optimization
 
-- **Selective Analysis**: Focus op specifieke modules waar nodig
-- **Caching**: Cache AST analysis results voor hergebruik
+- **Selective Analysis**: Focus on specifieke modules waar nodig
+- **Caching**: Cache AST analysis results for hergebruik
 - **Parallel Processing**: Analyseer multiple files tegelijkertijd
-- **Depth Limiting**: Controleer analysis depth voor grote codebases
+- **Depth Limiting**: Controleer analysis depth for grote codebases
 
 ### 2. Memory Management
 
@@ -645,13 +645,13 @@ architecture_state = {
 "Analyseer grote projecten in chunks"
 
 # Result streaming
-"Stream analysis results voor real-time feedback"
+"Stream analysis results for real-time feedback"
 
 # Selective loading
 "Load alleen relevante AST data"
 ```
 
-## Integration met Development Workflow
+## Integration with Development Workflow
 
 ### 1. CI/CD Integration
 
@@ -663,7 +663,7 @@ architecture_state = {
 "Definieer architectural quality gates"
 
 # Trend analysis
-"Track architectural metrics over time"
+"Track architectural metrics about time"
 ```
 
 ### 2. Documentation Generation
@@ -692,4 +692,4 @@ architecture_state = {
 "Develop architectural training content"
 ```
 
-De Architect Agent biedt een krachtige set tools voor software architects om complexe systemen te analyseren, verbeteren en strategisch te plannen. Door focus op high-level concerns en structural analysis, complementeert het perfect de detailed code analysis van de Code Agent.
+De Architect Agent biedt a krachtige set tools for software architects om complexe systemen te analyze, verbeteren and strategisch te plannen. Door focus on high-level concerns and structural analysis, complementeert the perfect the detailed code analysis of the Code Agent.

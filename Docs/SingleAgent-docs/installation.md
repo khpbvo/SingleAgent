@@ -119,37 +119,37 @@ Hier is wat elke dependency doet:
 ### Core Dependencies
 
 ```python
-openai                  # OpenAI API client voor LLM calls
-prompt_toolkit         # Geavanceerde CLI interface met history
-pydantic              # Data validatie en serialisatie
-tiktoken              # Token counting voor OpenAI models
+openai                  # OpenAI API client for LLM calls
+prompt_toolkit         # Geavanceerde CLI interface with history
+pydantic              # Data validatie and serialisatie
+tiktoken              # Token counting for OpenAI models
 ```
 
 ### Advanced Features
 
 ```python
-spacy                 # Natural Language Processing voor entity extraction
-networkx              # Graph analysis voor dependency mapping
+spacy                 # Natural Language Processing for entity extraction
+networkx              # Graph analysis for dependency mapping
 typing_extensions     # Extended type hints ondersteuning
-toml                  # TOML configuratie file parsing
+toml                  # TOML configuration file parsing
 ```
 
 ### Development Tools
 
 ```python
-ruff                  # Python linter en formatter (vervanger voor flake8)
+ruff                  # Python linter and formatter (vervanger for flake8)
 pylint                # Uitgebreide Python code analysis
-pyright               # Static type checker van Microsoft
+pyright               # Static type checker of Microsoft
 ```
 
 ## OpenAI API Setup
 
 ### API Key verkrijgen
 
-1. Ga naar [OpenAI Platform](https://platform.openai.com)
-2. Log in of maak een account
-3. Navigeer naar API keys sectie
-4. Genereer een nieuwe API key
+1. Ga to [OpenAI Platform](https://platform.openai.com)
+2. Log in or maak a account
+3. Navigeer to API keys sectie
+4. Genereer a nieuwe API key
 5. Bewaar deze veilig!
 
 ### API Key Configureren
@@ -157,7 +157,7 @@ pyright               # Static type checker van Microsoft
 #### Methode 1: Environment Variable (Aanbevolen)
 
 ```bash
-# macOS/Linux - voeg toe aan ~/.bashrc of ~/.zshrc
+# macOS/Linux - voeg toe aan ~/.bashrc or ~/.zshrc
 export OPENAI_API_KEY=sk-your-api-key-here
 
 # Windows - voeg toe aan environment variables
@@ -166,7 +166,7 @@ set OPENAI_API_KEY=sk-your-api-key-here
 
 #### Methode 2: .env File
 
-Maak een `.env` bestand in de project root:
+Create a `.env` bestand in the project root:
 
 ```env
 OPENAI_API_KEY=sk-your-api-key-here
@@ -176,9 +176,9 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ### API Gebruik Monitoring
 
-- Monitor je usage op [OpenAI Platform](https://platform.openai.com/usage)
-- Stel usage limits in als gewenst
-- SingleAgent gebruikt standaard GPT-4.1
+- Monitor je usage on [OpenAI Platform](https://platform.openai.com/usage)
+- Stel usage limits in as gewenst
+- SingleAgent used standaard GPT-4.1
 
 ## SpaCy Model Setup
 
@@ -192,7 +192,7 @@ python -m spacy download en_core_web_lg
 ### Alternatieve Models
 
 ```bash
-# Medium model (balans tussen grootte en accuracy)
+# Medium model (balans tussen grootte and accuracy)
 python -m spacy download en_core_web_md
 
 # Small model (snelste, minder accurate)
@@ -201,16 +201,16 @@ python -m spacy download en_core_web_sm
 
 ### Model Selectie Aanpassen
 
-In `The_Agents/spacy_singleton.py` kun je het model wijzigen:
+In `The_Agents/spacy_singleton.py` kun je the model wijzigen:
 
 ```python
-# Wijzig deze regel voor een ander model
+# Wijzig deze regel for a ander model
 await nlp_singleton.initialize(model_name="en_core_web_md", disable=["parser"])
 ```
 
-## Verificatie van Installatie
+## Verificatie of Installatie
 
-Test of alles correct geïnstalleerd is:
+Test or alles correct geïnstalleerd is:
 
 ### 1. Python Environment Test
 
@@ -283,7 +283,7 @@ except Exception as e:
 
 #### "No module named 'agents'"
 ```bash
-# Zorg dat je in de juiste directory bent
+# Zorg that je in the juiste directory bent
 ls -la  # Moet agents/ directory bevatten
 
 # Herinstalleer requirements
@@ -300,8 +300,8 @@ pip install https://github.com/explosion/spacy-models/releases/download/en_core_
 ```
 
 #### Windows Path Issues
-- Gebruik forward slashes `/` in plaats van backslashes `\`
-- Activeer virtual environment voor elke nieuwe terminal sessie
+- Gebruik forward slashes `/` in plaats of backslashes `\`
+- Activeer virtual environment for elke nieuwe terminal sessie
 - Controleer PATH environment variable
 
 #### Permission Errors (Linux/macOS)
@@ -325,15 +325,15 @@ await nlp_singleton.initialize(
 ```
 
 #### Voor Minder Memory Gebruik
-- Gebruik `en_core_web_md` in plaats van `en_core_web_lg`
+- Gebruik `en_core_web_md` in plaats of `en_core_web_lg`
 - Verhoog token limits in context management
 
 ## Next Steps
 
-Na succesvolle installatie:
+Na succesvolle installation:
 
-1. Lees de [Snelstart Gids](quickstart.md)
-2. Verken de [Architectuur Overview](architecture.md)
+1. Lees the [Snelstart Gids](quickstart.md)
+2. Verken the [Architectuur Overview](architecture.md)
 3. Probeer enkele [Voorbeelden](examples.md)
 
 Voor problemen die hier niet staan, zie [Troubleshooting](troubleshooting.md).

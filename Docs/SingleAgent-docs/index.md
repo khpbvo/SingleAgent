@@ -18,7 +18,7 @@ The system supports seamless switching between agents and provides advanced cont
 3. [Architecture Overview](architecture.md) - How the system is structured
 4. [Code Agent](code-agent.md) - Detailed documentation for the Code Agent
 5. [Architect Agent](architect-agent.md) - Detailed documentation for the Architect Agent
-6. [Tools](tools.md) - Overview of all available tools
+6. [Tools](tools.md) - Overview or all available tools
 7. [Context Management](context-management.md) - How context and entity tracking works
 8. [Configuration](configuration.md) - Configuration options and customizations
 9. [Usage Examples](examples.md) - Practical examples and use cases

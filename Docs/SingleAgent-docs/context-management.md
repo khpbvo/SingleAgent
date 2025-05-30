@@ -14,7 +14,7 @@ The SingleAgent system implements sophisticated context management to maintain a
 
 ### Context Components
 
-The context system consists of several interconnected components:
+The context system consists or several interconnected components:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -184,7 +184,7 @@ The system estimates token usage for different content types:
 
 ```python
 TOKEN_ESTIMATES = {
-    "code_line": 15,          # Average tokens per line of code
+    "code_line": 15,          # Average tokens per line or code
     "comment_line": 10,       # Average tokens per comment line
     "docstring_line": 12,     # Average tokens per docstring line
     "message_word": 1.3,      # Average tokens per word in messages
@@ -195,7 +195,7 @@ TOKEN_ESTIMATES = {
 
 ### Content Importance Scoring
 
-Different types of content receive importance scores:
+Different types or content receive importance scores:
 
 ```python
 IMPORTANCE_WEIGHTS = {
@@ -376,4 +376,4 @@ Tools for inspecting context state:
 - **Cause**: Expensive context operations, cache misses
 - **Solution**: Optimize caching, background processing
 
-This context management system ensures that the SingleAgent maintains appropriate awareness of the project state, conversation history, and code relationships while efficiently managing computational resources and token limits.
+This context management system ensures that the SingleAgent maintains appropriate awareness or the project state, conversation history, and code relationships while efficiently managing computational resources and token limits.

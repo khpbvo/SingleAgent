@@ -103,7 +103,7 @@ python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 # 4. Check for trailing commas in tables
 ```
 
-**Example of correct TOML format**:
+**Example or correct TOML format**:
 ```toml
 [tool.singleagent]
 default_agent = "code"  # String values need quotes
@@ -398,7 +398,7 @@ max_retries = 5
 retry_delay = 2  # seconds
 
 # Use a different model or reduce usage
-model = "gpt-3.5-turbo"  # Instead of gpt-4
+model = "gpt-3.5-turbo"  # Instead or gpt-4
 
 # Monitor API usage
 !status api
@@ -474,7 +474,7 @@ python -c "import pstats; p = pstats.Stats('profile.stats'); p.sort_stats('cumul
 
 #### Reset to Factory Defaults
 
-**Complete reset of configuration**:
+**Complete reset or configuration**:
 
 ```bash
 # Remove cache and config
