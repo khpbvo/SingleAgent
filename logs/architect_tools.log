@@ -45,7 +45,7 @@ TypeError: 'FunctionTool' object is not callable
 2025-04-24 04:24:40,676 DEBUG {"tool": "analyze_ast", "result_size": 131}
 2025-04-24 04:24:40,676 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/Tools/architect_tools.py", "analysis_type": "functions"}}
 2025-04-24 04:24:40,692 DEBUG {"tool": "analyze_ast", "result_size": 810}
-2025-04-24 04:24:40,692 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/Tools/tools_single_agent.py", "analysis_type": "functions"}}
+2025-04-24 04:24:40,692 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/Tools/singleagent_tools.py", "analysis_type": "functions"}}
 2025-04-24 04:24:40,700 DEBUG {"tool": "analyze_ast", "result_size": 695}
 2025-04-24 04:24:40,700 DEBUG {"tool": "analyze_ast", "params": {"file_path": "/Users/kevinvanosch/Documents/SingleAgent/The_Agents/ArchitectAgent.py", "analysis_type": "functions"}}
 2025-04-24 04:24:40,704 DEBUG {"tool": "analyze_ast", "result_size": 78}
