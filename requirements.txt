@@ -10,3 +10,4 @@ typing_extensions
 ruff
 pylint
 pyright
+graphviz
