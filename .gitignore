@@ -17,4 +17,18 @@ logs/context.log.3
 main.log.2
 main.log.3
 /Macvenvallot
-count_words.py
+
+# Temporary and development files
+development/temp_*
+*.tmp
+*.temp
+
+# Log files
+logs/*.log.*
+logs/*.log.backup
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

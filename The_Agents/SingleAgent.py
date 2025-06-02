@@ -90,7 +90,7 @@ from Tools.singleagent_tools import (
     get_context_response,
     add_manual_context
 )
-from utils.project_info import discover_project_info
+from utilities.project_info import discover_project_info
 from agents.exceptions import MaxTurnsExceeded
 
 # Import our enhanced context
