@@ -42,7 +42,7 @@ from .shared_tools import (
 tool_logger = logging.getLogger(__name__)
 tool_logger.setLevel(logging.DEBUG)
 # rotating file handler for tools.log
-tools_handler = RotatingFileHandler('tools.log', maxBytes=10*1024*1024, backupCount=3)
+tools_handler = RotatingFileHandler('logs/tools.log', maxBytes=10*1024*1024, backupCount=3)
 tools_handler.setLevel(logging.DEBUG)
 tools_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
 tool_logger.addHandler(tools_handler)
