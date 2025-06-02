@@ -1,19 +1,19 @@
 # Scripts
 
-Deze map bevat utility scripts en hulpprogramma's.
+This directory contains utility scripts and helper programs.
 
-## Apply Patch Systeem:
-Het project gebruikt een custom patch systeem met een speciaal "V4A diff format":
+## Apply Patch System:
+The project uses a custom patch system with a special "V4A diff format":
 
-- `apply_patch.py` - **Hoofdscript** voor het toepassen van patches in V4A format
-- `apply_patch_prompt.py` - **Tool definitie** en beschrijving voor AI agents
-- `verify_patch.py` - **Test script** voor het verifiëren van patch functionaliteit
+- `apply_patch.py` - **Main script** for applying patches in V4A format
+- `apply_patch_prompt.py` - **Tool definition** and description for AI agents
+- `verify_patch.py` - **Test script** for verifying patch functionality
 
-Het V4A diff format gebruikt context-based patching in plaats van line numbers, waardoor het robuuster is voor AI agents.
+The V4A diff format uses context-based patching instead of line numbers, making it more robust for AI agents.
 
-## Andere Utilities:
-- `count_words.py` - Utility voor het tellen van woorden in bestanden
+## Other Utilities:
+- `count_words.py` - Utility for counting words in files
 
-## Documentatie:
-Voor uitgebreide documentatie over het apply_patch systeem, zie:
+## Documentation:
+For comprehensive documentation about the apply_patch system, see:
 `Docs/SingleAgent_docs/eng/apply_patch_tool_documentation.txt`

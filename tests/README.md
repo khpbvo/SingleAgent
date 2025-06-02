@@ -1,8 +1,8 @@
 # Tests
 
-Deze map bevat alle test bestanden voor het SingleAgent project.
+This directory contains all test files for the SingleAgent project.
 
-## Bestanden:
-- `test_*.py` - Unit tests voor verschillende componenten
-- `spacy_test.py` - Test voor spaCy NLP functionaliteit
-- `test_patch.txt` - Test data voor patch functionaliteit
+## Files:
+- `test_*.py` - Unit tests for various components
+- `spacy_test.py` - Test for spaCy NLP functionality
+- `test_patch.txt` - Test data for patch functionality

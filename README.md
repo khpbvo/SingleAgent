@@ -1,42 +1,42 @@
 # SingleAgent Project
 
-Een intelligent agent systeem met code en architect capabilities.
+An intelligent agent system with code and architect capabilities.
 
-## Project Structuur
+## Project Structure
 
 ```
 SingleAgent/
-├── main.py                 # Hoofdentry point van de applicatie
-├── pyproject.toml         # Project configuratie
+├── main.py                 # Main entry point of the application
+├── pyproject.toml         # Project configuration
 ├── requirements.txt       # Python dependencies
-├── The_Agents/           # Agent implementaties
-│   ├── SingleAgent.py    # Basis agent
+├── The_Agents/           # Agent implementations
+│   ├── SingleAgent.py    # Base agent
 │   ├── ArchitectAgent.py # Architect agent
-│   └── ...               # Andere agent bestanden
-├── Tools/                # Tool implementaties voor agents
-├── utilities/            # Utility functies en hulpmodules
-├── Docs/                 # Project documentatie
-├── examples/             # Voorbeelden en demo code
-├── scripts/              # Utility scripts en hulpprogramma's
-├── tests/                # Test bestanden
-├── development/          # Development en experimentele code
-└── logs/                 # Log bestanden
+│   └── ...               # Other agent files
+├── Tools/                # Tool implementations for agents
+├── utilities/            # Utility functions and helper modules
+├── Docs/                 # Project documentation
+├── examples/             # Examples and demo code
+├── scripts/              # Utility scripts and helper programs
+├── tests/                # Test files
+├── development/          # Development and experimental code
+└── logs/                 # Log files
 ```
 
-## Gebruik
+## Usage
 
-Start de applicatie met:
+Start the application with:
 ```bash
 python main.py
 ```
 
 ## Development
 
-- Test bestanden staan in `tests/`
-- Development code staat in `development/`
-- Utility scripts staan in `scripts/`
-- Voorbeelden staan in `examples/`
+- Test files are in `tests/`
+- Development code is in `development/`
+- Utility scripts are in `scripts/`
+- Examples are in `examples/`
 
-## Documentatie
+## Documentation
 
-Uitgebreide documentatie is te vinden in de `Docs/` map.
+Comprehensive documentation can be found in the `Docs/` directory.

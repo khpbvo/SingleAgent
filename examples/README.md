@@ -1,6 +1,6 @@
 # Examples
 
-Deze map bevat voorbeelden en demo code.
+This directory contains examples and demo code.
 
-## Bestanden:
-- `Example_Agent_with_appy_patch.py` - Voorbeeld implementatie van een agent met patch functionaliteit
+## Files:
+- `Example_Agent_with_appy_patch.py` - Example implementation of an agent with patch functionality

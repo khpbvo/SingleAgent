@@ -1,8 +1,8 @@
 # Development
 
-Deze map bevat bestanden die gebruikt worden tijdens development.
+This directory contains files used during development.
 
-## Bestanden:
-- `temp.py` - Tijdelijke development code en experimenten
+## Files:
+- `temp.py` - Temporary development code and experiments
 
-⚠️ **Let op**: Bestanden in deze map zijn voor development doeleinden en mogen niet in productie gebruikt worden.
+⚠️ **Note**: Files in this directory are for development purposes and should not be used in production.
