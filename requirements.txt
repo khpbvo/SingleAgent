@@ -4,7 +4,6 @@ prompt_toolkit
 tiktoken
 pydantic
 spacy
-en-core-web-lg
 networkx
 toml
 typing_extensions
