@@ -3,7 +3,7 @@
 __pycache__/
 *.pyc
 /Imacvenv
-
+/Imacvenv2
 .DS_Store
 main.log
 singleagent.log
