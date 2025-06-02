@@ -7,7 +7,7 @@ Creates a simple diff and applies it to a temporary file.
 
 import os
 import sys
-from Tools.tools_single_agent import apply_patch
+from Tools.singleagent_tools import apply_patch
 
 # Create a test file
 with open("test_file.py", "w") as f:
