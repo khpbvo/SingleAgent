@@ -13,12 +13,13 @@ import os
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
-# Add these imports for prompt_toolkit
+# Add these imports for prompt_toolkit with status bar
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
 
 # Import spaCy singleton
 from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
@@ -52,6 +53,35 @@ class AgentMode:
     CODE = "code"
     ARCHITECT = "architect"
 
+def create_status_bar_text(current_agent, mode):
+    """Create status bar text for the bottom toolbar."""
+    context = current_agent.context
+    token_count = context.token_count
+    max_tokens = context.max_tokens
+    percentage = (token_count / max_tokens) * 100 if max_tokens > 0 else 0
+    
+    # Create progress bar
+    bar_width = 20
+    filled = int((percentage / 100) * bar_width)
+    bar = "█" * filled + "░" * (bar_width - filled)
+    
+    # Color coding based on percentage - use valid HTML class names
+    if percentage < 50:
+        token_style = "good"
+    elif percentage < 80:
+        token_style = "warning"
+    else:
+        token_style = "danger"
+    
+    mode_style = "mode-code" if mode == AgentMode.CODE else "mode-arch"
+    
+    # Use simpler HTML formatting that doesn't break XML parsing
+    return HTML(
+        f'<{mode_style}>[{mode.upper()}]</{mode_style}> │ '
+        f'<{token_style}>Tokens: {token_count:,}/{max_tokens:,} ({percentage:.1f}%) [{bar}]</{token_style}> │ '
+        f'<path>📁 {os.path.basename(context.working_directory)}</path>'
+    )
+
 async def main():
     """Main function to run the dual-agent system with mode switching support."""
     # Initialize spaCy model at startup
@@ -83,20 +113,46 @@ async def main():
     display_mode_banner()
     print(f"\n{get_current_agent().get_context_summary()}\n")
     
-    # Set up prompt_toolkit session for CLI with history auto-suggest
+    # Create key bindings for better UX
+    kb = KeyBindings()
+    
+    @kb.add('c-c')
+    def _(event):
+        """Handle Ctrl+C gracefully."""
+        event.app.exit()
+    
+    @kb.add('c-d')
+    def _(event):
+        """Handle Ctrl+D gracefully."""
+        event.app.exit()
+    
+    # Set up enhanced style with status bar colors
     style = Style.from_dict({
-        'auto-suggestion': 'fg:#888888 italic'
+        'auto-suggestion': 'fg:#888888 italic',
+        'bottom-toolbar': 'bg:#444444 fg:#ffffff',
+        
+        # Status bar styles - match the HTML class names above
+        'good': 'fg:#00ff00 bold',
+        'warning': 'fg:#ffff00 bold', 
+        'danger': 'fg:#ff0000 bold',
+        'mode-code': 'fg:#00ff00 bold',
+        'mode-arch': 'fg:#00aaff bold',
+        'path': 'fg:#cccccc',
     })
+    
+    # Set up prompt_toolkit session with status bar
     session = PromptSession(
         history=InMemoryHistory(),
         auto_suggest=AutoSuggestFromHistory(),
-        style=style
+        style=style,
+        key_bindings=kb,
+        bottom_toolbar=lambda: create_status_bar_text(get_current_agent(), current_mode),
     )
 
     # enter REPL loop
     while True:
         try:
-            # Use prompt_toolkit session for input with auto-suggest
+            # Use prompt_toolkit session for input with auto-suggest and status bar
             query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
             logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
             
@@ -139,6 +195,31 @@ async def main():
             print(f"\n{code_agent.get_context_summary()}\n")
             continue
             
+        # Add a new command to show token details
+        if query.strip().lower() == "!tokens":
+            current_agent = get_current_agent()
+            context = current_agent.context
+            token_info = context.get_token_usage_info() if hasattr(context, 'get_token_usage_info') else {
+                "current": context.token_count,
+                "maximum": context.max_tokens,
+                "percentage": (context.token_count / context.max_tokens) * 100,
+                "remaining": context.max_tokens - context.token_count,
+            }
+            
+            print(f"""
+{BOLD}Token Usage Details:{RESET}
+Current tokens: {token_info['current']:,}
+Maximum tokens: {token_info['maximum']:,}
+Usage percentage: {token_info['percentage']:.2f}%
+Remaining tokens: {token_info['remaining']:,}
+""")
+            if 'manual_context_tokens' in token_info:
+                print(f"Manual context tokens: {token_info['manual_context_tokens']:,}")
+            if 'chat_tokens' in token_info:
+                print(f"Chat history tokens: {token_info['chat_tokens']:,}")
+            print()
+            continue
+            
         # Common special commands for both modes
         if query.strip().lower() == "!help":
             print(f"""
@@ -146,6 +227,7 @@ async def main():
 !help       - Show this help message
 !history    - Show chat history
 !context    - Show full context summary 
+!tokens     - Show detailed token usage information
 !clear      - Clear chat history
 !save       - Manually save context
 !entity     - List tracked entities
@@ -165,6 +247,12 @@ arch:readdir:path - Analyze directory structure with Architect Agent
    - exclude: File patterns to exclude (default: ['__pycache__', '*.pyc', etc.])
 
 exit/quit   - Exit the program
+
+{BOLD}Status Bar:{RESET}
+The bottom toolbar shows:
+- Current agent mode ([CODE] or [ARCHITECT])
+- Token usage with visual progress bar and percentage
+- Current working directory
 """)
             continue
         elif query.strip().lower() == "!history":

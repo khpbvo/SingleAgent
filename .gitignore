@@ -26,6 +26,7 @@ development/temp_*
 # Log files
 logs/*.log.*
 logs/*.log.backup
+logs/*.log
 
 # IDE files
 .vscode/
@@ -33,3 +34,5 @@ logs/*.log.backup
 *.swp
 *.swo
 logs/architectagent.log
+logs/architectagent.log
+logs/shared_tools.log
