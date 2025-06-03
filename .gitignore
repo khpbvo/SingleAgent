@@ -32,3 +32,4 @@ logs/*.log.backup
 .idea/
 *.swp
 *.swo
+logs/architectagent.log
