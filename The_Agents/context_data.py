@@ -339,3 +339,89 @@ class EnhancedContextData(BaseModel):
             The stored value or default if not found
         """
         return self.session_state.get(key, default)
+
+    def get_token_usage_info(self) -> Dict[str, Any]:
+        """
+        Get detailed token usage information for display.
+        
+        Returns:
+            Dictionary with token usage details
+        """
+        percentage = (self.token_count / self.max_tokens) * 100 if self.max_tokens > 0 else 0
+        
+        # Calculate manual context tokens
+        manual_context_tokens = sum(item.token_count for item in self.manual_context_items)
+        
+        # Calculate chat tokens
+        chat_tokens = sum(self.count_tokens(msg.get("content", "")) for msg in self.chat_messages)
+        
+        return {
+            "current": self.token_count,
+            "maximum": self.max_tokens,
+            "percentage": percentage,
+            "remaining": self.max_tokens - self.token_count,
+            "status": "good" if percentage < 50 else "warning" if percentage < 80 else "danger",
+            "manual_context_tokens": manual_context_tokens,
+            "chat_tokens": chat_tokens,
+            "manual_context_items_count": len(self.manual_context_items),
+            "chat_messages_count": len(self.chat_messages),
+            "active_entities_count": len(self.active_entities),
+            "memory_items_count": len(self.memory_items),
+            "summarization_threshold": self.max_tokens * self.summarization_threshold,
+            "needs_summarization": self.should_summarize(),
+        }
+
+    def format_token_bar(self, width: int = 20) -> str:
+        """
+        Create a visual progress bar for token usage.
+        
+        Args:
+            width: Width of the progress bar in characters
+            
+        Returns:
+            String representation of the progress bar
+        """
+        percentage = (self.token_count / self.max_tokens) * 100 if self.max_tokens > 0 else 0
+        filled = int((percentage / 100) * width)
+        return "█" * filled + "░" * (width - filled)
+
+    def get_detailed_token_breakdown(self) -> str:
+        """
+        Get a formatted string with detailed token usage breakdown.
+        
+        Returns:
+            Formatted string with token breakdown
+        """
+        info = self.get_token_usage_info()
+        
+        return f"""Token Usage Breakdown:
+├─ Total Used: {info['current']:,} / {info['maximum']:,} ({info['percentage']:.1f}%)
+├─ Chat Messages: {info['chat_tokens']:,} tokens ({info['chat_messages_count']} messages)
+├─ Manual Context: {info['manual_context_tokens']:,} tokens ({info['manual_context_items_count']} items)
+├─ Remaining: {info['remaining']:,} tokens
+├─ Summarization Threshold: {info['summarization_threshold']:,} tokens
+└─ Status: {info['status'].upper()} {'⚠️  NEEDS SUMMARIZATION' if info['needs_summarization'] else '✅'}
+
+Progress: {self.format_token_bar(30)}
+
+Tracked Entities: {info['active_entities_count']}
+Memory Items: {info['memory_items_count']}"""
+
+    def remove_manual_context(self, label: str) -> bool:
+        """
+        Remove a manual context item by its label.
+        
+        Args:
+            label: Label of the context item to remove
+            
+        Returns:
+            True if item was found and removed, False otherwise
+        """
+        for i, item in enumerate(self.manual_context_items):
+            if item.label == label:
+                removed_item = self.manual_context_items.pop(i)
+                # Subtract the tokens from our count
+                self.token_count -= removed_item.token_count
+                self.last_updated = time.time()
+                return True
+        return False
