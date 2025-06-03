@@ -78,6 +78,9 @@ from Tools.architect_tools import (
 # Import custom context data model
 from The_Agents.context_data import EnhancedContextData
 
+# Path for persistent context storage
+CONTEXT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".architect_context.json")
+
 
 class ArchitectAgent:
     """
@@ -128,22 +131,16 @@ class ArchitectAgent:
         """
         Load context data from persistent storage if available.
         """
-        self.context = EnhancedContextData()  # Initialize empty context
-        
-        # Try to load persisted context 
-        context_file = "architect_context.json"
-        if os.path.exists(context_file):
-            try:
-                with open(context_file, 'r') as f:
-                    data = json.load(f)
-                    # Convert raw dict to EnhancedContextData
-                    self.context = EnhancedContextData.from_dict(data)
-                logger.debug(f"Loaded context from {context_file}")
-            except Exception as e:
-                logger.error(f"Error loading context: {e}")
-                # Continue with empty context on error
-        else:
-            logger.debug("No saved context found, starting fresh")
+        # Try to load persisted context if present
+        try:
+            self.context = await EnhancedContextData.load_from_json(CONTEXT_FILE_PATH)
+            logger.debug(f"Loaded context from {CONTEXT_FILE_PATH}")
+        except Exception as e:
+            logger.error(f"Error loading context: {e}")
+            self.context = EnhancedContextData(
+                working_directory=os.getcwd(),
+                project_name=os.path.basename(os.getcwd()),
+            )
             
         # Ensure context has required state
         if not hasattr(self.context, 'chat_messages'):
@@ -159,14 +156,8 @@ class ArchitectAgent:
         Save context data to persistent storage.
         """
         try:
-            context_file = "architect_context.json"
-            # Convert context object to serializable dictionary
-            data = self.context.to_dict()
-            
-            with open(context_file, 'w') as f:
-                json.dump(data, f)
-                
-            logger.debug(f"Context saved to {context_file}")
+            await self.context.save_to_json(CONTEXT_FILE_PATH)
+            logger.debug(f"Context saved to {CONTEXT_FILE_PATH}")
         except Exception as e:
             logger.error(f"Error saving context: {e}")
     

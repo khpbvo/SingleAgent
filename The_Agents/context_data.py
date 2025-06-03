@@ -8,8 +8,10 @@ Enhanced context system for SingleAgent with features from AgentSmith:
 """
 from datetime import datetime
 import os, time
+import json
+import asyncio
 from typing import List, Optional, Dict, Any
-import tiktoken 
+import tiktoken
 # Configure logger
 import logging
 logger = logging.getLogger("SingleAgent.Context")
@@ -425,3 +427,47 @@ Memory Items: {info['memory_items_count']}"""
                 self.last_updated = time.time()
                 return True
         return False
+
+    # ----- SERIALIZATION HELPERS -----
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a serializable dictionary of the context."""
+        return self.model_dump()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EnhancedContextData":
+        """Create an instance from a dictionary."""
+        return cls.model_validate(data)
+
+    async def save_to_json(self, file_path: str) -> None:
+        """Persist context to a JSON file asynchronously."""
+        def _write():
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(self.model_dump(), f, indent=2)
+
+        await asyncio.to_thread(_write)
+
+    @classmethod
+    async def load_from_json(cls, file_path: str) -> "EnhancedContextData":
+        """Load context from a JSON file if it exists."""
+        if not os.path.exists(file_path):
+            return cls(
+                working_directory=os.getcwd(),
+                project_name=os.path.basename(os.getcwd()),
+                project_info=None,
+            )
+
+        def _read() -> Dict[str, Any]:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        try:
+            data = await asyncio.to_thread(_read)
+            return cls.model_validate(data)
+        except Exception as e:
+            logger.error(f"Failed to load context from {file_path}: {e}")
+            return cls(
+                working_directory=os.getcwd(),
+                project_name=os.path.basename(os.getcwd()),
+                project_info=None,
+            )
