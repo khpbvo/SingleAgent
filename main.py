@@ -24,9 +24,11 @@ from prompt_toolkit.key_binding import KeyBindings
 # Import spaCy singleton
 from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
 
-# Import both agents
+# Import both agents and shared context manager
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
+from The_Agents.shared_context_manager import SharedContextManager
+from The_Agents.workflows import WorkflowOrchestrator
 
 # ANSI escape codes
 GREEN = "\033[32m"
@@ -53,7 +55,7 @@ class AgentMode:
     CODE = "code"
     ARCHITECT = "architect"
 
-def create_status_bar_text(current_agent, mode):
+def create_status_bar_text(current_agent, mode, shared_manager=None):
     """Create status bar text for the bottom toolbar."""
     context = current_agent.context
     token_count = context.token_count
@@ -75,11 +77,21 @@ def create_status_bar_text(current_agent, mode):
     
     mode_style = "mode-code" if mode == AgentMode.CODE else "mode-arch"
     
+    # Get collaboration info
+    collab_info = ""
+    if shared_manager:
+        agent_name = "code" if mode == AgentMode.CODE else "architect"
+        pending_tasks = shared_manager.get_pending_tasks(agent_name)
+        if pending_tasks:
+            task_count = len(pending_tasks)
+            collab_info = f' │ <collab>📋 {task_count} tasks</collab>'
+    
     # Use simpler HTML formatting that doesn't break XML parsing
     return HTML(
         f'<{mode_style}>[{mode.upper()}]</{mode_style}> │ '
         f'<{token_style}>Tokens: {token_count:,}/{max_tokens:,} ({percentage:.1f}%) [{bar}]</{token_style}> │ '
         f'<path>📁 {os.path.basename(context.working_directory)}</path>'
+        f'{collab_info}'
     )
 
 async def main():
@@ -88,10 +100,22 @@ async def main():
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
     await nlp_singleton.initialize(model_name="en_core_web_lg", disable=["parser"])
     
+    # Initialize shared context manager and workflow orchestrator
+    shared_manager = SharedContextManager()
+    workflow_orchestrator = WorkflowOrchestrator(shared_manager)
+    
     # Start in code agent mode by default
     current_mode = AgentMode.CODE
     code_agent = SingleAgent()
     architect_agent = ArchitectAgent()
+    
+    # Set up shared context manager and workflow orchestrator in both agents' metadata
+    code_agent.context.metadata["shared_manager"] = shared_manager
+    code_agent.context.metadata["agent_name"] = "code"
+    code_agent.context.metadata["workflow_orchestrator"] = workflow_orchestrator
+    architect_agent.context.metadata["shared_manager"] = shared_manager
+    architect_agent.context.metadata["agent_name"] = "architect"
+    architect_agent.context.metadata["workflow_orchestrator"] = workflow_orchestrator
     
     print(f"{BOLD}Dual-Agent system initialized.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
@@ -138,6 +162,7 @@ async def main():
         'mode-code': 'fg:#00ff00 bold',
         'mode-arch': 'fg:#00aaff bold',
         'path': 'fg:#cccccc',
+        'collab': 'fg:#ff8800 bold',  # Orange for collaboration info
     })
     
     # Set up prompt_toolkit session with status bar
@@ -146,7 +171,7 @@ async def main():
         auto_suggest=AutoSuggestFromHistory(),
         style=style,
         key_bindings=kb,
-        bottom_toolbar=lambda: create_status_bar_text(get_current_agent(), current_mode),
+        bottom_toolbar=lambda: create_status_bar_text(get_current_agent(), current_mode, shared_manager),
     )
 
     # enter REPL loop
@@ -181,7 +206,13 @@ async def main():
             current_mode = AgentMode.ARCHITECT
             # Save context before switching
             await code_agent.save_context()
+            # Merge relevant context from code agent to architect
+            architect_agent.context.merge_from(code_agent.context, merge_chat=False)
             print(f"\n{BLUE}Switching to Architect Agent mode.{RESET}")
+            # Show handoff context
+            handoff_context = shared_manager.get_agent_handoff_context("code", "architect")
+            if handoff_context["pending_tasks"]:
+                print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Code Agent{RESET}")
             display_mode_banner()
             print(f"\n{architect_agent.get_context_summary()}\n")
             continue
@@ -190,7 +221,13 @@ async def main():
             current_mode = AgentMode.CODE
             # Save context before switching
             await architect_agent.save_context()
+            # Merge relevant context from architect agent to code agent
+            code_agent.context.merge_from(architect_agent.context, merge_chat=False)
             print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
+            # Show handoff context
+            handoff_context = shared_manager.get_agent_handoff_context("architect", "code")
+            if handoff_context["pending_tasks"]:
+                print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Architect Agent{RESET}")
             display_mode_banner()
             print(f"\n{code_agent.get_context_summary()}\n")
             continue
@@ -235,6 +272,8 @@ Remaining tokens: {token_info['remaining']:,}
 !delctx:label  - Remove manual context item by label
 !code       - Switch to Code Agent mode
 !architect  - Switch to Architect Agent mode
+!collab     - Show collaboration status and pending tasks
+!workflows  - Show active workflows and their status
 
 {BOLD}Special Commands:{RESET}
 code:read:path - Add file at path to persistent context
@@ -246,6 +285,19 @@ arch:readdir:path - Analyze directory structure with Architect Agent
    - include: File patterns to include (default: ['*.py', '*.md', etc.])
    - exclude: File patterns to exclude (default: ['__pycache__', '*.pyc', etc.])
 
+{BOLD}Cross-Agent Collaboration:{RESET}
+Use the agent tools to:
+- request_architecture_review: Ask Architect for design advice
+- request_implementation: Ask Code Agent to implement features
+- share_insight: Share discoveries between agents
+- record_architectural_decision: Document design decisions
+- get_collaboration_status: Check pending tasks and insights
+- start_feature_workflow: Start automated feature implementation workflow
+- start_bugfix_workflow: Start automated bug fix workflow  
+- start_refactor_workflow: Start automated refactoring workflow
+- get_workflow_status: Check status of a specific workflow
+- list_active_workflows: List all active workflows
+
 exit/quit   - Exit the program
 
 {BOLD}Status Bar:{RESET}
@@ -253,6 +305,7 @@ The bottom toolbar shows:
 - Current agent mode ([CODE] or [ARCHITECT])
 - Token usage with visual progress bar and percentage
 - Current working directory
+- Pending collaboration tasks (📋 N tasks)
 """)
             continue
         elif query.strip().lower() == "!history":
@@ -268,6 +321,71 @@ The bottom toolbar shows:
         elif query.strip().lower() == "!save":
             await get_current_agent().save_context()
             print("\nContext saved.\n")
+            continue
+        elif query.strip().lower() == "!collab":
+            # Show collaboration status
+            agent_name = "code" if current_mode == AgentMode.CODE else "architect"
+            summary = shared_manager.get_collaboration_summary()
+            
+            print(f"\n{BOLD}=== Collaboration Status ==={RESET}")
+            
+            # Show pending tasks for current agent
+            pending_tasks = shared_manager.get_pending_tasks(agent_name)
+            if pending_tasks:
+                print(f"\n{YELLOW}📋 Your Pending Tasks ({len(pending_tasks)}):{RESET}")
+                for i, task in enumerate(pending_tasks, 1):
+                    print(f"  {i}. [{task.priority.upper()}] {task.task}")
+                    print(f"     From: {task.created_by}")
+                    if task.context:
+                        print(f"     Context: {json.dumps(task.context, indent=6)}")
+            else:
+                print(f"\n{GREEN}✅ No pending tasks for you{RESET}")
+            
+            # Overall statistics
+            print(f"\n{BOLD}📊 Overall Statistics:{RESET}")
+            print(f"  - Total tasks: {summary['total_tasks']}")
+            print(f"  - Completed: {summary['completed_tasks']}")
+            for agent, count in summary.get('pending_tasks_by_agent', {}).items():
+                print(f"  - Pending for {agent}: {count}")
+            
+            # Recent insights
+            if summary['recent_insights']:
+                print(f"\n{BOLD}💡 Recent Insights ({summary['total_insights']} total):{RESET}")
+                for insight in summary['recent_insights']:
+                    print(f"  - {insight}")
+            
+            # Architectural decisions
+            if summary['architectural_decisions'] > 0:
+                print(f"\n{BOLD}🏗️  Architectural Decisions: {summary['architectural_decisions']}{RESET}")
+                decisions = shared_manager.get_architectural_decisions()[:3]
+                for decision in decisions:
+                    print(f"  - {decision.decision}")
+                    print(f"    Rationale: {decision.rationale}")
+            
+            print()
+            continue
+        elif query.strip().lower() == "!workflows":
+            # Show active workflows
+            workflows = workflow_orchestrator.list_active_workflows()
+            
+            print(f"\n{BOLD}=== Active Workflows ==={RESET}")
+            
+            if not workflows:
+                print(f"\n{GREEN}✅ No active workflows{RESET}")
+            else:
+                for workflow in workflows:
+                    print(f"\n🔄 {workflow['name']}")
+                    print(f"   ID: {workflow['workflow_id']}")
+                    print(f"   Status: {workflow['status'].upper()}")
+                    print(f"   Progress: {workflow['completed_steps']}/{workflow['total_steps']} steps ({workflow['progress_percentage']:.1f}%)")
+                    
+                    if workflow['failed_steps'] > 0:
+                        print(f"   ⚠️  Failed steps: {workflow['failed_steps']}")
+                    
+                    if workflow['running_steps'] > 0:
+                        print(f"   🔄 Running steps: {workflow['running_steps']}")
+            
+            print()
             continue
         elif query.strip().lower() == "!entity":
             current_agent = get_current_agent()

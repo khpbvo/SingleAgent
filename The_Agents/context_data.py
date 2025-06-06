@@ -8,6 +8,7 @@ Enhanced context system for SingleAgent with features from AgentSmith:
 """
 from datetime import datetime
 import os, time
+import json
 from typing import List, Optional, Dict, Any
 import tiktoken 
 # Configure logger
@@ -425,3 +426,84 @@ Memory Items: {info['memory_items_count']}"""
                 self.last_updated = time.time()
                 return True
         return False
+    
+    # Serialization methods
+    async def save_to_json(self, filepath: str) -> None:
+        """Save context to JSON file."""
+        data = self.model_dump(exclude={'_tokenizer'})
+        # Convert datetime objects to strings
+        for item in data.get('memory_items', []):
+            if 'timestamp' in item and hasattr(item['timestamp'], 'isoformat'):
+                item['timestamp'] = item['timestamp'].isoformat()
+        
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2, default=str)
+        logger.info(f"Saved context to {filepath}")
+    
+    @classmethod
+    async def load_from_json(cls, filepath: str) -> 'EnhancedContextData':
+        """Load context from JSON file."""
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        
+        # Convert timestamp strings back to datetime objects
+        for item in data.get('memory_items', []):
+            if 'timestamp' in item and isinstance(item['timestamp'], str):
+                item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+        
+        logger.info(f"Loaded context from {filepath}")
+        return cls(**data)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        data = self.model_dump(exclude={'_tokenizer'})
+        # Handle datetime serialization
+        for item in data.get('memory_items', []):
+            if 'timestamp' in item and hasattr(item['timestamp'], 'isoformat'):
+                item['timestamp'] = item['timestamp'].isoformat()
+        return data
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'EnhancedContextData':
+        """Create from dictionary."""
+        # Convert timestamp strings back to datetime objects
+        for item in data.get('memory_items', []):
+            if 'timestamp' in item and isinstance(item['timestamp'], str):
+                item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+        return cls(**data)
+    
+    def merge_from(self, other_context: 'EnhancedContextData', merge_chat: bool = False) -> None:
+        """
+        Merge relevant information from another context.
+        
+        Args:
+            other_context: The context to merge from
+            merge_chat: Whether to merge recent chat messages
+        """
+        # Merge entities with higher access counts
+        for key, entity in other_context.active_entities.items():
+            if key not in self.active_entities or entity.access_count > self.active_entities[key].access_count:
+                self.active_entities[key] = entity
+        
+        # Optionally merge recent chat history
+        if merge_chat:
+            # Take last N messages from other context
+            recent_messages = other_context.chat_messages[-5:]
+            self.chat_messages.extend(recent_messages)
+            # Update token count
+            for msg in recent_messages:
+                self.update_token_count(self.count_tokens(msg.get('content', '')))
+        
+        # Merge manual context items (avoid duplicates)
+        existing_labels = {item.label for item in self.manual_context_items}
+        for item in other_context.manual_context_items:
+            if item.label not in existing_labels:
+                self.manual_context_items.append(item)
+                self.update_token_count(item.token_count)
+        
+        # Merge session state
+        self.session_state.update(other_context.session_state)
+        
+        # Update metadata
+        self.last_updated = time.time()
+        logger.info("Merged context from another instance")

@@ -36,3 +36,4 @@ logs/*.log
 logs/architectagent.log
 logs/architectagent.log
 logs/shared_tools.log
+shared_context.json

@@ -16,6 +16,8 @@ from logging.handlers import RotatingFileHandler
 
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
+from The_Agents.shared_context_manager import SharedContextManager, TaskPriority
+from The_Agents.workflows import WorkflowOrchestrator
 
 # Configure logger for shared tools
 shared_logger = logging.getLogger("SharedTools")
@@ -80,6 +82,79 @@ class RunCommandParams(BaseModel):
 class FileReadParams(BaseModel):
     """Parameters for reading a file."""
     file_path: str = Field(description="Path to the file to read")
+
+# Cross-agent communication parameter models
+class RequestArchitectureReviewParams(BaseModel):
+    """Parameters for requesting an architecture review."""
+    component: str = Field(description="Component or feature to review")
+    description: str = Field(description="Detailed description of what needs review")
+    priority: str = Field("medium", description="Priority level (high, medium, low)")
+    
+    class Config:
+        extra = "forbid"
+
+class RequestImplementationParams(BaseModel):
+    """Parameters for requesting implementation from code agent."""
+    feature: str = Field(description="Feature or component to implement")
+    specification: str = Field(description="Detailed specification for implementation")
+    priority: str = Field("medium", description="Priority level (high, medium, low)")
+    
+    class Config:
+        extra = "forbid"
+
+class ShareInsightParams(BaseModel):
+    """Parameters for sharing an insight with the other agent."""
+    insight: str = Field(description="The insight to share")
+    category: str = Field(description="Category (architecture, bug, optimization, security, etc.)")
+    
+    class Config:
+        extra = "forbid"
+
+class RecordArchitecturalDecisionParams(BaseModel):
+    """Parameters for recording an architectural decision."""
+    decision: str = Field(description="The architectural decision")
+    rationale: str = Field(description="Why this decision was made")
+    
+    class Config:
+        extra = "forbid"
+
+class GetCollaborationStatusParams(BaseModel):
+    """Parameters for getting collaboration status."""
+    verbose: bool = Field(False, description="Whether to include detailed information")
+    
+    class Config:
+        extra = "forbid"
+
+# Workflow parameter models
+class StartFeatureWorkflowParams(BaseModel):
+    """Parameters for starting a feature implementation workflow."""
+    feature_name: str = Field(description="Name of the feature to implement")
+    requirements: str = Field(description="Detailed requirements for the feature")
+    
+    class Config:
+        extra = "forbid"
+
+class StartBugfixWorkflowParams(BaseModel):
+    """Parameters for starting a bug fix workflow."""
+    bug_description: str = Field(description="Description of the bug to fix")
+    
+    class Config:
+        extra = "forbid"
+
+class StartRefactorWorkflowParams(BaseModel):
+    """Parameters for starting a refactoring workflow."""
+    component: str = Field(description="Component or module to refactor")
+    refactoring_goals: str = Field(description="Goals and objectives for the refactoring")
+    
+    class Config:
+        extra = "forbid"
+
+class GetWorkflowStatusParams(BaseModel):
+    """Parameters for getting workflow status."""
+    workflow_id: str = Field(description="ID of the workflow to check")
+    
+    class Config:
+        extra = "forbid"
 
 # Shared tool implementations
 @function_tool
@@ -349,3 +424,404 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
     result = "\n".join(info)
     logger.debug(json.dumps({"tool": "get_context", "output_length": len(result)}))
     return result
+
+# Cross-agent communication tools
+@function_tool
+async def request_architecture_review(wrapper: RunContextWrapper[EnhancedContextData], params: RequestArchitectureReviewParams) -> str:
+    """
+    Request an architecture review from the Architect Agent.
+    
+    Use this when you need architectural guidance or validation for your implementation.
+    The Architect Agent will analyze the component and provide design recommendations.
+    
+    Args:
+        component: Component or feature to review
+        description: Detailed description of what needs review
+        context: Additional context for the review
+        priority: Priority level (high, medium, low)
+        
+    Returns:
+        Confirmation message with task ID
+    """
+    logger.debug(json.dumps({"tool": "request_architecture_review", "params": params.model_dump()}))
+    
+    # Get the shared context manager from metadata
+    shared_manager = wrapper.context.metadata.get("shared_manager")
+    if not shared_manager:
+        return "Error: Shared context manager not available. Please ensure the system is properly initialized."
+    
+    # Get current agent name from context
+    current_agent = wrapper.context.metadata.get("agent_name", "code")
+    
+    # Create task for architect
+    task_id = shared_manager.add_task(
+        target_agent="architect",
+        task=f"Architecture review requested for {params.component}: {params.description}",
+        created_by=current_agent,
+        priority=TaskPriority(params.priority),
+        context={}
+    )
+    
+    return f"Architecture review requested successfully. Task ID: {task_id}. Switch to Architect Agent (!architect) to process this request."
+
+@function_tool
+async def request_implementation(wrapper: RunContextWrapper[EnhancedContextData], params: RequestImplementationParams) -> str:
+    """
+    Request implementation from the Code Agent.
+    
+    Use this when architectural design is complete and you need the Code Agent
+    to implement a specific feature or component.
+    
+    Args:
+        feature: Feature or component to implement
+        specification: Detailed specification for implementation
+        architectural_constraints: Architectural constraints to follow
+        priority: Priority level (high, medium, low)
+        
+    Returns:
+        Confirmation message with task ID
+    """
+    logger.debug(json.dumps({"tool": "request_implementation", "params": params.model_dump()}))
+    
+    # Get the shared context manager from metadata
+    shared_manager = wrapper.context.metadata.get("shared_manager")
+    if not shared_manager:
+        return "Error: Shared context manager not available. Please ensure the system is properly initialized."
+    
+    # Get current agent name from context
+    current_agent = wrapper.context.metadata.get("agent_name", "architect")
+    
+    # Create task for code agent
+    context = {
+        "specification": params.specification
+    }
+    
+    task_id = shared_manager.add_task(
+        target_agent="code",
+        task=f"Implement {params.feature}",
+        created_by=current_agent,
+        priority=TaskPriority(params.priority),
+        context=context
+    )
+    
+    return f"Implementation task created successfully. Task ID: {task_id}. Switch to Code Agent (!code) to implement this feature."
+
+@function_tool
+async def share_insight(wrapper: RunContextWrapper[EnhancedContextData], params: ShareInsightParams) -> str:
+    """
+    Share an insight or discovery with the other agent.
+    
+    Use this to communicate important findings, bugs, optimizations, or design
+    patterns that the other agent should be aware of.
+    
+    Args:
+        insight: The insight to share
+        category: Category (architecture, bug, optimization, security, etc.)
+        related_files: Related file paths
+        metadata: Additional metadata
+        
+    Returns:
+        Confirmation message with insight ID
+    """
+    logger.debug(json.dumps({"tool": "share_insight", "params": params.model_dump()}))
+    
+    # Get the shared context manager from metadata
+    shared_manager = wrapper.context.metadata.get("shared_manager")
+    if not shared_manager:
+        return "Error: Shared context manager not available. Please ensure the system is properly initialized."
+    
+    # Get current agent name from context
+    current_agent = wrapper.context.metadata.get("agent_name", "unknown")
+    
+    # Add insight
+    insight_id = shared_manager.add_insight(
+        agent=current_agent,
+        insight=params.insight,
+        category=params.category,
+        metadata={},
+        related_files=[]
+    )
+    
+    return f"Insight shared successfully. ID: {insight_id}. The other agent will see this insight when they check collaboration status."
+
+@function_tool
+async def record_architectural_decision(wrapper: RunContextWrapper[EnhancedContextData], params: RecordArchitecturalDecisionParams) -> str:
+    """
+    Record an important architectural decision.
+    
+    Use this to document architectural decisions that will affect the implementation.
+    These decisions will be available to both agents and help maintain consistency.
+    
+    Args:
+        decision: The architectural decision
+        rationale: Why this decision was made
+        affected_components: Components affected by this decision
+        constraints: Constraints considered
+        
+    Returns:
+        Confirmation message with decision ID
+    """
+    logger.debug(json.dumps({"tool": "record_architectural_decision", "params": params.model_dump()}))
+    
+    # Get the shared context manager from metadata
+    shared_manager = wrapper.context.metadata.get("shared_manager")
+    if not shared_manager:
+        return "Error: Shared context manager not available. Please ensure the system is properly initialized."
+    
+    # Record decision
+    decision_id = shared_manager.add_architectural_decision(
+        decision=params.decision,
+        rationale=params.rationale,
+        affected_components=[],
+        constraints=[]
+    )
+    
+    return f"Architectural decision recorded successfully. ID: {decision_id}. This decision will guide future implementations."
+
+@function_tool
+async def get_collaboration_status(wrapper: RunContextWrapper[EnhancedContextData], params: GetCollaborationStatusParams) -> str:
+    """
+    Get the current collaboration status between agents.
+    
+    Shows pending tasks, recent insights, architectural decisions, and active workflows.
+    Use this to understand what work is pending and what the other agent has discovered.
+    
+    Args:
+        verbose: Whether to include detailed information
+        
+    Returns:
+        Collaboration status summary
+    """
+    logger.debug(json.dumps({"tool": "get_collaboration_status", "params": params.model_dump()}))
+    
+    # Get the shared context manager from metadata
+    shared_manager = wrapper.context.metadata.get("shared_manager")
+    if not shared_manager:
+        return "Error: Shared context manager not available. Please ensure the system is properly initialized."
+    
+    # Get current agent name
+    current_agent = wrapper.context.metadata.get("agent_name", "unknown")
+    
+    # Get summary
+    summary = shared_manager.get_collaboration_summary()
+    
+    # Build response
+    lines = ["=== Collaboration Status ==="]
+    
+    # Pending tasks for current agent
+    pending_tasks = shared_manager.get_pending_tasks(current_agent)
+    if pending_tasks:
+        lines.append(f"\n📋 Pending Tasks for You ({len(pending_tasks)}):")
+        for task in pending_tasks[:5]:  # Show first 5
+            lines.append(f"  - [{task.priority.upper()}] {task.task} (from {task.created_by})")
+            if params.verbose and task.context:
+                lines.append(f"    Context: {json.dumps(task.context, indent=4)}")
+    else:
+        lines.append("\n✅ No pending tasks for you")
+    
+    # Overall task statistics
+    lines.append(f"\n📊 Task Statistics:")
+    lines.append(f"  - Total tasks: {summary['total_tasks']}")
+    lines.append(f"  - Completed: {summary['completed_tasks']}")
+    for agent, count in summary.get('pending_tasks_by_agent', {}).items():
+        lines.append(f"  - Pending for {agent}: {count}")
+    
+    # Recent insights
+    if summary['recent_insights']:
+        lines.append(f"\n💡 Recent Insights ({summary['total_insights']} total):")
+        for insight in summary['recent_insights']:
+            lines.append(f"  - {insight}")
+    
+    # Architectural decisions
+    if summary['architectural_decisions'] > 0:
+        lines.append(f"\n🏗️  Architectural Decisions: {summary['architectural_decisions']}")
+        if params.verbose:
+            decisions = shared_manager.get_architectural_decisions()[:3]
+            for decision in decisions:
+                lines.append(f"  - {decision.decision}")
+                lines.append(f"    Rationale: {decision.rationale}")
+    
+    # Active workflows
+    if summary['active_workflows'] > 0:
+        lines.append(f"\n🔄 Active Workflows: {summary['active_workflows']}")
+    
+    return "\n".join(lines)
+
+# Workflow orchestration tools
+@function_tool
+async def start_feature_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartFeatureWorkflowParams) -> str:
+    """
+    Start a feature implementation workflow.
+    
+    This creates a multi-step workflow that coordinates between Architect and Code agents
+    to implement a new feature from design to completion.
+    
+    Args:
+        feature_name: Name of the feature to implement
+        requirements: Detailed requirements for the feature
+        
+    Returns:
+        Workflow ID and confirmation message
+    """
+    logger.debug(json.dumps({"tool": "start_feature_workflow", "params": params.model_dump()}))
+    
+    # Get the workflow orchestrator from metadata
+    orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
+    if not orchestrator:
+        return "Error: Workflow orchestrator not available. Please ensure the system is properly initialized."
+    
+    # Create workflow
+    workflow_id = orchestrator.create_workflow(
+        workflow_type="feature",
+        feature_name=params.feature_name,
+        requirements=params.requirements
+    )
+    
+    return f"Feature implementation workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
+
+@function_tool
+async def start_bugfix_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartBugfixWorkflowParams) -> str:
+    """
+    Start a bug fix workflow.
+    
+    This creates a multi-step workflow that coordinates analysis and fixing of bugs
+    with architectural guidance.
+    
+    Args:
+        bug_description: Description of the bug to fix
+        
+    Returns:
+        Workflow ID and confirmation message
+    """
+    logger.debug(json.dumps({"tool": "start_bugfix_workflow", "params": params.model_dump()}))
+    
+    # Get the workflow orchestrator from metadata
+    orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
+    if not orchestrator:
+        return "Error: Workflow orchestrator not available. Please ensure the system is properly initialized."
+    
+    # Create workflow
+    workflow_id = orchestrator.create_workflow(
+        workflow_type="bugfix",
+        bug_description=params.bug_description
+    )
+    
+    return f"Bug fix workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
+
+@function_tool
+async def start_refactor_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartRefactorWorkflowParams) -> str:
+    """
+    Start a code refactoring workflow.
+    
+    This creates a multi-step workflow that coordinates code refactoring
+    with architectural guidance and planning.
+    
+    Args:
+        component: Component or module to refactor
+        refactoring_goals: Goals and objectives for the refactoring
+        
+    Returns:
+        Workflow ID and confirmation message
+    """
+    logger.debug(json.dumps({"tool": "start_refactor_workflow", "params": params.model_dump()}))
+    
+    # Get the workflow orchestrator from metadata
+    orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
+    if not orchestrator:
+        return "Error: Workflow orchestrator not available. Please ensure the system is properly initialized."
+    
+    # Create workflow
+    workflow_id = orchestrator.create_workflow(
+        workflow_type="refactor",
+        component=params.component,
+        refactoring_goals=params.refactoring_goals
+    )
+    
+    return f"Refactoring workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
+
+@function_tool
+async def get_workflow_status(wrapper: RunContextWrapper[EnhancedContextData], params: GetWorkflowStatusParams) -> str:
+    """
+    Get the status of a specific workflow.
+    
+    Shows detailed progress including completed steps, current steps, and remaining work.
+    
+    Args:
+        workflow_id: ID of the workflow to check
+        
+    Returns:
+        Detailed workflow status
+    """
+    logger.debug(json.dumps({"tool": "get_workflow_status", "params": params.model_dump()}))
+    
+    # Get the workflow orchestrator from metadata
+    orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
+    if not orchestrator:
+        return "Error: Workflow orchestrator not available. Please ensure the system is properly initialized."
+    
+    # Get workflow status
+    status = orchestrator.get_workflow_status(params.workflow_id)
+    
+    if "error" in status:
+        return f"Error: {status['error']}"
+    
+    # Format status
+    lines = [f"=== Workflow Status: {status['name']} ==="]
+    lines.append(f"ID: {status['workflow_id']}")
+    lines.append(f"Status: {status['status'].upper()}")
+    lines.append(f"Progress: {status['completed_steps']}/{status['total_steps']} steps ({status['progress_percentage']:.1f}%)")
+    
+    if status['failed_steps'] > 0:
+        lines.append(f"⚠️  Failed steps: {status['failed_steps']}")
+    
+    if status['running_steps'] > 0:
+        lines.append(f"🔄 Running steps: {status['running_steps']}")
+    
+    # Show step details
+    lines.append("\n📋 Steps:")
+    for step in status['steps']:
+        status_icon = {
+            "pending": "⏸️",
+            "running": "🔄",
+            "completed": "✅",
+            "failed": "❌"
+        }.get(step['status'], "❓")
+        
+        lines.append(f"  {status_icon} {step['description']} ({step['agent']})")
+        if step['status'] == "running" and step['started_at']:
+            runtime = time.time() - step['started_at']
+            lines.append(f"    ⏱️  Running for {runtime:.1f} seconds")
+    
+    return "\n".join(lines)
+
+@function_tool
+async def list_active_workflows(wrapper: RunContextWrapper[EnhancedContextData]) -> str:
+    """
+    List all active workflows.
+    
+    Shows a summary of all currently running or pending workflows.
+    
+    Returns:
+        List of active workflows with their status
+    """
+    logger.debug(json.dumps({"tool": "list_active_workflows"}))
+    
+    # Get the workflow orchestrator from metadata
+    orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
+    if not orchestrator:
+        return "Error: Workflow orchestrator not available. Please ensure the system is properly initialized."
+    
+    # Get active workflows
+    workflows = orchestrator.list_active_workflows()
+    
+    if not workflows:
+        return "No active workflows."
+    
+    lines = ["=== Active Workflows ==="]
+    for workflow in workflows:
+        lines.append(f"\n🔄 {workflow['name']}")
+        lines.append(f"   ID: {workflow['workflow_id']}")
+        lines.append(f"   Status: {workflow['status'].upper()}")
+        lines.append(f"   Progress: {workflow['completed_steps']}/{workflow['total_steps']} steps ({workflow['progress_percentage']:.1f}%)")
+    
+    return "\n".join(lines)
