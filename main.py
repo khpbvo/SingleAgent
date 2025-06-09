@@ -134,6 +134,41 @@ async def setup_mcp_servers() -> list:
         mcp_configs.append(CommonMCPConfigs.sqlite_server(db_files[0]))
         print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
     
+    # Add GitHub server if token is available
+    github_token = os.getenv('GITHUB_TOKEN') or os.getenv('GITHUB_PAT') or os.getenv('GH_TOKEN')
+    if github_token:
+        # Try to detect if we're in a GitHub repo and get owner/repo info
+        owner, repo = None, None
+        try:
+            if os.path.exists(os.path.join(current_dir, '.git')):
+                import subprocess
+                result = subprocess.run(['git', 'remote', 'get-url', 'origin'], 
+                                      capture_output=True, text=True, cwd=current_dir)
+                if result.returncode == 0:
+                    remote_url = result.stdout.strip()
+                    # Parse GitHub URL
+                    if 'github.com' in remote_url:
+                        # Handle both SSH and HTTPS URLs
+                        if remote_url.startswith('git@github.com:'):
+                            # SSH format: git@github.com:owner/repo.git
+                            repo_path = remote_url.replace('git@github.com:', '').replace('.git', '')
+                        elif 'github.com/' in remote_url:
+                            # HTTPS format: https://github.com/owner/repo.git
+                            repo_path = remote_url.split('github.com/')[-1].replace('.git', '')
+                        
+                        if '/' in repo_path:
+                            owner, repo = repo_path.split('/', 1)
+        except Exception:
+            pass  # Ignore errors in repo detection
+        
+        mcp_configs.append(CommonMCPConfigs.github_server(github_token, owner, repo))
+        if owner and repo:
+            print(f"{GREEN}✓ Added GitHub MCP server for {owner}/{repo}{RESET}")
+        else:
+            print(f"{GREEN}✓ Added GitHub MCP server (general access){RESET}")
+    else:
+        print(f"{YELLOW}⚠ GitHub token not found. Set GITHUB_TOKEN, GITHUB_PAT, or GH_TOKEN to enable GitHub MCP server{RESET}")
+    
     # You can add more MCP servers here based on your needs
     # Example: Web search (requires API key)
     # if os.getenv('WEB_SEARCH_API_KEY'):
@@ -380,8 +415,27 @@ When in MCP mode, you have access to additional tools from MCP servers:
 - Enhanced filesystem operations
 - Git repository management
 - Database operations (if configured)
+- GitHub API operations (if GitHub token is configured)
 - Web search and scraping (if configured)
 - And more based on your MCP server configuration
+
+{BOLD}GitHub MCP Server Setup:{RESET}
+To enable GitHub MCP server functionality:
+1. Get a GitHub Personal Access Token from https://github.com/settings/tokens
+2. Set one of these environment variables:
+   export GITHUB_TOKEN=your_token_here
+   export GITHUB_PAT=your_token_here  
+   export GH_TOKEN=your_token_here
+3. Restart the application to auto-detect GitHub repositories
+4. Switch to MCP mode with !mcp to access GitHub tools
+
+{BOLD}GitHub MCP Tools include:{RESET}
+- Repository management (create, delete, fork)
+- Issue management (create, update, list, comment)
+- Pull request operations (create, merge, review)
+- File operations (read, write, search)
+- Branch and commit management
+- Search across GitHub repositories
 """)
             continue
         # New MCP-specific commands

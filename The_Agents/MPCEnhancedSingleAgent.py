@@ -419,6 +419,31 @@ class CommonMCPConfigs:
                 "env": {"API_KEY": api_key}
             }
         )
+    
+    @staticmethod
+    def github_server(github_token: str, owner: str = None, repo: str = None) -> MCPServerConfig:
+        """MCP GitHub server configuration.
+        
+        Args:
+            github_token: GitHub personal access token
+            owner: Optional GitHub username/organization (if provided, repo must also be provided)
+            repo: Optional repository name (if provided, owner must also be provided)
+        """
+        args = ["-y", "@modelcontextprotocol/server-github"]
+        
+        # Add owner and repo if both are provided
+        if owner and repo:
+            args.extend([owner, repo])
+        
+        return MCPServerConfig(
+            name="github",
+            server_type="stdio",
+            config={
+                "command": "npx",
+                "args": args,
+                "env": {"GITHUB_TOKEN": github_token}
+            }
+        )
 
 
 # Example usage function
