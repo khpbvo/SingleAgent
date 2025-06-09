@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-main.py
-Entry point for the dual-agent system with both Code and Architect capabilities.
-Allows switching between SingleAgent and ArchitectAgent based on user commands.
+Enhanced main.py with MCP (Model Context Protocol) support.
+Extends the existing dual-agent system with MCP server integration.
 """
 
 import asyncio
@@ -27,6 +26,10 @@ from The_Agents.spacy_singleton import SpacyModelSingleton, nlp_singleton
 # Import both agents and shared context manager
 from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
+
+# Import the MCP-enhanced agent
+from The_Agents.MPCEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+
 from The_Agents.shared_context_manager import SharedContextManager
 from The_Agents.workflows import WorkflowOrchestrator
 
@@ -50,13 +53,14 @@ main_handler.setLevel(logging.DEBUG)
 main_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
 root_logger.addHandler(main_handler)
 
-# Enum-like for agent modes
+# Enhanced agent modes
 class AgentMode:
     CODE = "code"
     ARCHITECT = "architect"
+    MCP_ENHANCED = "mcp_enhanced"
 
 def create_status_bar_text(current_agent, mode, shared_manager=None):
-    """Create status bar text for the bottom toolbar."""
+    """Enhanced status bar that shows MCP server status."""
     context = current_agent.context
     token_count = context.token_count
     max_tokens = context.max_tokens
@@ -67,7 +71,7 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
     filled = int((percentage / 100) * bar_width)
     bar = "█" * filled + "░" * (bar_width - filled)
     
-    # Color coding based on percentage - use valid HTML class names
+    # Color coding based on percentage
     if percentage < 50:
         token_style = "good"
     elif percentage < 80:
@@ -75,7 +79,16 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
     else:
         token_style = "danger"
     
-    mode_style = "mode-code" if mode == AgentMode.CODE else "mode-arch"
+    # Mode styling
+    if mode == AgentMode.CODE:
+        mode_style = "mode-code"
+        mode_display = "CODE"
+    elif mode == AgentMode.ARCHITECT:
+        mode_style = "mode-arch"
+        mode_display = "ARCH"
+    else:  # MCP_ENHANCED
+        mode_style = "mode-mcp"
+        mode_display = "MCP+"
     
     # Get collaboration info
     collab_info = ""
@@ -86,16 +99,51 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
             task_count = len(pending_tasks)
             collab_info = f' │ <collab>📋 {task_count} tasks</collab>'
     
-    # Use simpler HTML formatting that doesn't break XML parsing
+    # Add MCP server count if applicable
+    mcp_info = ""
+    if hasattr(current_agent, 'mcp_servers') and current_agent.mcp_servers:
+        mcp_count = len(current_agent.mcp_servers)
+        mcp_info = f" │ 🔌 {mcp_count} MCP"
+    
     return HTML(
-        f'<{mode_style}>[{mode.upper()}]</{mode_style}> │ '
+        f'<{mode_style}>[{mode_display}]</{mode_style}> │ '
         f'<{token_style}>Tokens: {token_count:,}/{max_tokens:,} ({percentage:.1f}%) [{bar}]</{token_style}> │ '
-        f'<path>📁 {os.path.basename(context.working_directory)}</path>'
-        f'{collab_info}'
+        f'<path>📁 {os.path.basename(context.working_directory)}</path>{collab_info}{mcp_info}'
     )
 
+async def setup_mcp_servers() -> list:
+    """Setup common MCP servers for the enhanced agent."""
+    print(f"{YELLOW}Configuring MCP servers...{RESET}")
+    
+    mcp_configs = []
+    current_dir = os.getcwd()
+    
+    # Always add filesystem server for current directory
+    mcp_configs.append(CommonMCPConfigs.filesystem_server([current_dir]))
+    print(f"{GREEN}✓ Added Filesystem MCP server{RESET}")
+    
+    # Note: Git MCP server is not available in the official @modelcontextprotocol packages yet
+    # We could add git-mob-mcp-server or similar in the future
+    # if os.path.exists(os.path.join(current_dir, '.git')):
+    #     mcp_configs.append(CommonMCPConfigs.git_server("."))
+    #     print(f"{GREEN}✓ Added Git MCP server{RESET}")
+    
+    # Add SQLite server if there are .db files
+    db_files = [f for f in os.listdir(current_dir) if f.endswith('.db')]
+    if db_files:
+        mcp_configs.append(CommonMCPConfigs.sqlite_server(db_files[0]))
+        print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
+    
+    # You can add more MCP servers here based on your needs
+    # Example: Web search (requires API key)
+    # if os.getenv('WEB_SEARCH_API_KEY'):
+    #     mcp_configs.append(CommonMCPConfigs.web_search_server(os.getenv('WEB_SEARCH_API_KEY')))
+    
+    print(f"{GREEN}✓ Configured {len(mcp_configs)} MCP servers{RESET}")
+    return mcp_configs
+
 async def main():
-    """Main function to run the dual-agent system with mode switching support."""
+    """Enhanced main function with MCP support."""
     # Initialize spaCy model at startup
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
     await nlp_singleton.initialize(model_name="en_core_web_lg", disable=["parser"])
@@ -104,12 +152,19 @@ async def main():
     shared_manager = SharedContextManager()
     workflow_orchestrator = WorkflowOrchestrator(shared_manager)
     
-    # Start in code agent mode by default
+    # Initialize agents
     current_mode = AgentMode.CODE
     code_agent = SingleAgent()
     architect_agent = ArchitectAgent()
     
-    # Set up shared context manager and workflow orchestrator in both agents' metadata
+    # Setup MCP-enhanced agent
+    print(f"{YELLOW}Setting up MCP-enhanced agent...{RESET}")
+    mcp_configs = await setup_mcp_servers()
+    mcp_enhanced_agent = MCPEnhancedSingleAgent(mcp_configs)
+    await mcp_enhanced_agent.initialize_mcp_servers()
+    await mcp_enhanced_agent.create_agent()
+    
+    # Set up shared context manager and workflow orchestrator in all agents' metadata
     code_agent.context.metadata["shared_manager"] = shared_manager
     code_agent.context.metadata["agent_name"] = "code"
     code_agent.context.metadata["workflow_orchestrator"] = workflow_orchestrator
@@ -117,21 +172,28 @@ async def main():
     architect_agent.context.metadata["agent_name"] = "architect"
     architect_agent.context.metadata["workflow_orchestrator"] = workflow_orchestrator
     
-    print(f"{BOLD}Dual-Agent system initialized.{RESET}")
+    print(f"{BOLD}Tri-Agent system initialized with MCP support.{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
-    print(f"Use {BOLD}!code{RESET} or {BOLD}!architect{RESET} to switch between agents.")
-    print(f"Use {BOLD}!history{RESET} to view chat history or {BOLD}!clear{RESET} to clear it.")
+    print(f"Use {BOLD}!code{RESET}, {BOLD}!architect{RESET}, or {BOLD}!mcp{RESET} to switch between agents.")
+    print(f"Use {BOLD}!help{RESET} for all commands.")
     
     # Get the currently active agent
     def get_current_agent():
-        return code_agent if current_mode == AgentMode.CODE else architect_agent
+        if current_mode == AgentMode.CODE:
+            return code_agent
+        elif current_mode == AgentMode.ARCHITECT:
+            return architect_agent
+        else:  # MCP_ENHANCED
+            return mcp_enhanced_agent
     
     # Display agent mode banner
     def display_mode_banner():
         if current_mode == AgentMode.CODE:
             print(f"\n{GREEN}=== Code Agent Mode ==={RESET}")
-        else:
+        elif current_mode == AgentMode.ARCHITECT:
             print(f"\n{BLUE}=== Architect Agent Mode ==={RESET}")
+        else:  # MCP_ENHANCED
+            print(f"\n{YELLOW}=== MCP-Enhanced Agent Mode ==={RESET}")
     
     # Show initial context
     display_mode_banner()
@@ -150,7 +212,7 @@ async def main():
         """Handle Ctrl+D gracefully."""
         event.app.exit()
     
-    # Set up enhanced style with status bar colors
+    # Enhanced style with MCP mode support
     style = Style.from_dict({
         'auto-suggestion': 'fg:#888888 italic',
         'bottom-toolbar': 'bg:#444444 fg:#ffffff',
@@ -161,6 +223,7 @@ async def main():
         'danger': 'fg:#ff0000 bold',
         'mode-code': 'fg:#00ff00 bold',
         'mode-arch': 'fg:#00aaff bold',
+        'mode-mcp': 'fg:#ff8800 bold',  # New MCP mode color
         'path': 'fg:#cccccc',
         'collab': 'fg:#ff8800 bold',  # Orange for collaboration info
     })
@@ -200,34 +263,47 @@ async def main():
             print("Goodbye.")
             break
 
-        # Mode switching commands
-        if query.strip().lower() == "!architect" and current_mode == AgentMode.CODE:
-            # Switch to architect mode
+        # Enhanced mode switching with MCP support
+        query_lower = query.strip().lower()
+        
+        if query_lower == "!mcp" and current_mode != AgentMode.MCP_ENHANCED:
+            # Switch to MCP-enhanced mode
+            current_mode = AgentMode.MCP_ENHANCED
+            await get_current_agent().save_context()  # Save previous context
+            print(f"\n{YELLOW}Switching to MCP-Enhanced Agent mode.{RESET}")
+            display_mode_banner()
+            print(f"\n{mcp_enhanced_agent.get_context_summary()}\n")
+            continue
+            
+        elif query_lower == "!code" and current_mode != AgentMode.CODE:
+            current_mode = AgentMode.CODE
+            await get_current_agent().save_context()
+            # Merge relevant context for collaboration
+            if current_mode == AgentMode.ARCHITECT:
+                code_agent.context.merge_from(architect_agent.context, merge_chat=False)
+                # Show handoff context
+                handoff_context = shared_manager.get_agent_handoff_context("architect", "code")
+                if handoff_context["pending_tasks"]:
+                    print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Architect Agent{RESET}")
+            print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
+            display_mode_banner()
+            print(f"\n{code_agent.get_context_summary()}\n")
+            continue
+            
+        elif query_lower == "!architect" and current_mode != AgentMode.ARCHITECT:
             current_mode = AgentMode.ARCHITECT
-            # Save context before switching
-            await code_agent.save_context()
-            # Merge relevant context from code agent to architect
-            architect_agent.context.merge_from(code_agent.context, merge_chat=False)
+            await get_current_agent().save_context()
+            # Merge relevant context for collaboration
+            if current_mode == AgentMode.CODE:
+                architect_agent.context.merge_from(code_agent.context, merge_chat=False)
+                # Show handoff context
+                handoff_context = shared_manager.get_agent_handoff_context("code", "architect")
+                if handoff_context["pending_tasks"]:
+                    print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Code Agent{RESET}")
             print(f"\n{BLUE}Switching to Architect Agent mode.{RESET}")
-            # Show handoff context
-            handoff_context = shared_manager.get_agent_handoff_context("code", "architect")
-            if handoff_context["pending_tasks"]:
-                print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Code Agent{RESET}")
             display_mode_banner()
             print(f"\n{architect_agent.get_context_summary()}\n")
             continue
-        elif query.strip().lower() == "!code" and current_mode == AgentMode.ARCHITECT:
-            # Switch to code mode
-            current_mode = AgentMode.CODE
-            # Save context before switching
-            await architect_agent.save_context()
-            # Merge relevant context from architect agent to code agent
-            code_agent.context.merge_from(architect_agent.context, merge_chat=False)
-            print(f"\n{GREEN}Switching to Code Agent mode.{RESET}")
-            # Show handoff context
-            handoff_context = shared_manager.get_agent_handoff_context("architect", "code")
-            if handoff_context["pending_tasks"]:
-                print(f"{YELLOW}📋 You have {len(handoff_context['pending_tasks'])} pending tasks from Architect Agent{RESET}")
             display_mode_banner()
             print(f"\n{code_agent.get_context_summary()}\n")
             continue
@@ -257,10 +333,10 @@ Remaining tokens: {token_info['remaining']:,}
             print()
             continue
             
-        # Common special commands for both modes
-        if query.strip().lower() == "!help":
+        # Enhanced help command with MCP information
+        if query_lower == "!help":
             print(f"""
-{BOLD}Agent Commands:{RESET}
+{BOLD}Enhanced Agent Commands:{RESET}
 !help       - Show this help message
 !history    - Show chat history
 !context    - Show full context summary 
@@ -270,20 +346,21 @@ Remaining tokens: {token_info['remaining']:,}
 !entity     - List tracked entities
 !manualctx  - List all manually added context items
 !delctx:label  - Remove manual context item by label
-!code       - Switch to Code Agent mode
-!architect  - Switch to Architect Agent mode
-!collab     - Show collaboration status and pending tasks
-!workflows  - Show active workflows and their status
+
+{BOLD}Agent Modes:{RESET}
+!code       - Switch to Code Agent mode (original functionality)
+!architect  - Switch to Architect Agent mode (architecture analysis)
+!mcp        - Switch to MCP-Enhanced Agent mode (expanded capabilities)
+
+{BOLD}MCP-Specific Commands:{RESET}
+!mcptools   - List all available MCP tools
+!mcpstatus  - Show MCP server status
+!mcpreload:server - Reload a specific MCP server
 
 {BOLD}Special Commands:{RESET}
 code:read:path - Add file at path to persistent context
 arch:readfile:path - Read and analyze a file with Architect Agent
 arch:readdir:path - Analyze directory structure with Architect Agent
-  Parameters for arch:readdir:
-   - directory_path: Directory to analyze (required)
-   - max_depth: How deep to scan (default: 3)
-   - include: File patterns to include (default: ['*.py', '*.md', etc.])
-   - exclude: File patterns to exclude (default: ['__pycache__', '*.pyc', etc.])
 
 {BOLD}Cross-Agent Collaboration:{RESET}
 Use the agent tools to:
@@ -295,19 +372,72 @@ Use the agent tools to:
 - start_feature_workflow: Start automated feature implementation workflow
 - start_bugfix_workflow: Start automated bug fix workflow  
 - start_refactor_workflow: Start automated refactoring workflow
-- get_workflow_status: Check status of a specific workflow
-- list_active_workflows: List all active workflows
 
 exit/quit   - Exit the program
 
-{BOLD}Status Bar:{RESET}
-The bottom toolbar shows:
-- Current agent mode ([CODE] or [ARCHITECT])
-- Token usage with visual progress bar and percentage
-- Current working directory
-- Pending collaboration tasks (📋 N tasks)
+{BOLD}MCP Capabilities:{RESET}
+When in MCP mode, you have access to additional tools from MCP servers:
+- Enhanced filesystem operations
+- Git repository management
+- Database operations (if configured)
+- Web search and scraping (if configured)
+- And more based on your MCP server configuration
 """)
             continue
+        # New MCP-specific commands
+        if query_lower == "!mcptools":
+            if current_mode == AgentMode.MCP_ENHANCED:
+                tools_info = await mcp_enhanced_agent.list_available_tools()
+                print(f"\n{BOLD}Available Tools:{RESET}")
+                print(f"{GREEN}Custom Tools ({len(tools_info['custom_tools'])}):{RESET}")
+                for tool in tools_info['custom_tools']:
+                    print(f"  - {tool}")
+                
+                print(f"\n{YELLOW}MCP Tools:{RESET}")
+                mcp_tools = tools_info['mcp_tools']
+                if isinstance(mcp_tools, dict):
+                    for server_name, tools in mcp_tools.items():
+                        print(f"  {BOLD}{server_name} ({len(tools)} tools):{RESET}")
+                        for tool in tools:
+                            print(f"    - {tool}")
+                else:
+                    print(f"  {RED}Unexpected MCP tools format: {type(mcp_tools)}{RESET}")
+                print()
+            else:
+                print(f"{RED}MCP tools are only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
+        if query_lower == "!mcpstatus":
+            if current_mode == AgentMode.MCP_ENHANCED:
+                status = await mcp_enhanced_agent.get_mcp_server_status()
+                print(f"\n{BOLD}MCP Server Status:{RESET}")
+                for server_name, info in status.items():
+                    status_color = GREEN if info['status'] == 'active' else RED
+                    print(f"  {status_color}{server_name}: {info['status']}{RESET}")
+                    if info['status'] == 'active':
+                        print(f"    Tools: {info['tool_count']}")
+                        print(f"    Type: {info['server_type']}")
+                    else:
+                        print(f"    Error: {info.get('error', 'Unknown error')}")
+                print()
+            else:
+                print(f"{RED}MCP status is only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
+        if query_lower.startswith("!mcpreload:"):
+            if current_mode == AgentMode.MCP_ENHANCED:
+                server_name = query_lower[len("!mcpreload:"):]
+                print(f"{YELLOW}Reloading MCP server: {server_name}...{RESET}")
+                success = await mcp_enhanced_agent.reload_mcp_server(server_name)
+                if success:
+                    print(f"{GREEN}✓ Successfully reloaded {server_name}{RESET}")
+                else:
+                    print(f"{RED}✗ Failed to reload {server_name}{RESET}")
+            else:
+                print(f"{RED}MCP reload is only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
+        # Keep all existing special commands
         elif query.strip().lower() == "!history":
             print(f"\n{get_current_agent().get_chat_history_summary()}\n")
             continue
@@ -596,7 +726,6 @@ The bottom toolbar shows:
         # Run the appropriate agent with the query
         try:
             current_agent = get_current_agent()
-            # Log which agent is handling the query
             logging.debug(json.dumps({
                 "event": "agent_processing", 
                 "mode": current_mode, 
@@ -604,13 +733,20 @@ The bottom toolbar shows:
             }))
             
             # Show agent-specific processing indicator
-            mode_color = GREEN if current_mode == AgentMode.CODE else BLUE
-            agent_name = "Code Agent" if current_mode == AgentMode.CODE else "Architect Agent"
+            if current_mode == AgentMode.CODE:
+                mode_color = GREEN
+                agent_name = "Code Agent"
+            elif current_mode == AgentMode.ARCHITECT:
+                mode_color = BLUE
+                agent_name = "Architect Agent"
+            else:  # MCP_ENHANCED
+                mode_color = YELLOW
+                agent_name = "MCP-Enhanced Agent"
+            
             print(f"{mode_color}Processing with {agent_name}...{RESET}")
             
             # Run the agent with streaming output
             result = await current_agent.run(query, stream_output=True)
-            # Since output is streamed, we don't need to print the result again
             
             # Save context after each interaction
             await current_agent.save_context()
@@ -618,6 +754,11 @@ The bottom toolbar shows:
         except Exception as e:
             logging.error(f"Error running agent: {e}", exc_info=True)
             print(f"\n{RED}Error running agent: {e}{RESET}\n")
+
+    # Cleanup on exit
+    if current_mode == AgentMode.MCP_ENHANCED:
+        print(f"{YELLOW}Cleaning up MCP servers...{RESET}")
+        await mcp_enhanced_agent.cleanup()
 
 if __name__ == "__main__":
     asyncio.run(main())
