@@ -11,6 +11,10 @@ import json
 import os
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add these imports for prompt_toolkit with status bar
 from prompt_toolkit import PromptSession
