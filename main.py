@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Enhanced main.py with MCP (Model Context Protocol) support.
-Extends the existing dual-agent system with MCP server integration.
+Extends the existing dual-agent system with MCP server integration and multi-project support.
 """
 
 import asyncio
@@ -103,11 +103,16 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
             task_count = len(pending_tasks)
             collab_info = f' │ <collab>📋 {task_count} tasks</collab>'
     
-    # Add MCP server count if applicable
+    # Add MCP server count and working directories if applicable
     mcp_info = ""
     if hasattr(current_agent, 'mcp_servers') and current_agent.mcp_servers:
         mcp_count = len(current_agent.mcp_servers)
         mcp_info = f" │ 🔌 {mcp_count} MCP"
+        
+        # Add working directories count
+        if hasattr(current_agent, 'working_directories'):
+            dir_count = len(current_agent.working_directories)
+            mcp_info += f" │ 📁 {dir_count} dirs"
     
     return HTML(
         f'<{mode_style}>[{mode_display}]</{mode_style}> │ '
@@ -115,26 +120,101 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
         f'<path>📁 {os.path.basename(context.working_directory)}</path>{collab_info}{mcp_info}'
     )
 
+def get_common_project_directories():
+    """Get common project directories for multi-project support."""
+    common_dirs = []
+    
+    # Add current directory
+    current_dir = os.getcwd()
+    common_dirs.append(current_dir)
+    
+    # Add parent directory if it looks like a projects folder
+    parent_dir = os.path.dirname(current_dir)
+    if any(word in parent_dir.lower() for word in ['projects', 'development', 'dev', 'code', 'workspace']):
+        # Add other project directories in the same parent
+        try:
+            for item in os.listdir(parent_dir):
+                item_path = os.path.join(parent_dir, item)
+                if os.path.isdir(item_path) and item_path != current_dir:
+                    # Check if it looks like a project directory
+                    if any(os.path.exists(os.path.join(item_path, file)) for file in [
+                        '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
+                    ]):
+                        common_dirs.append(item_path)
+        except PermissionError:
+            pass  # Skip if we can't read the parent directory
+    
+    # Add common development directories
+    home_dir = os.path.expanduser("~")
+    potential_dirs = [
+        os.path.join(home_dir, "Projects"),
+        os.path.join(home_dir, "Development"),
+        os.path.join(home_dir, "dev"),
+        os.path.join(home_dir, "code"),
+        os.path.join(home_dir, "workspace"),
+        os.path.join(home_dir, "Documents", "Projects"),
+        os.path.join(home_dir, "Documents", "Development"),
+    ]
+    
+    for potential_dir in potential_dirs:
+        if os.path.exists(potential_dir) and potential_dir not in common_dirs:
+            # Add the directory itself if it contains projects
+            try:
+                for item in os.listdir(potential_dir):
+                    item_path = os.path.join(potential_dir, item)
+                    if os.path.isdir(item_path):
+                        # Check if it looks like a project directory
+                        if any(os.path.exists(os.path.join(item_path, file)) for file in [
+                            '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
+                        ]):
+                            if item_path not in common_dirs:
+                                common_dirs.append(item_path)
+            except PermissionError:
+                pass
+    
+    # Limit to reasonable number and sort by relevance
+    common_dirs = common_dirs[:10]  # Limit to 10 directories max
+    
+    return common_dirs
+
 async def setup_mcp_servers() -> list:
-    """Setup common MCP servers for the enhanced agent."""
-    print(f"{YELLOW}Configuring MCP servers...{RESET}")
+    """Setup common MCP servers for the enhanced agent with multi-project support."""
+    print(f"{YELLOW}Configuring MCP servers with multi-project support...{RESET}")
     
     mcp_configs = []
-    current_dir = os.getcwd()
     
-    # Always add filesystem server for current directory
-    mcp_configs.append(CommonMCPConfigs.filesystem_server([current_dir]))
-    print(f"{GREEN}✓ Added Filesystem MCP server{RESET}")
+    # Get working directories for multi-project support
+    working_directories = get_common_project_directories()
+    print(f"{BLUE}Detected {len(working_directories)} project directories:{RESET}")
+    for i, dir_path in enumerate(working_directories, 1):
+        print(f"  {i}. {dir_path}")
     
-    # Note: Git MCP server is not available in the official @modelcontextprotocol packages yet
-    # We could add git-mob-mcp-server or similar in the future
-    # if os.path.exists(os.path.join(current_dir, '.git')):
-    #     mcp_configs.append(CommonMCPConfigs.git_server("."))
-    #     print(f"{GREEN}✓ Added Git MCP server{RESET}")
+    # Add filesystem server with multiple directories
+    mcp_configs.append(CommonMCPConfigs.filesystem_server(working_directories))
+    print(f"{GREEN}✓ Added Filesystem MCP server for {len(working_directories)} directories{RESET}")
     
-    # Add SQLite server if there are .db files
-    db_files = [f for f in os.listdir(current_dir) if f.endswith('.db')]
+    # Add Git server for each directory that has a .git folder
+    git_repos = [d for d in working_directories if os.path.exists(os.path.join(d, '.git'))]
+    if git_repos:
+        # For now, use the current directory's git repo
+        # In the future, we could set up multiple git servers
+        current_git_repo = next((d for d in git_repos if d == os.getcwd()), git_repos[0])
+        mcp_configs.append(CommonMCPConfigs.git_server(current_git_repo))
+        print(f"{GREEN}✓ Added Git MCP server for {current_git_repo}{RESET}")
+    
+    # Add SQLite server if there are .db files in any directory
+    db_files = []
+    for directory in working_directories:
+        try:
+            db_files.extend([
+                os.path.join(directory, f) for f in os.listdir(directory) 
+                if f.endswith('.db') and os.path.isfile(os.path.join(directory, f))
+            ])
+        except PermissionError:
+            continue
+    
     if db_files:
+        # Use the first database found
         mcp_configs.append(CommonMCPConfigs.sqlite_server(db_files[0]))
         print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
     
@@ -144,6 +224,7 @@ async def setup_mcp_servers() -> list:
         # Try to detect if we're in a GitHub repo and get owner/repo info
         owner, repo = None, None
         try:
+            current_dir = os.getcwd()
             if os.path.exists(os.path.join(current_dir, '.git')):
                 import subprocess
                 result = subprocess.run(['git', 'remote', 'get-url', 'origin'], 
@@ -178,11 +259,11 @@ async def setup_mcp_servers() -> list:
     # if os.getenv('WEB_SEARCH_API_KEY'):
     #     mcp_configs.append(CommonMCPConfigs.web_search_server(os.getenv('WEB_SEARCH_API_KEY')))
     
-    print(f"{GREEN}✓ Configured {len(mcp_configs)} MCP servers{RESET}")
-    return mcp_configs
+    print(f"{GREEN}✓ Configured {len(mcp_configs)} MCP servers with multi-project support{RESET}")
+    return mcp_configs, working_directories
 
 async def main():
-    """Enhanced main function with MCP support."""
+    """Enhanced main function with MCP support and multi-project capabilities."""
     # Initialize spaCy model at startup
     print(f"{YELLOW}Initializing spaCy model (this may take a moment)...{RESET}")
     await nlp_singleton.initialize(model_name="en_core_web_lg", disable=["parser"])
@@ -196,10 +277,10 @@ async def main():
     code_agent = SingleAgent()
     architect_agent = ArchitectAgent()
     
-    # Setup MCP-enhanced agent
-    print(f"{YELLOW}Setting up MCP-enhanced agent...{RESET}")
-    mcp_configs = await setup_mcp_servers()
-    mcp_enhanced_agent = MCPEnhancedSingleAgent(mcp_configs)
+    # Setup MCP-enhanced agent with multi-project support
+    print(f"{YELLOW}Setting up MCP-enhanced agent with multi-project support...{RESET}")
+    mcp_configs, working_directories = await setup_mcp_servers()
+    mcp_enhanced_agent = MCPEnhancedSingleAgent(mcp_configs, working_directories)
     await mcp_enhanced_agent.initialize_mcp_servers()
     await mcp_enhanced_agent.create_agent()
     
@@ -211,10 +292,11 @@ async def main():
     architect_agent.context.metadata["agent_name"] = "architect"
     architect_agent.context.metadata["workflow_orchestrator"] = workflow_orchestrator
     
-    print(f"{BOLD}Tri-Agent system initialized with MCP support.{RESET}")
+    print(f"{BOLD}🚀 Multi-Project MCP Agent System Initialized!{RESET}")
     print(f"{GREEN}Currently in {BOLD}Code Agent{RESET}{GREEN} mode.{RESET}")
     print(f"Use {BOLD}!code{RESET}, {BOLD}!architect{RESET}, or {BOLD}!mcp{RESET} to switch between agents.")
     print(f"Use {BOLD}!help{RESET} for all commands.")
+    print(f"\n{CYAN}🌍 Multi-Project Support: {len(working_directories)} directories available{RESET}")
     
     # Get the currently active agent
     def get_current_agent():
@@ -232,7 +314,7 @@ async def main():
         elif current_mode == AgentMode.ARCHITECT:
             print(f"\n{BLUE}=== Architect Agent Mode ==={RESET}")
         else:  # MCP_ENHANCED
-            print(f"\n{YELLOW}=== MCP-Enhanced Agent Mode ==={RESET}")
+            print(f"\n{YELLOW}=== MCP-Enhanced Agent Mode (Multi-Project) ==={RESET}")
     
     # Show initial context
     display_mode_banner()
@@ -309,7 +391,7 @@ async def main():
             # Switch to MCP-enhanced mode
             current_mode = AgentMode.MCP_ENHANCED
             await get_current_agent().save_context()  # Save previous context
-            print(f"\n{YELLOW}Switching to MCP-Enhanced Agent mode.{RESET}")
+            print(f"\n{YELLOW}Switching to MCP-Enhanced Agent mode with multi-project support.{RESET}")
             display_mode_banner()
             print(f"\n{mcp_enhanced_agent.get_context_summary()}\n")
             continue
@@ -343,9 +425,6 @@ async def main():
             display_mode_banner()
             print(f"\n{architect_agent.get_context_summary()}\n")
             continue
-            display_mode_banner()
-            print(f"\n{code_agent.get_context_summary()}\n")
-            continue
             
         # Add a new command to show token details
         if query.strip().lower() == "!tokens":
@@ -372,10 +451,10 @@ Remaining tokens: {token_info['remaining']:,}
             print()
             continue
             
-        # Enhanced help command with MCP information
+        # Enhanced help command with MCP information and multi-project support
         if query_lower == "!help":
             print(f"""
-{BOLD}Enhanced Agent Commands:{RESET}
+{BOLD}🚀 Enhanced Multi-Project Agent Commands:{RESET}
 !help       - Show this help message
 !history    - Show chat history
 !context    - Show full context summary 
@@ -389,12 +468,15 @@ Remaining tokens: {token_info['remaining']:,}
 {BOLD}Agent Modes:{RESET}
 !code       - Switch to Code Agent mode (original functionality)
 !architect  - Switch to Architect Agent mode (architecture analysis)
-!mcp        - Switch to MCP-Enhanced Agent mode (expanded capabilities)
+!mcp        - Switch to MCP-Enhanced Agent mode (multi-project capabilities)
 
-{BOLD}MCP-Specific Commands:{RESET}
+{BOLD}🔌 MCP-Specific Commands:{RESET}
 !mcptools   - List all available MCP tools
 !mcpstatus  - Show MCP server status
 !mcpreload:server - Reload a specific MCP server
+!mcpdirs    - List all available working directories
+!mcpadddir:path - Add a new working directory
+!mcprmdir:path - Remove a working directory
 
 {BOLD}Special Commands:{RESET}
 code:read:path - Add file at path to persistent context
@@ -414,14 +496,21 @@ Use the agent tools to:
 
 exit/quit   - Exit the program
 
-{BOLD}MCP Capabilities:{RESET}
-When in MCP mode, you have access to additional tools from MCP servers:
-- Enhanced filesystem operations
-- Git repository management
-- Database operations (if configured)
-- GitHub API operations (if GitHub token is configured)
-- Web search and scraping (if configured)
-- And more based on your MCP server configuration
+{BOLD}🌍 Multi-Project Support:{RESET}
+The MCP-enhanced agent can work across multiple projects simultaneously:
+- Automatically detects project directories
+- Provides filesystem access to all configured directories
+- Can switch between projects using change_dir or MCP filesystem tools
+- Maintains context across different projects
+
+{BOLD}🔧 MCP Capabilities:{RESET}
+When in MCP mode, you have access to enhanced tools:
+- **Enhanced filesystem operations** across multiple directories
+- **Git repository management** with advanced features
+- **Database operations** (if SQLite databases are detected)
+- **GitHub API operations** (if GitHub token is configured)
+- **Web search and scraping** (if configured)
+- **Multi-project workflow management**
 
 {BOLD}GitHub MCP Server Setup:{RESET}
 To enable GitHub MCP server functionality:
@@ -433,16 +522,19 @@ To enable GitHub MCP server functionality:
 3. Restart the application to auto-detect GitHub repositories
 4. Switch to MCP mode with !mcp to access GitHub tools
 
-{BOLD}GitHub MCP Tools include:{RESET}
-- Repository management (create, delete, fork)
-- Issue management (create, update, list, comment)
-- Pull request operations (create, merge, review)
-- File operations (read, write, search)
-- Branch and commit management
-- Search across GitHub repositories
+{BOLD}🎯 MCP Tool Priority:{RESET}
+The MCP agent is designed to:
+- **Prefer MCP tools** over custom tools for better capabilities
+- **Explain tool choices** to help you understand the benefits
+- **Work across multiple projects** seamlessly
+- **Provide enhanced error handling** and structured responses
+
+Example: Instead of using 'read_file', the MCP agent will use the MCP filesystem 
+tool which provides better error handling, metadata, and cross-project support.
 """)
             continue
-        # New MCP-specific commands
+            
+        # New MCP-specific commands with multi-project support
         if query_lower == "!mcptools":
             if current_mode == AgentMode.MCP_ENHANCED:
                 tools_info = await mcp_enhanced_agent.list_available_tools()
@@ -460,6 +552,10 @@ To enable GitHub MCP server functionality:
                             print(f"    - {tool}")
                 else:
                     print(f"  {RED}Unexpected MCP tools format: {type(mcp_tools)}{RESET}")
+                
+                print(f"\n{CYAN}Working Directories ({len(tools_info['working_directories'])}):{RESET}")
+                for i, dir_path in enumerate(tools_info['working_directories'], 1):
+                    print(f"  {i}. {dir_path}")
                 print()
             else:
                 print(f"{RED}MCP tools are only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
@@ -475,6 +571,15 @@ To enable GitHub MCP server functionality:
                     if info['status'] == 'active':
                         print(f"    Tools: {info['tool_count']}")
                         print(f"    Type: {info['server_type']}")
+                        if 'config' in info and 'args' in info['config']:
+                            args = info['config']['args']
+                            if server_name == 'filesystem' and len(args) > 2:
+                                dirs = args[2:]  # Skip npx and package name
+                                print(f"    Directories: {len(dirs)}")
+                                for d in dirs[:3]:  # Show first 3
+                                    print(f"      - {d}")
+                                if len(dirs) > 3:
+                                    print(f"      ... and {len(dirs) - 3} more")
                     else:
                         print(f"    Error: {info.get('error', 'Unknown error')}")
                 print()
@@ -482,9 +587,63 @@ To enable GitHub MCP server functionality:
                 print(f"{RED}MCP status is only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
             continue
 
+        if query_lower == "!mcpdirs":
+            if current_mode == AgentMode.MCP_ENHANCED:
+                dirs = await mcp_enhanced_agent.list_working_directories()
+                print(f"\n{BOLD}Available Working Directories ({len(dirs)}):{RESET}")
+                for i, dir_path in enumerate(dirs, 1):
+                    current_marker = " (current)" if dir_path == os.getcwd() else ""
+                    print(f"  {i}. {dir_path}{current_marker}")
+                print()
+            else:
+                print(f"{RED}Working directories are only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
+        if query_lower.startswith("!mcpadddir:"):
+            if current_mode == AgentMode.MCP_ENHANCED:
+                dir_path = query_lower[len("!mcpadddir:"):].strip()
+                if not dir_path:
+                    print(f"{RED}Usage: !mcpadddir:path/to/directory{RESET}")
+                    continue
+                
+                print(f"{YELLOW}Adding working directory: {dir_path}...{RESET}")
+                success = await mcp_enhanced_agent.add_working_directory(dir_path)
+                if success:
+                    print(f"{GREEN}✓ Successfully added {dir_path}{RESET}")
+                    dirs = await mcp_enhanced_agent.list_working_directories()
+                    print(f"Total working directories: {len(dirs)}")
+                else:
+                    print(f"{RED}✗ Failed to add {dir_path} (check if directory exists){RESET}")
+            else:
+                print(f"{RED}Directory management is only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
+        if query_lower.startswith("!mcprmdir:"):
+            if current_mode == AgentMode.MCP_ENHANCED:
+                dir_path = query_lower[len("!mcprmdir:"):].strip()
+                if not dir_path:
+                    print(f"{RED}Usage: !mcprmdir:path/to/directory{RESET}")
+                    continue
+                
+                print(f"{YELLOW}Removing working directory: {dir_path}...{RESET}")
+                success = await mcp_enhanced_agent.remove_working_directory(dir_path)
+                if success:
+                    print(f"{GREEN}✓ Successfully removed {dir_path}{RESET}")
+                    dirs = await mcp_enhanced_agent.list_working_directories()
+                    print(f"Remaining working directories: {len(dirs)}")
+                else:
+                    print(f"{RED}✗ Failed to remove {dir_path} (not in working directories){RESET}")
+            else:
+                print(f"{RED}Directory management is only available in MCP-Enhanced mode. Use !mcp to switch.{RESET}")
+            continue
+
         if query_lower.startswith("!mcpreload:"):
             if current_mode == AgentMode.MCP_ENHANCED:
-                server_name = query_lower[len("!mcpreload:"):]
+                server_name = query_lower[len("!mcpreload:"):].strip()
+                if not server_name:
+                    print(f"{RED}Usage: !mcpreload:server_name{RESET}")
+                    continue
+                    
                 print(f"{YELLOW}Reloading MCP server: {server_name}...{RESET}")
                 success = await mcp_enhanced_agent.reload_mcp_server(server_name)
                 if success:
@@ -625,8 +784,7 @@ To enable GitHub MCP server functionality:
         if query.startswith("!delctx:"):
             try:
                 # Extract label
-                label = query[len("!delctx:"):]
-                label = label.strip()
+                label = query[len("!delctx:"):].strip()
                 
                 # Get current agent
                 current_agent = get_current_agent()
@@ -672,8 +830,7 @@ To enable GitHub MCP server functionality:
                     current_mode = AgentMode.ARCHITECT
                     
                 # Extract file path
-                file_path = query[len("arch:readfile:"):]
-                file_path = file_path.strip()
+                file_path = query[len("arch:readfile:"):].strip()
                 
                 # Skip if path is empty
                 if not file_path:
@@ -705,8 +862,7 @@ To enable GitHub MCP server functionality:
                     current_mode = AgentMode.ARCHITECT
                 
                 # Extract directory path
-                dir_path = query[len("arch:readdir:"):]
-                dir_path = dir_path.strip()
+                dir_path = query[len("arch:readdir:"):].strip()
                 
                 # Skip if path is empty
                 if not dir_path:
@@ -733,8 +889,7 @@ To enable GitHub MCP server functionality:
         if query.startswith("code:read:"):
             try:
                 # Extract file path
-                file_path = query[len("code:read:"):]
-                file_path = file_path.strip()
+                file_path = query[len("code:read:"):].strip()
                 
                 # Get absolute path if relative
                 if not os.path.isabs(file_path):
