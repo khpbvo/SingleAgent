@@ -65,12 +65,13 @@ class MCPEnhancedSingleAgent:
     - Improved error handling and logging
     """
     
-    def __init__(self, mcp_configs: Optional[List[MCPServerConfig]] = None):
+    def __init__(self, mcp_configs: Optional[List[MCPServerConfig]] = None, working_directories: Optional[List[str]] = None):
         """
         Initialize the MCP-enhanced SingleAgent.
         
         Args:
             mcp_configs: List of MCP server configurations to load
+            working_directories: List of directories the agent can work with (default: current dir only)
         """
         # Initialize context first
         cwd = os.getcwd()
@@ -81,10 +82,15 @@ class MCPEnhancedSingleAgent:
             current_file=None,
         )
         
+        # Store working directories for multi-project support
+        self.working_directories = working_directories or [cwd]
+        logger.info(f"Initialized with working directories: {self.working_directories}")
+        
         # MCP servers
         self.mcp_servers = []
         self.mcp_configs = mcp_configs or []
         self.mcp_tools_list = {}  # Cache for tool listings
+        self.mcp_server_details = {}  # Detailed info about each server
         
         # Initialize agent with base tools (will add MCP tools later)
         self.base_tools = [
@@ -145,7 +151,7 @@ class MCPEnhancedSingleAgent:
             # Create agent with custom tools and MCP servers
             self.agent = Agent[EnhancedContextData](
                 name="MCPEnhancedCodeAssistant",
-                model="gpt-4.1",  # FIXED: Use standard model name
+                model="gpt-4.1",  # FIXED: Use correct model name
                 instructions=self._get_enhanced_instructions(),
                 tools=self.base_tools,
                 mcp_servers=self.mcp_servers
@@ -175,7 +181,7 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
 
 **ALWAYS choose the BEST tool for the task, whether it's custom or MCP!**
 
-📋 **CUSTOM TOOLS AVAILABLE:**
+📋 **
 - Code analysis: run_ruff, run_pylint, run_pyright
 - File operations: read_file, apply_patch, create_colored_diff
 - System operations: run_command, change_dir, os_command
@@ -279,11 +285,12 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
         logger.debug("Streamed run completed")
         return output_text_buffer
     
-    async def list_available_tools(self) -> Dict[str, List[str]]:
+    async def list_available_tools(self) -> Dict[str, Any]:
         """List all available tools (custom + MCP)."""
         tools_info = {
-            "custom_tools": [tool.__name__ for tool in self.base_tools],
-            "mcp_tools": {}
+            "custom_tools": [getattr(tool, '__name__', getattr(tool, 'name', str(tool))) for tool in self.base_tools],
+            "mcp_tools": {},
+            "working_directories": self.working_directories
         }
         
         for i, server in enumerate(self.mcp_servers):
@@ -296,6 +303,63 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
                 tools_info["mcp_tools"][config_name] = ["ERROR: Could not list tools"]
         
         return tools_info
+    
+    async def add_working_directory(self, directory_path: str) -> bool:
+        """Add a new working directory to the MCP filesystem server."""
+        try:
+            abs_path = os.path.abspath(directory_path)
+            if not os.path.exists(abs_path):
+                logger.warning(f"Directory does not exist: {abs_path}")
+                return False
+            
+            if abs_path not in self.working_directories:
+                self.working_directories.append(abs_path)
+                # Update filesystem server with new directories
+                await self._update_filesystem_server()
+                logger.info(f"Added working directory: {abs_path}")
+                return True
+            else:
+                logger.info(f"Directory already in working directories: {abs_path}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to add working directory {directory_path}: {e}")
+            return False
+    
+    async def remove_working_directory(self, directory_path: str) -> bool:
+        """Remove a working directory from the MCP filesystem server."""
+        try:
+            abs_path = os.path.abspath(directory_path)
+            if abs_path in self.working_directories:
+                self.working_directories.remove(abs_path)
+                # Update filesystem server with remaining directories
+                await self._update_filesystem_server()
+                logger.info(f"Removed working directory: {abs_path}")
+                return True
+            else:
+                logger.warning(f"Directory not in working directories: {abs_path}")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to remove working directory {directory_path}: {e}")
+            return False
+    
+    async def _update_filesystem_server(self):
+        """Update the filesystem server with current working directories."""
+        try:
+            # Find the filesystem server config
+            for i, config in enumerate(self.mcp_configs):
+                if config.name == "filesystem":
+                    # Update the config args
+                    config.config["args"] = ["-y", "@modelcontextprotocol/server-filesystem"] + self.working_directories
+                    
+                    # Reload the filesystem server
+                    await self.reload_mcp_server("filesystem")
+                    break
+        except Exception as e:
+            logger.error(f"Failed to update filesystem server: {e}")
+    
+    async def list_working_directories(self) -> List[str]:
+        """List all working directories."""
+        return self.working_directories.copy()
     
     async def get_mcp_server_status(self) -> Dict[str, Any]:
         """Get status of all MCP servers."""
@@ -411,17 +475,18 @@ class CommonMCPConfigs:
             }
         )
     
-    @staticmethod
-    def git_server(repo_path: str = ".") -> MCPServerConfig:
-        """MCP Git server configuration."""
-        return MCPServerConfig(
-            name="git",
-            server_type="stdio",
-            config={
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-git", repo_path]
-            }
-        )
+    # DISABLED: Git server removed due to faults with @modelcontextprotocol/server-git
+    # @staticmethod
+    # def git_server(repo_path: str = ".") -> MCPServerConfig:
+    #     """MCP Git server configuration."""
+    #     return MCPServerConfig(
+    #         name="git",
+    #         server_type="stdio",
+    #         config={
+    #             "command": "npx",
+    #             "args": ["-y", "@modelcontextprotocol/server-git", repo_path]
+    #         }
+    #     )
     
     @staticmethod
     def sqlite_server(db_path: str) -> MCPServerConfig:
@@ -449,7 +514,7 @@ class CommonMCPConfigs:
         )
     
     @staticmethod
-    def github_server(github_token: str, owner: str = None, repo: str = None) -> MCPServerConfig:
+    def github_server(github_token: str, owner: Optional[str] = None, repo: Optional[str] = None) -> MCPServerConfig:
         """MCP GitHub server configuration.
         
         Args:

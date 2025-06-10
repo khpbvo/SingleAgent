@@ -530,17 +530,18 @@ class CommonMCPConfigs:
             }
         )
     
-    @staticmethod
-    def git_server(repo_path: str = ".") -> MCPServerConfig:
-        """MCP Git server configuration."""
-        return MCPServerConfig(
-            name="git",
-            server_type="stdio",
-            config={
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-git", repo_path]
-            }
-        )
+    # DISABLED: Git server removed due to faults with @modelcontextprotocol/server-git
+    # @staticmethod
+    # def git_server(repo_path: str = ".") -> MCPServerConfig:
+    #     """MCP Git server configuration."""
+    #     return MCPServerConfig(
+    #         name="git",
+    #         server_type="stdio",
+    #         config={
+    #             "command": "npx",
+    #             "args": ["-y", "@modelcontextprotocol/server-git", repo_path]
+    #         }
+    #     )
     
     @staticmethod
     def sqlite_server(db_path: str) -> MCPServerConfig:

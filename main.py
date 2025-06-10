@@ -32,7 +32,7 @@ from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
 
 # Import the MCP-enhanced agent
-from The_Agents.MPCEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
 
 from The_Agents.shared_context_manager import SharedContextManager
 from The_Agents.workflows import WorkflowOrchestrator
@@ -42,6 +42,7 @@ GREEN = "\033[32m"
 RED   = "\033[31m"
 BLUE  = "\033[34m"
 YELLOW = "\033[33m"
+CYAN  = "\033[36m"
 BOLD  = "\033[1m"
 RESET = "\033[0m"
 
@@ -193,14 +194,15 @@ async def setup_mcp_servers() -> list:
     mcp_configs.append(CommonMCPConfigs.filesystem_server(working_directories))
     print(f"{GREEN}✓ Added Filesystem MCP server for {len(working_directories)} directories{RESET}")
     
-    # Add Git server for each directory that has a .git folder
-    git_repos = [d for d in working_directories if os.path.exists(os.path.join(d, '.git'))]
-    if git_repos:
-        # For now, use the current directory's git repo
-        # In the future, we could set up multiple git servers
-        current_git_repo = next((d for d in git_repos if d == os.getcwd()), git_repos[0])
-        mcp_configs.append(CommonMCPConfigs.git_server(current_git_repo))
-        print(f"{GREEN}✓ Added Git MCP server for {current_git_repo}{RESET}")
+    # DISABLED: Git server removed due to faults
+    # git_repos = [d for d in working_directories if os.path.exists(os.path.join(d, '.git'))]
+    # if git_repos:
+    #     # For now, use the current directory's git repo
+    #     # In the future, we could set up multiple git servers
+    #     current_git_repo = next((d for d in git_repos if d == os.getcwd()), git_repos[0])
+    #     mcp_configs.append(CommonMCPConfigs.git_server(current_git_repo))
+    #     print(f"{GREEN}✓ Added Git MCP server for {current_git_repo}{RESET}")
+    print(f"{YELLOW}ℹ Git MCP server disabled (was causing issues){RESET}")
     
     # Add SQLite server if there are .db files in any directory
     db_files = []
@@ -219,7 +221,8 @@ async def setup_mcp_servers() -> list:
         print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
     
     # Add GitHub server if token is available
-    github_token = os.getenv('GITHUB_TOKEN') or os.getenv('GITHUB_PAT') or os.getenv('GH_TOKEN')
+    github_token = (os.getenv('GITHUB_TOKEN') or os.getenv('GITHUB_PAT') or 
+                   os.getenv('GH_TOKEN') or os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN'))
     if github_token:
         # Try to detect if we're in a GitHub repo and get owner/repo info
         owner, repo = None, None
@@ -252,7 +255,7 @@ async def setup_mcp_servers() -> list:
         else:
             print(f"{GREEN}✓ Added GitHub MCP server (general access){RESET}")
     else:
-        print(f"{YELLOW}⚠ GitHub token not found. Set GITHUB_TOKEN, GITHUB_PAT, or GH_TOKEN to enable GitHub MCP server{RESET}")
+        print(f"{YELLOW}⚠ GitHub token not found. Set GITHUB_TOKEN, GITHUB_PAT, GH_TOKEN, or GITHUB_PERSONAL_ACCESS_TOKEN to enable GitHub MCP server{RESET}")
     
     # You can add more MCP servers here based on your needs
     # Example: Web search (requires API key)

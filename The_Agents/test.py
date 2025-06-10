@@ -108,10 +108,11 @@ async def setup_mcp_servers() -> list:
     # Always add filesystem server for current directory
     mcp_configs.append(CommonMCPConfigs.filesystem_server([current_dir]))
     
-    # Add Git server if we're in a Git repository
-    if os.path.exists(os.path.join(current_dir, '.git')):
-        mcp_configs.append(CommonMCPConfigs.git_server("."))
-        print(f"{GREEN}✓ Added Git MCP server{RESET}")
+    # DISABLED: Git server removed due to faults
+    # if os.path.exists(os.path.join(current_dir, '.git')):
+    #     mcp_configs.append(CommonMCPConfigs.git_server("."))
+    #     print(f"{GREEN}✓ Added Git MCP server{RESET}")
+    print(f"{YELLOW}ℹ Git MCP server disabled (was causing issues){RESET}")
     
     # Add SQLite server if there are .db files
     db_files = [f for f in os.listdir(current_dir) if f.endswith('.db')]
