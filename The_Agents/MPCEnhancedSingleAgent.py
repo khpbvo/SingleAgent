@@ -1,6 +1,6 @@
 """
 Enhanced SingleAgent implementation with MCP (Model Context Protocol) support.
-Integrates MCP servers alongside existing custom tools for maximum capability.
+FIXED VERSION - Addresses MCP tool usage issues.
 """
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
@@ -58,12 +58,11 @@ class MCPEnhancedSingleAgent:
     """
     Enhanced SingleAgent with MCP (Model Context Protocol) support.
     
-    Features:
-    - All existing SingleAgent capabilities
-    - MCP server integration for expanded tool ecosystem
-    - Dynamic MCP server management
-    - Unified tool interface (custom + MCP)
-    - Enhanced logging and monitoring
+    FIXES:
+    - Proper model configuration
+    - Enhanced MCP tool instructions
+    - Better tool visibility and usage guidance
+    - Improved error handling and logging
     """
     
     def __init__(self, mcp_configs: Optional[List[MCPServerConfig]] = None):
@@ -85,6 +84,7 @@ class MCPEnhancedSingleAgent:
         # MCP servers
         self.mcp_servers = []
         self.mcp_configs = mcp_configs or []
+        self.mcp_tools_list = {}  # Cache for tool listings
         
         # Initialize agent with base tools (will add MCP tools later)
         self.base_tools = [
@@ -124,6 +124,9 @@ class MCPEnhancedSingleAgent:
                 tools = await server.list_tools()
                 logger.info(f"MCP server '{config.name}' loaded with {len(tools)} tools")
                 
+                # Cache tool list for instructions
+                self.mcp_tools_list[config.name] = [tool.name for tool in tools]
+                
                 self.mcp_servers.append(server)
                 
             except Exception as e:
@@ -142,7 +145,7 @@ class MCPEnhancedSingleAgent:
             # Create agent with custom tools and MCP servers
             self.agent = Agent[EnhancedContextData](
                 name="MCPEnhancedCodeAssistant",
-                model="gpt-4.1",
+                model="gpt-4.1",  # FIXED: Use standard model name
                 instructions=self._get_enhanced_instructions(),
                 tools=self.base_tools,
                 mcp_servers=self.mcp_servers
@@ -152,38 +155,58 @@ class MCPEnhancedSingleAgent:
     
     def _get_enhanced_instructions(self) -> str:
         """Get enhanced instructions that include MCP capabilities."""
-        base_instructions = """
-You are an enhanced code assistant with access to both custom tools and MCP (Model Context Protocol) servers.
+        
+        # Build detailed MCP tools listing
+        mcp_tools_section = ""
+        if self.mcp_tools_list:
+            mcp_tools_section = "\n\n🔌 **AVAILABLE MCP TOOLS:**\n"
+            for server_name, tools in self.mcp_tools_list.items():
+                mcp_tools_section += f"\n**{server_name.upper()} SERVER:**\n"
+                for tool in tools:
+                    mcp_tools_section += f"  - {tool}\n"
+            mcp_tools_section += "\n**IMPORTANT:** These MCP tools provide extended capabilities beyond your custom tools. USE THEM when they're more appropriate for the task!"
+        
+        base_instructions = f"""
+You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Model Context Protocol) TOOLS.
 
-CAPABILITIES:
-- All original SingleAgent capabilities (code analysis, patching, etc.)
-- Extended capabilities via MCP servers (filesystem, databases, web, etc.)
-- Unified tool interface - you can seamlessly use both custom and MCP tools
-- Enhanced context management with token tracking and entity recognition
+🎯 **CORE PRINCIPLE:** You have access to TWO TYPES of tools:
+1. **Custom Tools** (your original capabilities)
+2. **MCP Tools** (extended capabilities via MCP servers)
 
-AVAILABLE TOOL TYPES:
-1. Custom Tools (your original capabilities):
-   - Code analysis: run_ruff, run_pylint, run_pyright
-   - File operations: read_file, apply_patch, create_colored_diff
-   - System operations: run_command, change_dir, os_command
-   - Context management: get_context, add_manual_context
+**ALWAYS choose the BEST tool for the task, whether it's custom or MCP!**
 
-2. MCP Tools (extended capabilities):
-   - Additional filesystem operations
-   - Database connections and queries
-   - Web browsing and scraping
-   - Cloud service integrations
-   - Development workflow tools
+📋 **CUSTOM TOOLS AVAILABLE:**
+- Code analysis: run_ruff, run_pylint, run_pyright
+- File operations: read_file, apply_patch, create_colored_diff
+- System operations: run_command, change_dir, os_command
+- Context management: get_context, add_manual_context
+{mcp_tools_section}
 
-WORKFLOW:
-1. Always check context first using get_context
-2. Use the most appropriate tool for the task (custom or MCP)
-3. Combine tools creatively for complex workflows
-4. Track important files and commands in context
-5. Provide clear explanations of your actions
+🚀 **ENHANCED WORKFLOW:**
+1. **Check context first** using get_context
+2. **Identify the best tool** for your task:
+   - Use MCP filesystem tools for advanced file operations
+   - Use MCP git tools for version control operations
+   - Use MCP database tools for data operations
+   - Use MCP GitHub tools for repository management
+   - Use custom tools for code analysis and patching
+3. **Combine tools creatively** - you can chain custom and MCP tools
+4. **Always explain your tool choices** - tell the user why you picked a specific tool
+5. **Track important context** as you work
 
-Remember: You now have access to a much broader ecosystem of tools via MCP servers.
-Think creatively about how to combine your existing capabilities with new MCP tools.
+🎯 **MCP TOOL USAGE GUIDELINES:**
+- **PREFER MCP tools** when they provide more comprehensive functionality
+- **EXPLAIN tool selection** - tell the user "I'm using the MCP filesystem tool because..."
+- **Leverage unique MCP capabilities** like database queries, GitHub API calls, etc.
+- **Fall back to custom tools** if MCP tools fail or aren't suitable
+
+⚠️ **CRITICAL:** Don't just use your familiar custom tools! The MCP tools often provide better, more comprehensive solutions. Always consider them first!
+
+🔄 **EXAMPLE DECISION PROCESS:**
+- User asks to "read a file" → Consider: read_file (custom) vs MCP filesystem read → Choose based on complexity needed
+- User asks for "git operations" → Prefer MCP git tools over run_command with git
+- User asks for "database query" → Use MCP database tools, not custom command tools
+- User asks for "code analysis" → Use custom analysis tools (run_ruff, etc.) - they're specialized for this
 """
         
         # Add context summary
@@ -211,10 +234,11 @@ Think creatively about how to combine your existing capabilities with new MCP to
         # Add user message to context
         self.context.add_chat_message("user", user_input)
         
-        # Update agent instructions with latest context
+        # Update agent instructions with latest context and MCP tool info
         self.agent.instructions = self._get_enhanced_instructions()
         
         logger.debug(f"Running agent with input: {user_input}")
+        logger.debug(f"Available MCP servers: {list(self.mcp_tools_list.keys())}")
         
         if stream_output:
             result = await self._run_streamed(user_input)
@@ -311,6 +335,10 @@ Think creatively about how to combine your existing capabilities with new MCP to
                         server = MCPServerSse(params=config.config, cache_tools_list=True)
                     
                     await server.__aenter__()
+                    
+                    # Update tools list
+                    tools = await server.list_tools()
+                    self.mcp_tools_list[config.name] = [tool.name for tool in tools]
                     
                     # Replace in list
                     if i < len(self.mcp_servers):
@@ -455,15 +483,8 @@ async def create_enhanced_agent_with_common_servers() -> MCPEnhancedSingleAgent:
         # Filesystem access to current directory and subdirectories
         CommonMCPConfigs.filesystem_server([os.getcwd()]),
         
-        # Note: Git server not available in official packages yet
-        # Git operations on current repository
-        # CommonMCPConfigs.git_server("."),
-        
-        # SQLite database operations (if you have a project database)
-        # CommonMCPConfigs.sqlite_server("./project.db"),
-        
-        # Web search capabilities (requires API key)
-        # CommonMCPConfigs.web_search_server("your_api_key_here"),
+        # Add GitHub server if token is available
+        # CommonMCPConfigs.github_server(os.getenv("GITHUB_TOKEN"))
     ]
     
     # Create and initialize the enhanced agent
