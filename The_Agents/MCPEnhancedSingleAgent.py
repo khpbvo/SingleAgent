@@ -59,7 +59,6 @@ class MCPEnhancedSingleAgent:
     Enhanced SingleAgent with MCP (Model Context Protocol) support.
     
     FIXES:
-    - Proper model configuration (gpt-4o instead of gpt-4.1)
     - Enhanced MCP tool instructions with clear prioritization
     - Better tool visibility and usage guidance
     - Multi-project support with configurable directories

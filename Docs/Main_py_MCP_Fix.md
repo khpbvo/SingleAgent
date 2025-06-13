@@ -7,13 +7,13 @@ In your `main.py` file, update the import and setup to use the fixed MCP agent:
 ### Before:
 ```python
 # Import the MCP-enhanced agent
-from The_Agents.MPCEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+from The_Agents.MCPEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
 ```
 
 ### After:
 ```python
 # Import the FIXED MCP-enhanced agent
-from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+from The_Agents.MCPEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
 ```
 
 ## Testing the Fix
@@ -70,5 +70,5 @@ If MCP tools still aren't being used properly, check:
 If the fixes cause issues, simply revert the import:
 ```python
 # Rollback to original
-from The_Agents.MPCEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+from The_Agents.MCPEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
 ```

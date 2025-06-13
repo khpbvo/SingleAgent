@@ -5,7 +5,7 @@ Test script to check GitHub access and find the Topv3 repository.
 import asyncio
 import os
 import sys
-from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
+from The_Agents.MCPEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
 
 async def test_github_access():
     """Test GitHub MCP server access and search for Topv3 repository."""

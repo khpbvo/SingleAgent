@@ -4,7 +4,7 @@ Test the MCP agent with the correct TopV3 repository name and read app.py.
 """
 import asyncio
 import os
-from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
+from The_Agents.MCPEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
 
 async def test_topv3_access():
     """Test accessing the TopV3 repository correctly."""

@@ -15,7 +15,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 # Import the MCP enhanced agent
-from The_Agents.MPCEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs
+from The_Agents.MCPEnhancedSingleAgent import MCPEnhancedSingleAgent, CommonMCPConfigs
 
 # ANSI color codes
 GREEN = "\033[32m"

@@ -32,7 +32,7 @@ from The_Agents.SingleAgent import SingleAgent
 from The_Agents.ArchitectAgent import ArchitectAgent
 
 # Import the MCP-enhanced agent
-from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
+from The_Agents.MCPEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs, MCPServerConfig
 
 from The_Agents.shared_context_manager import SharedContextManager
 from The_Agents.workflows import WorkflowOrchestrator

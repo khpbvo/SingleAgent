@@ -71,7 +71,7 @@ model="gpt-4"    # Standard OpenAI model
 
 ## 🛠️ Implemented Fixes
 
-### 1. Fixed MCP Agent (`MPCEnhancedSingleAgent_fixed.py`)
+### 1. Fixed MCP Agent (`MCPEnhancedSingleAgent_fixed.py`)
 
 **Key Changes:**
 - ✅ Model: `"gpt-4"` instead of `"gpt-4.1"`

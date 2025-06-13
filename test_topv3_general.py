@@ -4,7 +4,7 @@ Test the MCP agent with general GitHub access to find and read TopV3/app.py.
 """
 import asyncio
 import os
-from The_Agents.MPCEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
+from The_Agents.MCPEnhancedSingleAgent_fixed import MCPEnhancedSingleAgent, CommonMCPConfigs
 
 async def test_topv3_general_access():
     """Test accessing TopV3 with general GitHub access."""
