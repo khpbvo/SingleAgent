@@ -110,37 +110,37 @@ class MCPEnhancedSingleAgent:
     async def initialize_mcp_servers(self):
         """Initialize all configured MCP servers."""
         logger.info(f"Initializing {len(self.mcp_configs)} MCP servers...")
-        
-        for config in self.mcp_configs:
-            try:
-                if config.server_type == "stdio":
-                    server = MCPServerStdio(
-                        params=config.config,
-                        cache_tools_list=True  # Cache for performance
-                    )
-                elif config.server_type == "sse":
-                    server = MCPServerSse(
-                        params=config.config,
-                        cache_tools_list=True
-                    )
-                else:
-                    logger.error(f"Unknown MCP server type: {config.server_type}")
-                    continue
-                
-                # Start the server and verify it works
-                await server.__aenter__()
-                tools = await server.list_tools()
-                logger.info(f"MCP server '{config.name}' loaded with {len(tools)} tools")
-                
-                # Cache tool list for instructions
-                self.mcp_tools_list[config.name] = [tool.name for tool in tools]
-                
-                self.mcp_servers.append(server)
-                
-            except Exception as e:
-                logger.error(f"Failed to initialize MCP server '{config.name}': {e}")
+        async def init_server(config: MCPServerConfig):
+            if config.server_type == "stdio":
+                server = MCPServerStdio(
+                    params=config.config,
+                    cache_tools_list=True  # Cache for performance
+                )
+            elif config.server_type == "sse":
+                server = MCPServerSse(
+                    params=config.config,
+                    cache_tools_list=True
+                )
+            else:
+                raise ValueError(f"Unknown MCP server type: {config.server_type}")
+
+            await server.__aenter__()
+            tools = await server.list_tools()
+            logger.info(f"MCP server '{config.name}' loaded with {len(tools)} tools")
+            return server, tools
+
+        tasks = [asyncio.create_task(init_server(config)) for config in self.mcp_configs]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for config, result in zip(self.mcp_configs, results):
+            if isinstance(result, Exception):
+                logger.error(f"Failed to initialize MCP server '{config.name}': {result}")
                 continue
-        
+
+            server, tools = result
+            self.mcp_tools_list[config.name] = [tool.name for tool in tools]
+            self.mcp_servers.append(server)
+
         logger.info(f"Successfully initialized {len(self.mcp_servers)} MCP servers")
     
     async def create_agent(self):
