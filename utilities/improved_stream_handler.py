@@ -18,10 +18,13 @@ CYAN  = "\033[36m"
 BOLD  = "\033[1m"
 RESET = "\033[0m"
 
-async def handle_stream_events_improved(stream_events, context, item_helpers):
+async def handle_stream_events_improved(stream_events, context, logger=None, item_helpers=None):
     """
     Improved stream event handler that doesn't get stuck
     """
+    # Fallbacks for optional params
+    if logger is None:
+        logger = logging.getLogger(__name__)
     output_buffer = []
     print_buffer = []
     thinking_shown = False
@@ -85,7 +88,7 @@ async def handle_stream_events_improved(stream_events, context, item_helpers):
                     
                     # Message output
                     elif hasattr(item, 'type') and 'message' in item.type:
-                        if hasattr(item_helpers, 'text_message_output'):
+                        if item_helpers is not None and hasattr(item_helpers, 'text_message_output'):
                             content = item_helpers.text_message_output(item)
                             if content and content.strip():
                                 output_buffer.append(content)

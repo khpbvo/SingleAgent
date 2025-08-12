@@ -126,7 +126,7 @@ class EnhancedContextData(BaseModel):
     def get_tokenizer(self):
         if self._tokenizer is None:
             # pick an encoder for your model
-            self._tokenizer = tiktoken.encoding_for_model("gpt-5")
+            self._tokenizer = tiktoken.encoding_for_model("gpt-4o")
         return self._tokenizer
 
     def count_tokens(self, text: str) -> int:
