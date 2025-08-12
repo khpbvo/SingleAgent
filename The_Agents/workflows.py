@@ -25,7 +25,7 @@ class WorkflowStatus(str, Enum):
 class WorkflowStep:
     """A single step in a workflow."""
     
-    def __init__(self, step_id: str, agent: str, description: str, 
+    def __init__(self, step_id: str, agent: str, description: str,
                  task: str, depends_on: List[str] = None):
         self.step_id = step_id
         self.agent = agent  # "architect" or "code"
@@ -36,6 +36,8 @@ class WorkflowStep:
         self.result: Optional[str] = None
         self.started_at: Optional[float] = None
         self.completed_at: Optional[float] = None
+        # Aantal vereiste stappen die nog niet voltooid zijn
+        self.remaining_dependencies: int = 0
 
 
 class BaseWorkflow:
@@ -50,25 +52,46 @@ class BaseWorkflow:
         self.started_at: Optional[float] = None
         self.completed_at: Optional[float] = None
         self.context: Dict[str, Any] = {}
-    
+        # Queue voor stappen die uitgevoerd kunnen worden
+        self.ready_steps: List[WorkflowStep] = []
+        # Relatie van een stap naar de stappen die ervan afhangen
+        self.dependents: Dict[str, List[str]] = {}
+
     def add_step(self, step: WorkflowStep):
         """Add a step to the workflow."""
+        # Bepaal hoeveel onafgeronde dependencies er nog zijn
+        step.remaining_dependencies = sum(
+            1
+            for dep_id in step.depends_on
+            if dep_id not in self.steps
+            or self.steps[dep_id].status != WorkflowStatus.COMPLETED
+        )
         self.steps[step.step_id] = step
-    
+
+        # Registreer afhankelijkheden zodat we ze later kunnen bijwerken
+        for dep_id in step.depends_on:
+            self.dependents.setdefault(dep_id, []).append(step.step_id)
+
+        # Als er geen afhankelijkheden meer zijn, is de stap klaar voor uitvoering
+        if step.remaining_dependencies == 0:
+            self.ready_steps.append(step)
+
     def get_ready_steps(self) -> List[WorkflowStep]:
-        """Get steps that are ready to be executed (dependencies met)."""
-        ready_steps = []
-        for step in self.steps.values():
-            if step.status == WorkflowStatus.PENDING:
-                # Check if all dependencies are completed
-                deps_completed = all(
-                    self.steps[dep_id].status == WorkflowStatus.COMPLETED
-                    for dep_id in step.depends_on
-                    if dep_id in self.steps
-                )
-                if deps_completed:
-                    ready_steps.append(step)
-        return ready_steps
+        """Return and clear steps that are ready to run."""
+        ready = self.ready_steps
+        self.ready_steps = []
+        return ready
+
+    def mark_step_completed(self, step_id: str):
+        """Verlaag de counters van afhankelijke stappen wanneer een stap klaar is."""
+        for dependent_id in self.dependents.get(step_id, []):
+            dependent = self.steps[dependent_id]
+            dependent.remaining_dependencies -= 1
+            if (
+                dependent.remaining_dependencies == 0
+                and dependent.status == WorkflowStatus.PENDING
+            ):
+                self.ready_steps.append(dependent)
     
     def is_complete(self) -> bool:
         """Check if all steps are completed."""
@@ -394,7 +417,8 @@ class WorkflowOrchestrator:
         
         if status == WorkflowStatus.COMPLETED:
             step.completed_at = time.time()
-            
+            workflow.mark_step_completed(step_id)
+
             # Check if workflow is complete
             if workflow.is_complete():
                 workflow.status = WorkflowStatus.COMPLETED
