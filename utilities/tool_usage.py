@@ -149,18 +149,22 @@ def clear_thinking_animation() -> None:
     """Clear the thinking animation from the terminal."""
     print("\r" + " " * 10 + "\r", end="", flush=True)
 
-async def process_stream_event(event, context, item_helpers, output_text_buffer: str = "") -> tuple:
+STREAMING_FLUSH_THRESHOLD = 20  # Characters to buffer before flushing
+
+
+async def process_stream_event(event, context, item_helpers, output_text_buffer: str = "", print_buffer: str = "") -> tuple:
     """
     Process a single stream event and update the output buffer.
-    
+
     Args:
         event: The event to process
         context: The agent context
         item_helpers: ItemHelpers from the agents module
         output_text_buffer: Current output buffer
-        
+        print_buffer: Buffer holding text to be printed
+
     Returns:
-        Tuple of (updated_buffer, processed_output, consume_event)
+        Tuple of (updated_buffer, updated_print_buffer, processed_output, consume_event)
     """
     processed_output = ""
     consume_event = False
@@ -168,19 +172,44 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
     # Handle raw response events (token-by-token streaming)
     if isinstance(event, RawResponsesStreamEvent):
         try:
-            from openai.types.responses import ResponseTextDeltaEvent
-            if hasattr(event, 'data') and isinstance(event.data, ResponseTextDeltaEvent):
-                # Clear thinking indicator if this is first text
-                if not output_text_buffer:
-                    clear_thinking_animation()
-                
-                # Get text delta
-                delta = event.data.delta
-                
-                # Print text deltas in real-time
-                print(delta, end="", flush=True)
-                output_text_buffer += delta
-                consume_event = True
+            from openai.types.responses import (
+                ResponseTextDeltaEvent,
+                ResponseTextDoneEvent,
+                ResponseCompletedEvent,
+            )
+            if hasattr(event, "data"):
+                data = event.data
+
+                # Handle text deltas
+                if isinstance(data, ResponseTextDeltaEvent):
+                    if not output_text_buffer:
+                        clear_thinking_animation()
+
+                    delta = data.delta
+                    print_buffer += delta
+                    output_text_buffer += delta
+                    consume_event = True
+
+                    flush_output = ""
+
+                    # Flush when newline present
+                    if "\n" in print_buffer:
+                        newline_index = print_buffer.rfind("\n") + 1
+                        flush_output = print_buffer[:newline_index]
+                        print_buffer = print_buffer[newline_index:]
+                    elif len(print_buffer) >= STREAMING_FLUSH_THRESHOLD:
+                        flush_output = print_buffer
+                        print_buffer = ""
+
+                    if flush_output:
+                        print(flush_output, end="", flush=True)
+
+                # Flush remaining buffer when done events occur
+                elif isinstance(data, (ResponseTextDoneEvent, ResponseCompletedEvent)):
+                    if print_buffer:
+                        print(print_buffer, end="", flush=True)
+                        print_buffer = ""
+                    consume_event = True
         except ImportError:
             # Handle case where ResponseTextDeltaEvent is not available
             pass
@@ -238,7 +267,7 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
                 output_text_buffer = content
                 consume_event = True
     
-    return output_text_buffer, processed_output, consume_event
+    return output_text_buffer, print_buffer, processed_output, consume_event
 
 async def handle_stream_events(stream_events, context, logger, item_helpers) -> str:
     """
@@ -263,6 +292,8 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
     
     # Output buffer for collecting the response
     output_text_buffer = ""
+    # Buffer for batching printed output
+    print_buffer = ""
     
     # Print initial thinking indicator
     print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
@@ -278,8 +309,13 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
                     last_animation_time = current_time
             
             # Process this event
-            output_text_buffer, processed_output, consumed = await process_stream_event(
-                event, context, item_helpers, output_text_buffer
+            (
+                output_text_buffer,
+                print_buffer,
+                processed_output,
+                consumed,
+            ) = await process_stream_event(
+                event, context, item_helpers, output_text_buffer, print_buffer
             )
             
             # If event wasn't handled by our processing, log it
@@ -290,7 +326,9 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
         logger.error(f"Error in stream event handling: {e}")
         print(f"\n{RED}Error: {e}{RESET}")
         
-    # Print a newline at the end
+    # Flush any remaining buffered text and print a newline at the end
+    if print_buffer:
+        print(print_buffer, end="", flush=True)
     print()
-    
+
     return output_text_buffer
