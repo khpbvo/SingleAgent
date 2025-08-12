@@ -380,7 +380,8 @@ async def main():
             print("\nExiting. Goodbye.")
             break
 
-        if not query.strip():
+        # Handle None or empty input safely
+        if query is None or not isinstance(query, str) or not query.strip():
             continue
             
         if query.strip().lower() in ("exit", "quit"):

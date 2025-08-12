@@ -8,6 +8,7 @@ import json
 import logging
 import asyncio
 import shlex
+import time
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
@@ -384,32 +385,12 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
 
         # Track file in context using content (cached or new)
         track_file_entity(wrapper.context, file_path, content)
-        codex/add-lru-cache-for-read_file
-
+        # Build and return result
         result = {"content": content, "metadata": metadata}
 
         logger.debug(json.dumps({"tool": "read_file", "result_size": len(content), "cached": cached}))
-        
-        # Create metadata
-        metadata = {
-            "file_path": file_path,
-            "file_name": os.path.basename(file_path),
-            "file_size": file_size,
-            "file_extension": file_extension,
-            "last_modified": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
-            "token_count": wrapper.context.count_tokens(content),
-            "line_count": content.count('\n') + 1
-        }
-        
-        # Return result
-        result = {
-            "content": content,
-            "metadata": metadata
-        }
-
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("read_file result_size=%d", len(content))
-        main
         return result
     
     except Exception as e:
