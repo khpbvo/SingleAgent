@@ -79,6 +79,10 @@ class ColoredDiffParams(BaseModel):
 class ApplyPatchParams(BaseModel):
     """Parameters for applying a patch."""
     patch_content: str = Field(description="Patch content in the specified format")
+    auto_confirm: bool = Field(
+        default=False,
+        description="If true, apply the patch without interactive confirmation. Recommended for non-interactive runs."
+    )
 
 
 class ChangeDirParams(BaseModel):
@@ -229,19 +233,46 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
                 else:
                     print(line)
     
-    # Ask for confirmation
-    print(f"\n{YELLOW}Apply these changes? [y/N]{RESET} ", end="", flush=True)
-    user_input = input().strip().lower()
-    if user_input != "y":
-        return "Patch application cancelled by user."
+    # Confirmation handling
+    if not params.auto_confirm:
+        # If in a non-interactive context, avoid blocking on input()
+        try:
+            is_tty = sys.stdin.isatty() and sys.stdout.isatty()
+        except Exception:
+            is_tty = False
+
+        if not is_tty:
+            return (
+                "Non-interactive environment detected; not applying patch. "
+                "Pass auto_confirm=true to apply without prompt."
+            )
+
+        # Interactive confirmation
+        print(f"\n{YELLOW}Apply these changes? [y/N]{RESET} ", end="", flush=True)
+        try:
+            user_input = input().strip().lower()
+        except EOFError:
+            return (
+                "Input stream closed; not applying patch. "
+                "Pass auto_confirm=true to apply without prompt."
+            )
+        if user_input != "y":
+            return "Patch application cancelled by user."
     
     # User confirmed, proceed with applying the patch
-    # Get the path to the apply_patch.py script
-    apply_patch_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "apply_patch.py")
-    
-    # Create subprocess with PIPE for stdin/stdout/stderr
+    # Resolve path to apply_patch.py: prefer root shim, fallback to scripts/apply_patch.py
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    root_shim = os.path.join(project_root, "apply_patch.py")
+    scripts_impl = os.path.join(project_root, "scripts", "apply_patch.py")
+    apply_patch_path = root_shim if os.path.isfile(root_shim) else scripts_impl
+    if not os.path.isfile(apply_patch_path):
+        err = f"apply_patch.py not found. Expected at {root_shim} or {scripts_impl}"
+        logger.error(err)
+        return f"Error applying patch: {err}"
+
+    # Create subprocess with PIPE for stdin/stdout/stderr using current interpreter
     proc = await asyncio.create_subprocess_exec(
-        "python3", apply_patch_path,
+        sys.executable, apply_patch_path,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
