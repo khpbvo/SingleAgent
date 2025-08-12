@@ -26,7 +26,10 @@ from Tools.singleagent_tools import (
     change_dir, os_command, get_context,
     get_context_response, add_manual_context
 )
-from utilities.tool_usage import handle_stream_events
+try:
+    from utilities.improved_stream_handler import handle_stream_events_improved as handle_stream_events
+except ImportError:
+    from utilities.tool_usage import handle_stream_events
 from utilities.project_info import discover_project_info
 
 # Configure logger
@@ -153,7 +156,7 @@ class MCPEnhancedSingleAgent:
             # Create agent with custom tools and MCP servers
             self.agent = Agent[EnhancedContextData](
                 name="MCPEnhancedCodeAssistant",
-                model="gpt-5",  # FIXED: Use correct model name
+                model="gpt-4o",  # FIXED: Use correct model name
                 instructions=self._get_enhanced_instructions(),
                 tools=self.base_tools,
                 mcp_servers=self.mcp_servers,

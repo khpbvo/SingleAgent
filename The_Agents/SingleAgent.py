@@ -29,7 +29,10 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.styles import Style
 
 # Import tool usage utilities
-from utilities.tool_usage import handle_stream_events
+try:
+    from utilities.improved_stream_handler import handle_stream_events_improved as handle_stream_events
+except ImportError:
+    from utilities.tool_usage import handle_stream_events
 
 # Configure logger for SingleAgent
 logger = logging.getLogger(__name__)
@@ -271,6 +274,9 @@ class SingleAgent:
         If user mentions code changes but doesn't specify a file,
         automatically add the most recently edited file from context.
         """
+        # Defensive: ensure text operations get a string
+        if not isinstance(user_input, str):
+            user_input = "" if user_input is None else str(user_input)
         # 1. Skip if the input already mentions a file
         if re.search(r'\w+\.(py|js|ts|html|css|java|cpp|h|c|rb|go|rs|php)\b', user_input):
             return user_input
@@ -429,6 +435,9 @@ class SingleAgent:
         )
 
     async def run(self, user_input: str, stream_output: bool = True):
+        # Defensive: ensure user input is a string
+        if not isinstance(user_input, str):
+            user_input = "" if user_input is None else str(user_input)
         self._prepare_context_for_agent()
         self.context.add_chat_message("user", user_input)
         if stream_output:
@@ -440,6 +449,9 @@ class SingleAgent:
                 context=self.context,
             )
             out = res.final_output
+        # Ensure assistant message is a string to avoid regex/tokenizer errors
+        if not isinstance(out, str):
+            out = "" if out is None else str(out)
         self.context.add_chat_message("assistant", out)
         return out
     
@@ -450,6 +462,9 @@ class SingleAgent:
         Args:
             user_input: The user's query or request
         """
+        # Defensive: ensure entity extractor receives a string
+        if not isinstance(user_input, str):
+            user_input = "" if user_input is None else str(user_input)
         # Import here to avoid circular imports
         from The_Agents.entity_recognizer import extract_entities
         
@@ -538,6 +553,9 @@ class SingleAgent:
             user_input: The user's query or request
         """
         logger.debug("Using fallback entity extraction")
+        # Defensive: ensure regex functions receive a string input
+        if not isinstance(user_input, str):
+            user_input = "" if user_input is None else str(user_input)
         current_time = datetime.now().isoformat()
         
         # Extract potential file references (with more extensions)
@@ -630,26 +648,35 @@ class SingleAgent:
             logger.debug("_run_streamed_start user_input=%s", user_input)
         print(f"{CYAN}Starting agent...{RESET}")
         
-        # Run the agent with streaming
-        result = Runner.run_streamed(
-            starting_agent=self.agent,
-            input=user_input,
-            max_turns=999,  # Increased for complex tasks
-            context=self.context,
-        )
-        
-        # Use the shared stream event handler
-        output_text_buffer = await handle_stream_events(
-            result.stream_events(),
-            self.context,
-            logger,
-            ItemHelpers
-        )
-        
-        # Final output (Agent reply)
-        final = result.final_output
+        try:
+            # Run the agent with streaming
+            result = Runner.run_streamed(
+                starting_agent=self.agent,
+                input=user_input,
+                max_turns=999,  # Increased for complex tasks
+                context=self.context,
+            )
+            
+            # Use the shared stream event handler
+            output_text_buffer = await handle_stream_events(
+                result.stream_events(),
+                self.context,
+                logger,
+                ItemHelpers
+            )
+            
+            # Final output (Agent reply)
+            final = result.final_output
+        except KeyboardInterrupt:
+            logger.info("Streaming interrupted by user (Ctrl+C)")
+            output_text_buffer = ""
+            final = ""
         
         # Count tokens for the agent's response
+        # Coerce to safe string: prefer final, fall back to streamed buffer, else empty
+        if not isinstance(final, str) or not final:
+            final = output_text_buffer if isinstance(output_text_buffer, str) and output_text_buffer else ""
+
         response_tokens = self.context.count_tokens(final)
         logger.info(f"Response size: ~{response_tokens} tokens")
         
