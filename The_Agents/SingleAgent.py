@@ -425,7 +425,7 @@ class SingleAgent:
             model="gpt-5",           # ← use the same model string as in __init__
             instructions=instr,
             tools=self.agent.tools,
-            model_settings=ModelSettings(temperature=0.0, max_tokens=400_000)
+            model_settings=ModelSettings(max_tokens=400_000)
         )
 
     async def run(self, user_input: str, stream_output: bool = True):
