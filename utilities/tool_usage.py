@@ -7,6 +7,8 @@ import asyncio
 import logging
 from typing import Any, Dict, Optional, Union, List, Callable, AsyncIterable
 
+from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -160,8 +162,6 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
     Returns:
         Tuple of (updated_buffer, processed_output, consume_event)
     """
-    from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
-    
     processed_output = ""
     consume_event = False
     
