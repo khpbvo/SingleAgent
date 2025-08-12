@@ -139,12 +139,23 @@ class EnhancedContextData(BaseModel):
 
     # Chat message management
     def add_chat_message(self, role: str, content: str, extra_metadata: Optional[Dict[str, Any]] = None) -> None:
-        msg = {"role": role, "content": content}
+        msg_tokens = self.count_tokens(content)
+        msg = {"role": role, "content": content, "token_count": msg_tokens}
         if extra_metadata:
             msg.update(extra_metadata)
         self.chat_messages.append(msg)
-        # track tokens used
-        self.update_token_count(self.count_tokens(content))
+        # track tokens used for this message
+        self.update_token_count(msg_tokens)
+        # trim old messages if we exceed the max
+        while len(self.chat_messages) > self.max_chat_messages:
+            removed = self.chat_messages.pop(0)
+            removed_tokens = removed.get("token_count", self.count_tokens(removed.get("content", "")))
+            self.token_count = max(0, self.token_count - removed_tokens)
+            logger.debug(
+                "Trimmed chat history, removed %s tokens; %s messages remaining",
+                removed_tokens,
+                len(self.chat_messages),
+            )
 
     def get_chat_history(self) -> List[Dict[str, Any]]:
         return list(self.chat_messages)
