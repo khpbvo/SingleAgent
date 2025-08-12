@@ -115,9 +115,10 @@ class SpacyModelSingleton:
         """
         # Make sure NLP is initialized
         await self._ensure_initialized()
-            
-        # Process the text
-        doc = self.nlp(text)
+
+        # Process the text using a thread executor to avoid blocking
+        loop = asyncio.get_running_loop()
+        doc = await loop.run_in_executor(None, self.nlp, text)
         return doc
     
     async def extract_entities(self, text: str) -> Dict[str, List[Dict[str, Any]]]:
