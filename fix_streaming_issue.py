@@ -14,7 +14,7 @@ def fix_model_name():
         content = f.read()
     
     # Fix model name - use gpt-4-turbo or gpt-4o
-    content = content.replace('model="gpt-5"', 'model="gpt-4o"')
+    content = content.replace('model="gpt-5"', 'model="gpt-5"')
     
     with open(file_path, 'w') as f:
         f.write(content)
@@ -263,7 +263,7 @@ def main():
         print("-" * 50)
         print("✅ All fixes applied successfully!")
         print("\n📝 Summary of changes:")
-        print("1. Fixed model name from 'gpt-5' to 'gpt-4o'")
+        print("1. Fixed model name from 'gpt-5' to 'gpt-5'")
         print("2. Created improved stream event handler")
         print("3. Updated imports to use improved handler with fallback")
         print("\n🚀 To test the fixes:")

@@ -239,7 +239,7 @@ async def test_mcp_agent_instructions():
             ("PRIORITY", "Priority guidance"),
             ("filesystem", "Filesystem server mention"),
             ("working directories", "Multi-project support"),
-            ("gpt-4o", "Correct model name")
+            ("gpt-5", "Correct model name")
         ]
         
         passed_checks = 0
@@ -258,10 +258,10 @@ async def test_mcp_agent_instructions():
             success = False
         
         # Check model configuration
-        if hasattr(agent.agent, 'model') and agent.agent.model == "gpt-4o":
-            print(f"  {GREEN}✓ Model correctly set to gpt-4o{RESET}")
+        if hasattr(agent.agent, 'model') and agent.agent.model == "gpt-5":
+            print(f"  {GREEN}✓ Model correctly set to gpt-5{RESET}")
         else:
-            print(f"  {RED}✗ Model not set correctly (should be gpt-4o){RESET}")
+            print(f"  {RED}✗ Model not set correctly (should be gpt-5){RESET}")
             success = False
         
         await agent.cleanup()

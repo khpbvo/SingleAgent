@@ -48,7 +48,7 @@ python_bash_patch_tool = {
 
 def run_example():
     # Choose a lightweight, widely available model. Override via OPENAI_MODEL if needed.
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL", "gpt-5")
 
     # Provide your task/bug description here.
     user_task = "Please fix the type error in module X and add a unit test."
