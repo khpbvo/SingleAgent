@@ -214,7 +214,7 @@ class EnhancedContextData(BaseModel):
         resp = await openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
+            max_tokens=16_000,
         )
         summary = resp.choices[0].message.content
 

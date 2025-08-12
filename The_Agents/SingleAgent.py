@@ -83,12 +83,16 @@ from Tools.singleagent_tools import (
     run_ruff,
     run_pylint,
     run_pyright,
-    run_command,
-    read_file,
     create_colored_diff,
     apply_patch,
     change_dir,
-    os_command,
+    os_command
+)
+
+# Import shared tools (these are used by multiple agents)
+from Tools.shared_tools import (
+    run_command,
+    read_file,
     get_context,
     get_context_response,
     add_manual_context

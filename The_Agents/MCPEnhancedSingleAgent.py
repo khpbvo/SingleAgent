@@ -21,9 +21,14 @@ from agents import Agent, Runner, ItemHelpers, function_tool
 from agents.model_settings import ModelSettings
 from The_Agents.context_data import EnhancedContextData
 from Tools.singleagent_tools import (
-    run_ruff, run_pylint, run_pyright, run_command,
-    read_file, create_colored_diff, apply_patch,
-    change_dir, os_command, get_context,
+    run_ruff, run_pylint, run_pyright,
+    create_colored_diff, apply_patch,
+    change_dir, os_command
+)
+
+# Import shared tools (these are used by multiple agents)
+from Tools.shared_tools import (
+    run_command, read_file, get_context,
     get_context_response, add_manual_context
 )
 from utilities.tool_usage import handle_stream_events
