@@ -27,7 +27,6 @@ RESET = "\033[0m"
 import os
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
-import json
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -102,7 +101,8 @@ class RuffParams(BaseModel):
 # Tool implementations
 @function_tool
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
-    logger.debug(json.dumps({"tool": "run_ruff", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("run_ruff params=%s", params.model_dump())
     cmd = ["ruff", "check", *params.paths, *params.flags]
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -111,12 +111,14 @@ async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
     )
     stdout, stderr = await proc.communicate()
     output = stdout.decode() or stderr.decode()
-    logger.debug(json.dumps({"tool": "run_ruff", "output": output}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("run_ruff output=%s", output)
     return output
 
 @function_tool
 async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> str:
-    logger.debug(json.dumps({"tool": "run_pylint", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("run_pylint params=%s", params.model_dump())
     cmd = ["pylint", params.file_path] + params.options
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -126,16 +128,19 @@ async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> 
         )
         stdout, stderr = await proc.communicate()
         output = stdout.decode() if stdout else stderr.decode()
-        logger.debug(json.dumps({"tool": "run_pylint", "output": output}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_pylint output=%s", output)
         return output
     except Exception as e:
-        logger.debug(json.dumps({"tool": "run_pylint", "error": str(e)}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_pylint error=%s", e)
         return f"Error running pylint: {str(e)}"
 
 
 @function_tool
 async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -> str:
-    logger.debug(json.dumps({"tool": "run_pyright", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("run_pyright params=%s", params.model_dump())
     cmd = ["pyright", *params.targets, *params.options, "--outputjson"]
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -145,10 +150,12 @@ async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -
         )
         stdout, stderr = await proc.communicate()
         output = stdout.decode() if stdout else stderr.decode()
-        logger.debug(json.dumps({"tool": "run_pyright", "output": output}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_pyright output=%s", output)
         return output
     except Exception as e:
-        logger.debug(json.dumps({"tool": "run_pyright", "error": str(e)}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_pyright error=%s", e)
         return f"Error running pyright: {str(e)}"
 
 
@@ -158,7 +165,8 @@ FileParams = FileReadParams
 
 @function_tool
 async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredDiffParams) -> str:
-    logger.debug(json.dumps({"tool": "create_colored_diff", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("create_colored_diff params=%s", params.model_dump())
     original_lines = params.original.splitlines()
     modified_lines = params.modified.splitlines()
     
@@ -170,14 +178,16 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
         lineterm=''
     )
     result = '\n'.join(diff)
-    logger.debug(json.dumps({"tool": "create_colored_diff", "diff_line_count": len(result.splitlines())}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("create_colored_diff diff_line_count=%d", len(result.splitlines()))
     return result
 
 
 @function_tool
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
     """Apply a patch to files using the apply_patch.py script with colored diff preview."""
-    logger.debug(json.dumps({"tool": "apply_patch", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("apply_patch params=%s", params.model_dump())
     
     # First, show the patch content for preview
     print(f"\n{BLUE}=== Patch Preview ==={RESET}")
@@ -315,7 +325,8 @@ class CommandResult(TypedDict):
 
 @function_tool
 async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) -> CommandResult:
-    logger.debug(json.dumps({"tool": "os_command", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("os_command params=%s", params.model_dump())
     try:
         proc = await asyncio.create_subprocess_exec(
             params.command, *params.args,
@@ -332,7 +343,8 @@ async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) 
         }
         # Track command entity in context (stdout preview)
         track_command_entity(wrapper.context, params.command, output["stdout"])
-        logger.debug(json.dumps({"tool": "os_command", "output": output}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("os_command output=%s", output)
         return output
     except Exception as e:
         # match CommandResult shape on error
