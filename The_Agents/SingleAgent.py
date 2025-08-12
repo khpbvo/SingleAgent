@@ -626,7 +626,8 @@ class SingleAgent:
             The final output from the agent
         """
         # Log start of streamed run
-        logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("_run_streamed_start user_input=%s", user_input)
         print(f"{CYAN}Starting agent...{RESET}")
         
         # Run the agent with streaming
@@ -655,11 +656,12 @@ class SingleAgent:
         # Update context with token count from response
         self.context.update_token_count(response_tokens)
         
-        logger.debug(json.dumps({
-            "event": "_run_streamed_end", 
-            "final_output": final,
-            "token_count": self.context.token_count
-        }))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "_run_streamed_end final_output=%s token_count=%d",
+                final,
+                self.context.token_count,
+            )
         
         return final
 
@@ -674,7 +676,8 @@ class SingleAgent:
     def clear_chat_history(self) -> None:
         """Clear the chat history."""
         self.context.clear_chat_history()
-        logger.debug(json.dumps({"event": "chat_history_cleared"}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("chat_history_cleared")
 
 async def main():
     """Main function to run the SingleAgent REPL."""

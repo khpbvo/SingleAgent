@@ -255,7 +255,8 @@ For TODO lists:
             await self._load_context()
         
         # Log start of run
-        logger.debug(json.dumps({"event": "run_start", "user_input": user_input}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_start user_input=%s", user_input)
         
         # Process input for potential entities
         await self._extract_entities_from_input(user_input)
@@ -291,12 +292,13 @@ For TODO lists:
         await self.save_context()
         
         # Log end of run
-        logger.debug(json.dumps({
-            "event": "run_end", 
-            "output": out,
-            "chat_history_length": len(self.context.chat_messages),
-            "token_count": self.context.token_count
-        }))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "run_end output=%s chat_history_length=%d token_count=%d",
+                out,
+                len(self.context.chat_messages),
+                self.context.token_count,
+            )
         
         return out
     
@@ -500,7 +502,8 @@ For TODO lists:
             The final output from the agent
         """
         # Log start of streamed run
-        logger.debug(json.dumps({"event": "_run_streamed_start", "user_input": user_input}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("_run_streamed_start user_input=%s", user_input)
         print(f"{CYAN}Starting architect agent...{RESET}")
         
         # Run the agent with streaming
@@ -520,10 +523,8 @@ For TODO lists:
         )
         
         # Log end of streamed run
-        logger.debug(json.dumps({
-            "event": "_run_streamed_end",
-            "output_length": len(output_text_buffer)
-        }))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("_run_streamed_end output_length=%d", len(output_text_buffer))
         
         return output_text_buffer
 

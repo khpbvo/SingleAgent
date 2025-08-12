@@ -95,7 +95,8 @@ async def write_file(wrapper: RunContextWrapper[EnhancedContextData], params: Wr
     """
     # Compute write mode, defaulting to 'w' if not provided
     mode = params.mode if params.mode is not None else "w"
-    logger.debug(json.dumps({"tool": "write_file", "params": {"file_path": params.file_path, "mode": mode}}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("write_file file_path=%s mode=%s", params.file_path, mode)
     
     try:
         # Ensure the directory exists
@@ -111,11 +112,13 @@ async def write_file(wrapper: RunContextWrapper[EnhancedContextData], params: Wr
         track_file_entity(wrapper.context, params.file_path, params.content)
         
         file_size = os.path.getsize(params.file_path)
-        logger.debug(json.dumps({"tool": "write_file", "output": f"File written: {params.file_path}, size: {file_size} bytes"}))
-        
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("write_file output=File written: %s, size: %d bytes", params.file_path, file_size)
+
         return f"Successfully wrote {file_size} bytes to {params.file_path}"
     except Exception as e:
-        logger.debug(json.dumps({"tool": "write_file", "error": str(e)}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("write_file error=%s", e)
         return f"Error writing to file: {str(e)}"
 
 @function_tool
@@ -136,7 +139,8 @@ async def analyze_ast(wrapper: RunContextWrapper[EnhancedContextData], params: A
     Returns:
         Dictionary containing the requested analysis information
     """
-    logger.debug(json.dumps({"tool": "analyze_ast", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("analyze_ast params=%s", params.model_dump())
     
     try:
         # Read the file and parse the AST
@@ -251,7 +255,8 @@ async def analyze_ast(wrapper: RunContextWrapper[EnhancedContextData], params: A
                         dependencies.add(node.module.split('.')[0])
             result['dependencies'] = list(dependencies)
         
-        logger.debug(json.dumps({"tool": "analyze_ast", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("analyze_ast result_size=%d", len(json.dumps(result)))
         return result
     except Exception as e:
         logger.error(f"Error in analyze_ast: {str(e)}", exc_info=True)
@@ -275,7 +280,8 @@ async def analyze_project_structure(wrapper: RunContextWrapper[EnhancedContextDa
     Returns:
         Dictionary containing project structure information
     """
-    logger.debug(json.dumps({"tool": "analyze_project_structure", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("analyze_project_structure params=%s", params.model_dump())
     
     try:
         import fnmatch
@@ -384,7 +390,8 @@ async def analyze_project_structure(wrapper: RunContextWrapper[EnhancedContextDa
             metadata={"file_count": file_count, "dir_count": dir_count}
         )
         
-        logger.debug(json.dumps({"tool": "analyze_project_structure", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("analyze_project_structure result_size=%d", len(json.dumps(result)))
         return result
     
     except Exception as e:
@@ -409,7 +416,8 @@ async def generate_todo_list(wrapper: RunContextWrapper[EnhancedContextData], pa
     Returns:
         Dictionary containing structured TODO list with tasks, priorities, and dependencies
     """
-    logger.debug(json.dumps({"tool": "generate_todo_list", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("generate_todo_list params=%s", params.model_dump())
     
     try:
         # Initialize the result structure
@@ -578,7 +586,8 @@ async def generate_todo_list(wrapper: RunContextWrapper[EnhancedContextData], pa
         else:
             result["suggested_approach"] = "Modular implementation with iterative development cycles"
         
-        logger.debug(json.dumps({"tool": "generate_todo_list", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("generate_todo_list result_size=%d", len(json.dumps(result)))
         return result
     
     except Exception as e:
@@ -601,7 +610,8 @@ async def analyze_dependencies(wrapper: RunContextWrapper[EnhancedContextData], 
     Returns:
         Dictionary containing dependency information and graph representation
     """
-    logger.debug(json.dumps({"tool": "analyze_dependencies", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("analyze_dependencies params=%s", params.model_dump())
     
     try:
         import glob
@@ -691,7 +701,8 @@ async def analyze_dependencies(wrapper: RunContextWrapper[EnhancedContextData], 
             metadata={"module_count": len(module_map), "dependency_count": G.number_of_edges()}
         )
         
-        logger.debug(json.dumps({"tool": "analyze_dependencies", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("analyze_dependencies result_size=%d", len(json.dumps(result)))
         return result
     
     except Exception as e:
@@ -714,7 +725,8 @@ async def detect_code_patterns(wrapper: RunContextWrapper[EnhancedContextData], 
     Returns:
         Dictionary containing detected patterns and their instances
     """
-    logger.debug(json.dumps({"tool": "detect_code_patterns", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("detect_code_patterns params=%s", params.model_dump())
     
     try:
         # Read and parse the file
@@ -890,7 +902,8 @@ async def detect_code_patterns(wrapper: RunContextWrapper[EnhancedContextData], 
             "anti_patterns_found": sum(1 for p in anti_patterns.values() if p["instances"])
         }
         
-        logger.debug(json.dumps({"tool": "detect_code_patterns", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("detect_code_patterns result_size=%d", len(json.dumps(result)))
         return result
     
     except Exception as e:
@@ -915,7 +928,8 @@ async def read_directory(wrapper: RunContextWrapper[EnhancedContextData], params
     Returns:
         Dictionary containing directory structure and statistics
     """
-    logger.debug(json.dumps({"tool": "read_directory", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("read_directory params=%s", params.model_dump())
     
     try:
         import fnmatch
@@ -1060,7 +1074,8 @@ async def read_directory(wrapper: RunContextWrapper[EnhancedContextData], params
             "base_directory": directory_path
         }
         
-        logger.debug(json.dumps({"tool": "read_directory", "result_size": len(json.dumps(result))}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("read_directory result_size=%d", len(json.dumps(result)))
         return result
     
     except Exception as e:
