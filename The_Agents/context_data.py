@@ -201,9 +201,9 @@ class EnhancedContextData(BaseModel):
 
         # Call the LLM
         resp = await openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-5",
             messages=[{"role": "user", "content": prompt}],
-            max_output_tokens=400_000
+            max_output_tokens=400.000
         )
         summary = resp.choices[0].message.content
 
