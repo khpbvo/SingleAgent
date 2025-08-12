@@ -152,20 +152,30 @@ def clear_thinking_animation() -> None:
 STREAMING_FLUSH_THRESHOLD = 20  # Characters to buffer before flushing
 
 
-async def process_stream_event(event, context, item_helpers, output_text_buffer: str = "", print_buffer: str = "") -> tuple:
-    """
-    Process a single stream event and update the output buffer.
+async def process_stream_event(
+    event,
+    context,
+    item_helpers,
+    output_text_buffer: Optional[List[str]] = None,
+    print_buffer: Optional[List[str]] = None,
+) -> tuple:
+    """Process a single stream event and update the output buffers.
 
     Args:
         event: The event to process
         context: The agent context
         item_helpers: ItemHelpers from the agents module
-        output_text_buffer: Current output buffer
-        print_buffer: Buffer holding text to be printed
+        output_text_buffer: List collecting streamed text tokens
+        print_buffer: List collecting text pending flush to stdout
 
     Returns:
         Tuple of (updated_buffer, updated_print_buffer, processed_output, consume_event)
     """
+    if output_text_buffer is None:
+        output_text_buffer = []
+    if print_buffer is None:
+        print_buffer = []
+
     processed_output = ""
     consume_event = False
     
@@ -186,20 +196,26 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
                         clear_thinking_animation()
 
                     delta = data.delta
-                    print_buffer += delta
-                    output_text_buffer += delta
+                    print_buffer.append(delta)
+                    output_text_buffer.append(delta)
                     consume_event = True
 
                     flush_output = ""
 
+                    # Join buffer once for inspections
+                    joined_buffer = "".join(print_buffer)
+
                     # Flush when newline present
-                    if "\n" in print_buffer:
-                        newline_index = print_buffer.rfind("\n") + 1
-                        flush_output = print_buffer[:newline_index]
-                        print_buffer = print_buffer[newline_index:]
-                    elif len(print_buffer) >= STREAMING_FLUSH_THRESHOLD:
-                        flush_output = print_buffer
-                        print_buffer = ""
+                    if "\n" in joined_buffer:
+                        newline_index = joined_buffer.rfind("\n") + 1
+                        flush_output = joined_buffer[:newline_index]
+                        remainder = joined_buffer[newline_index:]
+                        print_buffer.clear()
+                        if remainder:
+                            print_buffer.append(remainder)
+                    elif len(joined_buffer) >= STREAMING_FLUSH_THRESHOLD:
+                        flush_output = joined_buffer
+                        print_buffer.clear()
 
                     if flush_output:
                         print(flush_output, end="", flush=True)
@@ -207,8 +223,8 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
                 # Flush remaining buffer when done events occur
                 elif isinstance(data, (ResponseTextDoneEvent, ResponseCompletedEvent)):
                     if print_buffer:
-                        print(print_buffer, end="", flush=True)
-                        print_buffer = ""
+                        print("".join(print_buffer), end="", flush=True)
+                        print_buffer.clear()
                     consume_event = True
         except ImportError:
             # Handle case where ResponseTextDeltaEvent is not available
@@ -264,9 +280,9 @@ async def process_stream_event(event, context, item_helpers, output_text_buffer:
             # Only print non-empty content if no raw streaming occurred to avoid duplicates
             if content.strip():
                 print(content, end='', flush=True)
-                output_text_buffer = content
+                output_text_buffer.append(content)
                 consume_event = True
-    
+
     return output_text_buffer, print_buffer, processed_output, consume_event
 
 async def handle_stream_events(stream_events, context, logger, item_helpers) -> str:
@@ -291,9 +307,9 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
     animation_interval = 0.2  # seconds between animation frames
     
     # Output buffer for collecting the response
-    output_text_buffer = ""
+    output_text_buffer: List[str] = []
     # Buffer for batching printed output
-    print_buffer = ""
+    print_buffer: List[str] = []
     
     # Print initial thinking indicator
     print(f"{thinking_chars[thinking_index]} ", end="", flush=True)
@@ -328,7 +344,7 @@ async def handle_stream_events(stream_events, context, logger, item_helpers) -> 
         
     # Flush any remaining buffered text and print a newline at the end
     if print_buffer:
-        print(print_buffer, end="", flush=True)
+        print("".join(print_buffer), end="", flush=True)
     print()
 
-    return output_text_buffer
+    return "".join(output_text_buffer)
