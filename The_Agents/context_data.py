@@ -203,7 +203,7 @@ class EnhancedContextData(BaseModel):
         resp = await openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_output_tokens=400_000
+            max_output_tokens=1000
         )
         summary = resp.choices[0].message.content
 

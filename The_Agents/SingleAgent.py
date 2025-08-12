@@ -403,16 +403,17 @@ class SingleAgent:
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
     
-    def _prepare_context_for_agent(self):
+    async def _prepare_context_for_agent(self):
         """
         Prepares the system prompt by injecting the latest context summary
         so the LLM actually "remembers" previous turns.
         """
         # If you've initialized an OpenAI client, compress old history when needed
         if getattr(self, "openai_client", None):
-            # note: make this method async if you uncomment the next line
-            # await self.context.summarize_if_needed(self.openai_client)
-            pass
+            try:
+                await self.context.summarize_if_needed(self.openai_client)
+            except Exception as e:
+                logger.warning(f"Context summarization failed: {e}")
 
         # Get a human‑readable summary of our EnhancedContextData
         summary = self.context.get_context_summary()
@@ -438,7 +439,7 @@ class SingleAgent:
         # Defensive: ensure user input is a string
         if not isinstance(user_input, str):
             user_input = "" if user_input is None else str(user_input)
-        self._prepare_context_for_agent()
+        await self._prepare_context_for_agent()
         self.context.add_chat_message("user", user_input)
         if stream_output:
             out = await self._run_streamed(user_input)
