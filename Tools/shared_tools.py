@@ -34,6 +34,10 @@ shared_logger.propagate = False
 # alias shared_logger as logger for use in function implementations
 logger = shared_logger
 
+# Simple module-level cache for file reads keyed by absolute path
+# Each entry stores mtime, size, content, and metadata
+_file_cache: Dict[str, Dict[str, Any]] = {}
+
 # Shared utility functions for tracking entities in context
 def track_file_entity(ctx, file_path, content):
     """
@@ -214,31 +218,26 @@ async def add_manual_context(wrapper: RunContextWrapper[EnhancedContextData], pa
         logger.debug("add_manual_context params=%s", params.model_dump())
     
     try:
-        # Verify file exists
-        if not os.path.isfile(params.file_path):
-            return f"Error: File not found at {params.file_path}"
-            
-        # Read file content
-        with open(params.file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            
+        # Use read_file to leverage caching and tracking
+        result = await read_file(wrapper, FileReadParams(file_path=params.file_path))
+        if "error" in result:
+            return f"Error: {result['error']}"
+
+        content = result["content"]
         if not content:
             return f"Error: Empty file at {params.file_path}"
-            
+
         # Add to context
         label = wrapper.context.add_manual_context(
             content=content,
             source=params.file_path,
             label=params.label
         )
-        
-        # Track as file entity as well
-        track_file_entity(wrapper.context, params.file_path, content)
-        
+
         # Return success message
         tokens = wrapper.context.count_tokens(content)
         return f"Successfully added context from {params.file_path} with label '{label}' ({tokens} tokens)"
-    
+
     except Exception as e:
         logger.error(f"Error adding manual context: {str(e)}", exc_info=True)
         return f"Error adding context: {str(e)}"
@@ -340,26 +339,56 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
         # Get file stats
         file_stats = os.stat(file_path)
         file_size = file_stats.st_size
-        
+
         # Check file size (limit to reasonable size to prevent resource issues)
         if file_size > 5 * 1024 * 1024:
             return {"error": f"File too large ({file_size / 1024 / 1024:.2f} MB). Maximum size is 5 MB."}
-        
-        # Read file with proper error handling
-        try:
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                content = f.read()
-        except UnicodeDecodeError:
-            return {"error": f"Could not decode file as text: {file_path}. This may be a binary file."}
-        except PermissionError:
-            return {"error": f"Permission denied when reading file: {file_path}"}
-        
-        # Get file extension
-        _, file_extension = os.path.splitext(file_path)
-        file_extension = file_extension.lower()
-        
-        # Track file in context
+
+        # Check cache: reuse content and metadata if unchanged
+        cached = False
+        cache_entry = _file_cache.get(file_path)
+        if cache_entry and cache_entry["mtime"] == file_stats.st_mtime and cache_entry["size"] == file_size:
+            content = cache_entry["content"]
+            metadata = cache_entry["metadata"]
+            cached = True
+        else:
+            # Read file with proper error handling
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                return {"error": f"Could not decode file as text: {file_path}. This may be a binary file."}
+            except PermissionError:
+                return {"error": f"Permission denied when reading file: {file_path}"}
+
+            # Get file extension
+            _, file_extension = os.path.splitext(file_path)
+            file_extension = file_extension.lower()
+
+            metadata = {
+                "file_path": file_path,
+                "file_name": os.path.basename(file_path),
+                "file_size": file_size,
+                "file_extension": file_extension,
+                "last_modified": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+                "token_count": wrapper.context.count_tokens(content),
+                "line_count": content.count('\n') + 1
+            }
+
+            _file_cache[file_path] = {
+                "mtime": file_stats.st_mtime,
+                "size": file_size,
+                "content": content,
+                "metadata": metadata,
+            }
+
+        # Track file in context using content (cached or new)
         track_file_entity(wrapper.context, file_path, content)
+        codex/add-lru-cache-for-read_file
+
+        result = {"content": content, "metadata": metadata}
+
+        logger.debug(json.dumps({"tool": "read_file", "result_size": len(content), "cached": cached}))
         
         # Create metadata
         metadata = {
@@ -380,6 +409,7 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug("read_file result_size=%d", len(content))
+        main
         return result
     
     except Exception as e:
