@@ -7,6 +7,7 @@ delegate tasks, and coordinate their work.
 import time
 import json
 import os
+import asyncio
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -102,9 +103,34 @@ class SharedContextManager:
         self._task_counter = 0
         self._insight_counter = 0
         self._decision_counter = 0
-        
+
+        # Track dirty state for autosaving
+        self._dirty = False
+        self._last_dirty_ts = 0.0
+
         # Load existing data if available
         self.load_from_disk()
+
+        # Start background autosave task if an event loop is running
+        try:
+            loop = asyncio.get_running_loop()
+            self._autosave_task = loop.create_task(self._autosave_loop())
+        except RuntimeError:
+            self._autosave_task = None
+            logger.warning("No running event loop; autosave disabled")
+
+    def _mark_dirty(self) -> None:
+        """Mark the context as needing persistence."""
+        self._dirty = True
+        self._last_dirty_ts = time.time()
+
+    async def _autosave_loop(self) -> None:
+        """Background task that periodically saves state when dirty."""
+        while True:
+            await asyncio.sleep(1)
+            if self._dirty:
+                self.save_to_disk()
+                self._dirty = False
     
     def _get_next_task_id(self) -> str:
         """Generate unique task ID."""
@@ -149,7 +175,7 @@ class SharedContextManager:
         )
         self.tasks[task_id] = agent_task
         logger.info(f"Task {task_id} created by {created_by} for {target_agent}: {task}")
-        self.save_to_disk()
+        self._mark_dirty()
         return task_id
     
     def get_pending_tasks(self, agent_name: str) -> List[AgentTask]:
@@ -184,7 +210,7 @@ class SharedContextManager:
             if result:
                 self.tasks[task_id].result = result
             logger.info(f"Task {task_id} status updated to {status}")
-            self.save_to_disk()
+            self._mark_dirty()
             return True
         return False
     
@@ -216,7 +242,7 @@ class SharedContextManager:
         )
         self.insights[insight_id] = shared_insight
         logger.info(f"Insight {insight_id} added by {agent}: {insight[:50]}...")
-        self.save_to_disk()
+        self._mark_dirty()
         return insight_id
     
     def get_insights_by_category(self, category: str) -> List[SharedInsight]:
@@ -261,7 +287,7 @@ class SharedContextManager:
         )
         self.architectural_decisions[decision_id] = arch_decision
         logger.info(f"Architectural decision {decision_id} recorded: {decision[:50]}...")
-        self.save_to_disk()
+        self._mark_dirty()
         return decision_id
     
     def get_architectural_decisions(self) -> List[ArchitecturalDecision]:
@@ -294,10 +320,10 @@ class SharedContextManager:
             "status": "active",
             "started_at": time.time(),
             "tasks": []
-        }
+        } 
         self.active_workflows.append(workflow)
         logger.info(f"Started workflow {workflow_id}: {workflow_type}")
-        self.save_to_disk()
+        self._mark_dirty()
         return workflow_id
     
     def add_task_to_workflow(self, workflow_id: str, task_id: str) -> bool:
@@ -305,7 +331,7 @@ class SharedContextManager:
         for workflow in self.active_workflows:
             if workflow["id"] == workflow_id:
                 workflow["tasks"].append(task_id)
-                self.save_to_disk()
+                self._mark_dirty()
                 return True
         return False
     
