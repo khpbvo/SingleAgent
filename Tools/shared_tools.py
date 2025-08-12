@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import asyncio
+import shlex
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
@@ -78,6 +79,7 @@ class RunCommandParams(BaseModel):
     """Parameters for running shell commands."""
     command: str = Field(description="The command to execute")
     working_dir: Optional[str] = Field(None, description="Directory to execute the command in")
+    stream_output: bool = Field(False, description="Stream output to caller in real time")
 
 class FileReadParams(BaseModel):
     """Parameters for reading a file."""
@@ -257,19 +259,39 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: R
     logger.debug(json.dumps({"tool": "run_command", "params": params.model_dump()}))
     working_dir = params.working_dir if params.working_dir is not None else os.getcwd()
     try:
-        proc = await asyncio.create_subprocess_shell(
-            params.command,
+        proc = await asyncio.create_subprocess_exec(
+            *shlex.split(params.command),
             cwd=working_dir,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
-        output = stdout.decode() or ""
-        if stderr:
-            output += f"\nSTDERR:\n{stderr.decode()}"
+
+        stdout_lines: List[str] = []
+        stderr_lines: List[str] = []
+
+        async def _read_stream(stream: asyncio.StreamReader, collector: List[str]):
+            while True:
+                line = await stream.readline()
+                if not line:
+                    break
+                text = line.decode()
+                collector.append(text)
+                if params.stream_output:
+                    # Stream output incrementally to caller
+                    print(text, end="", flush=True)
+
+        stdout_task = asyncio.create_task(_read_stream(proc.stdout, stdout_lines))
+        stderr_task = asyncio.create_task(_read_stream(proc.stderr, stderr_lines))
+
+        await asyncio.gather(stdout_task, stderr_task)
+        await proc.wait()
+
+        output = "".join(stdout_lines)
+        if stderr_lines:
+            output += f"\nSTDERR:\n{''.join(stderr_lines)}"
         if not output:
             output = "Command executed successfully with no output."
-        
+
         # Track command entity in context
         track_command_entity(wrapper.context, params.command, output)
         logger.debug(json.dumps({"tool": "run_command", "output": output}))
