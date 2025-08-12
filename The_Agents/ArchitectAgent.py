@@ -49,14 +49,15 @@ except ImportError:
             self.delta = delta
 
 from agents import (
-    Agent, 
-    Runner, 
+    Agent,
+    Runner,
     ItemHelpers,
-    RunItemStreamEvent, 
+    RunItemStreamEvent,
     RawResponsesStreamEvent,
     AgentUpdatedStreamEvent,
     RunContextWrapper
 )
+from agents.model_settings import ModelSettings
 
 
 # Import architect tools
@@ -112,8 +113,9 @@ class ArchitectAgent:
                 read_directory,
                 add_manual_context,
                 run_command,  # Added run_command tool
-                write_file  
-            ]
+                write_file
+            ],
+            model_settings=ModelSettings(max_tokens=400_000)
         )
         
         logger.debug("ArchitectAgent initialized")
@@ -121,14 +123,15 @@ class ArchitectAgent:
         cwd = os.getcwd()
         self.context = EnhancedContextData(
             working_directory=cwd,
-            project_name=os.path.basename(cwd)
+            project_name=os.path.basename(cwd),
+            max_tokens=400_000
         )
         
     async def _load_context(self):
         """
         Load context data from persistent storage if available.
         """
-        self.context = EnhancedContextData()  # Initialize empty context
+        self.context = EnhancedContextData(max_tokens=400_000)  # Initialize empty context
         
         # Try to load persisted context 
         context_file = "architect_context.json"
@@ -232,7 +235,8 @@ For TODO lists:
             name="ArchitectAgent",
             model="gpt-5",
             instructions=instr,
-            tools=self.agent.tools
+            tools=self.agent.tools,
+            model_settings=ModelSettings(max_tokens=400_000)
         )
 
     async def run(self, user_input: str, stream_output: bool = True) -> str:
