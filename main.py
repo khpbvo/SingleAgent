@@ -9,6 +9,7 @@ import sys
 import logging
 import json
 import os
+from functools import lru_cache
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
@@ -121,30 +122,30 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
         f'<path>📁 {os.path.basename(context.working_directory)}</path>{collab_info}{mcp_info}'
     )
 
+@lru_cache(maxsize=None)
 def get_common_project_directories():
     """Get common project directories for multi-project support."""
     common_dirs = []
-    
+
     # Add current directory
     current_dir = os.getcwd()
     common_dirs.append(current_dir)
-    
+
     # Add parent directory if it looks like a projects folder
     parent_dir = os.path.dirname(current_dir)
     if any(word in parent_dir.lower() for word in ['projects', 'development', 'dev', 'code', 'workspace']):
         # Add other project directories in the same parent
         try:
-            for item in os.listdir(parent_dir):
-                item_path = os.path.join(parent_dir, item)
-                if os.path.isdir(item_path) and item_path != current_dir:
-                    # Check if it looks like a project directory
-                    if any(os.path.exists(os.path.join(item_path, file)) for file in [
-                        '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
-                    ]):
-                        common_dirs.append(item_path)
+            with os.scandir(parent_dir) as it:
+                for entry in it:
+                    if entry.is_dir() and entry.path != current_dir:
+                        if any(os.path.exists(os.path.join(entry.path, file)) for file in [
+                            '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
+                        ]):
+                            common_dirs.append(entry.path)
         except PermissionError:
             pass  # Skip if we can't read the parent directory
-    
+
     # Add common development directories
     home_dir = os.path.expanduser("~")
     potential_dirs = [
@@ -156,26 +157,24 @@ def get_common_project_directories():
         os.path.join(home_dir, "Documents", "Projects"),
         os.path.join(home_dir, "Documents", "Development"),
     ]
-    
+
     for potential_dir in potential_dirs:
         if os.path.exists(potential_dir) and potential_dir not in common_dirs:
-            # Add the directory itself if it contains projects
             try:
-                for item in os.listdir(potential_dir):
-                    item_path = os.path.join(potential_dir, item)
-                    if os.path.isdir(item_path):
-                        # Check if it looks like a project directory
-                        if any(os.path.exists(os.path.join(item_path, file)) for file in [
-                            '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
-                        ]):
-                            if item_path not in common_dirs:
-                                common_dirs.append(item_path)
+                with os.scandir(potential_dir) as it:
+                    for entry in it:
+                        if entry.is_dir():
+                            if any(os.path.exists(os.path.join(entry.path, file)) for file in [
+                                '.git', 'package.json', 'requirements.txt', 'Cargo.toml', 'go.mod', 'pom.xml'
+                            ]):
+                                if entry.path not in common_dirs:
+                                    common_dirs.append(entry.path)
             except PermissionError:
                 pass
-    
+
     # Limit to reasonable number and sort by relevance
     common_dirs = common_dirs[:10]  # Limit to 10 directories max
-    
+
     return common_dirs
 
 async def setup_mcp_servers() -> list:
@@ -208,10 +207,10 @@ async def setup_mcp_servers() -> list:
     db_files = []
     for directory in working_directories:
         try:
-            db_files.extend([
-                os.path.join(directory, f) for f in os.listdir(directory) 
-                if f.endswith('.db') and os.path.isfile(os.path.join(directory, f))
-            ])
+            with os.scandir(directory) as it:
+                for entry in it:
+                    if entry.is_file() and entry.name.endswith('.db'):
+                        db_files.append(entry.path)
         except PermissionError:
             continue
     

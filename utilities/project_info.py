@@ -1,8 +1,10 @@
 import os
 import re
+from functools import lru_cache
 from typing import Any, Dict
 import toml
 
+@lru_cache(maxsize=None)
 def discover_project_info(root_dir: str) -> Dict[str, Any]:
     info: Dict[str, Any] = {
         "name": None,
@@ -48,12 +50,13 @@ def discover_project_info(root_dir: str) -> Dict[str, Any]:
                 info["dependencies"][pkg] = ver
 
     # 4) scan for source/ test dirs
-    for name in os.listdir(root_dir):
-        p = os.path.join(root_dir, name)
-        if os.path.isdir(p):
-            if name in ("src", "lib"):
-                info["source_dirs"].append(name)
-            if name in ("tests", "test"):
-                info["test_dirs"].append(name)
+    with os.scandir(root_dir) as it:
+        for entry in it:
+            if entry.is_dir():
+                name = entry.name
+                if name in ("src", "lib"):
+                    info["source_dirs"].append(name)
+                if name in ("tests", "test"):
+                    info["test_dirs"].append(name)
 
     return info
