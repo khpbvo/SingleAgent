@@ -391,8 +391,22 @@ When you successfully use MCP tools, briefly explain the benefits:
     
     async def list_available_tools(self) -> Dict[str, Any]:
         """List all available tools (custom + MCP)."""
+        # Some custom tools are wrapped by decorators (e.g., FunctionTool) and may not
+        # have a __name__ attribute. Be defensive and extract a readable name.
+        def _tool_name(t: Any) -> str:
+            # Prefer Python function __name__ if present
+            n = getattr(t, "__name__", None)
+            if isinstance(n, str):
+                return n
+            # Fall back to common wrapper attributes like .name
+            n = getattr(t, "name", None)
+            if isinstance(n, str):
+                return n
+            # Last resort: class name string
+            return type(t).__name__
+
         tools_info = {
-            "custom_tools": [tool.__name__ for tool in self.base_tools],
+            "custom_tools": [_tool_name(tool) for tool in self.base_tools],
             "mcp_tools": {}
         }
         
