@@ -308,6 +308,7 @@ class SingleAgent:
             project_name=os.path.basename(cwd),
             project_info=discover_project_info(cwd),
             current_file=None,
+            max_tokens=400_000,
         )
         """Initialize the code assistant agent with all required tools and enhanced context."""
         # Attempt to load existing context or create new one
@@ -330,7 +331,7 @@ class SingleAgent:
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
             model="gpt-5",
-            model_settings=ModelSettings(temperature=0.0),  # Correct way to set temperature
+            model_settings=ModelSettings(temperature=0.0, max_tokens=400_000),  # Support 400k context
             instructions=AGENT_INSTRUCTIONS,
             tools=[
                 run_ruff,
@@ -385,6 +386,7 @@ class SingleAgent:
                 project_name=os.path.basename(cwd),
                 project_info=discover_project_info(cwd),
                 current_file=None,
+                max_tokens=400_000,
             )
     
     async def save_context(self):
@@ -422,7 +424,8 @@ class SingleAgent:
             name="CodeAssistant",
             model="gpt-5",           # ← use the same model string as in __init__
             instructions=instr,
-            tools=self.agent.tools
+            tools=self.agent.tools,
+            model_settings=ModelSettings(temperature=0.0, max_tokens=400_000)
         )
 
     async def run(self, user_input: str, stream_output: bool = True):

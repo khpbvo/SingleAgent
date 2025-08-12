@@ -82,7 +82,7 @@ class EnhancedContextData(BaseModel):
     
     # Token management
     token_count: int = Field(default=0, description="Current token count")
-    max_tokens: int = Field(default=900000, description="Maximum tokens before summarization")
+    max_tokens: int = Field(default=400_000, description="Maximum tokens before summarization")
     summarization_threshold: float = Field(default=0.8, description="Threshold ratio for summarization")
     summaries: List[ContextSummary] = Field(default_factory=list, description="History of context summaries")
     
@@ -202,7 +202,8 @@ class EnhancedContextData(BaseModel):
         # Call the LLM
         resp = await openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            max_output_tokens=400_000
         )
         summary = resp.choices[0].message.content
 
@@ -445,12 +446,17 @@ Memory Items: {info['memory_items_count']}"""
         """Load context from JSON file."""
         with open(filepath, 'r') as f:
             data = json.load(f)
-        
+
         # Convert timestamp strings back to datetime objects
         for item in data.get('memory_items', []):
             if 'timestamp' in item and isinstance(item['timestamp'], str):
                 item['timestamp'] = datetime.fromisoformat(item['timestamp'])
-        
+
+        # Ensure max_tokens is at least the default
+        default_max = 400_000
+        if data.get('max_tokens', default_max) < default_max:
+            data['max_tokens'] = default_max
+
         logger.info(f"Loaded context from {filepath}")
         return cls(**data)
     
@@ -470,6 +476,12 @@ Memory Items: {info['memory_items_count']}"""
         for item in data.get('memory_items', []):
             if 'timestamp' in item and isinstance(item['timestamp'], str):
                 item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+
+        # Ensure max_tokens respects minimum default
+        default_max = 400_000
+        if data.get('max_tokens', default_max) < default_max:
+            data['max_tokens'] = default_max
+
         return cls(**data)
     
     def merge_from(self, other_context: 'EnhancedContextData', merge_chat: bool = False) -> None:

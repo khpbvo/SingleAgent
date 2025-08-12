@@ -18,6 +18,7 @@ from agents.mcp.server import MCPServerStdio, MCPServerSse
 
 # Your existing imports
 from agents import Agent, Runner, ItemHelpers, function_tool
+from agents.model_settings import ModelSettings
 from The_Agents.context_data import EnhancedContextData
 from Tools.singleagent_tools import (
     run_ruff, run_pylint, run_pyright, run_command,
@@ -80,6 +81,7 @@ class MCPEnhancedSingleAgent:
             project_name=os.path.basename(cwd),
             project_info=discover_project_info(cwd),
             current_file=None,
+            max_tokens=400_000,
         )
         
         # Store working directories for multi-project support
@@ -154,7 +156,8 @@ class MCPEnhancedSingleAgent:
                 model="gpt-5",  # FIXED: Use correct model name
                 instructions=self._get_enhanced_instructions(),
                 tools=self.base_tools,
-                mcp_servers=self.mcp_servers
+                mcp_servers=self.mcp_servers,
+                model_settings=ModelSettings(max_tokens=400_000)
             )
             
             logger.info(f"Agent created with {len(self.base_tools)} custom tools and {len(self.mcp_servers)} MCP servers")
