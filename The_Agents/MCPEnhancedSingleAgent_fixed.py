@@ -295,16 +295,24 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
             "mcp_tools": {},
             "working_directories": self.working_directories
         }
-        
+
+        # Gather tool lists from all servers concurrently
+        tasks = []
+        server_names = []
         for i, server in enumerate(self.mcp_servers):
-            config_name = self.mcp_configs[i].name if i < len(self.mcp_configs) else f"server_{i}"
-            try:
-                mcp_tools = await server.list_tools()
-                tools_info["mcp_tools"][config_name] = [tool.name for tool in mcp_tools]
-            except Exception as e:
-                logger.error(f"Failed to list tools for MCP server {config_name}: {e}")
-                tools_info["mcp_tools"][config_name] = ["ERROR: Could not list tools"]
-        
+            server_name = self.mcp_configs[i].name if i < len(self.mcp_configs) else f"server_{i}"
+            server_names.append(server_name)
+            tasks.append(server.list_tools())
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for server_name, result in zip(server_names, results):
+            if isinstance(result, Exception):
+                logger.error(f"Failed to list tools for MCP server {server_name}: {result}")
+                tools_info["mcp_tools"][server_name] = ["ERROR: Could not list tools"]
+            else:
+                tools_info["mcp_tools"][server_name] = [tool.name for tool in result]
+
         return tools_info
     
     async def add_working_directory(self, directory_path: str) -> bool:
@@ -367,23 +375,33 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
     async def get_mcp_server_status(self) -> Dict[str, Any]:
         """Get status of all MCP servers."""
         status = {}
-        
+
+        tasks = []
+        server_names = []
+        server_types = []
         for i, server in enumerate(self.mcp_servers):
-            config_name = self.mcp_configs[i].name if i < len(self.mcp_configs) else f"server_{i}"
-            try:
-                tools = await server.list_tools()
-                status[config_name] = {
-                    "status": "active",
-                    "tool_count": len(tools),
-                    "server_type": self.mcp_configs[i].server_type if i < len(self.mcp_configs) else "unknown"
-                }
-            except Exception as e:
-                status[config_name] = {
+            server_name = self.mcp_configs[i].name if i < len(self.mcp_configs) else f"server_{i}"
+            server_type = self.mcp_configs[i].server_type if i < len(self.mcp_configs) else "unknown"
+            server_names.append(server_name)
+            server_types.append(server_type)
+            tasks.append(server.list_tools())
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for server_name, server_type, result in zip(server_names, server_types, results):
+            if isinstance(result, Exception):
+                status[server_name] = {
                     "status": "error",
-                    "error": str(e),
-                    "server_type": self.mcp_configs[i].server_type if i < len(self.mcp_configs) else "unknown"
+                    "error": str(result),
+                    "server_type": server_type
                 }
-        
+            else:
+                status[server_name] = {
+                    "status": "active",
+                    "tool_count": len(result),
+                    "server_type": server_type
+                }
+
         return status
     
     async def reload_mcp_server(self, server_name: str) -> bool:
