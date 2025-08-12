@@ -329,7 +329,7 @@ class SingleAgent:
         # Create the enhanced agent with all tools
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
-            model="gpt-4.1",
+            model="gpt-5",
             model_settings=ModelSettings(temperature=0.0),  # Correct way to set temperature
             instructions=AGENT_INSTRUCTIONS,
             tools=[
@@ -420,7 +420,7 @@ class SingleAgent:
         # Rebuild the Agent with the updated prompt, matching your original model
         self.agent = Agent[EnhancedContextData](
             name="CodeAssistant",
-            model="gpt-4.1",           # ← use the same model string as in __init__
+            model="gpt-5",           # ← use the same model string as in __init__
             instructions=instr,
             tools=self.agent.tools
         )

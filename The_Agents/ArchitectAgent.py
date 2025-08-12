@@ -98,7 +98,7 @@ class ArchitectAgent:
         # Create agent
         self.agent = Agent[EnhancedContextData](
             name="ArchitectAgent",
-            model="gpt-4.1",
+            model="gpt-5",
             instructions=self.instructions,
             tools=[
                 analyze_ast,
@@ -230,7 +230,7 @@ For TODO lists:
         # 3) Re-create agent with new instructions
         self.agent = Agent[EnhancedContextData](
             name="ArchitectAgent",
-            model="gpt-4.1",
+            model="gpt-5",
             instructions=instr,
             tools=self.agent.tools
         )

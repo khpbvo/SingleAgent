@@ -164,7 +164,7 @@ python_bash_patch_tool = {
 
 response = client.responses.create(
     instructions=SYS_PROMPT_SWEBENCH,
-    model="gpt-4.1-2025-04-14",
+    model="gpt-5,
     tools=[python_bash_patch_tool],
     input=f"Please answer the following question:\nBug: Typerror..."
 )

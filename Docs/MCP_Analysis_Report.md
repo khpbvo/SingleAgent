@@ -31,10 +31,10 @@ Your system implements a **legitimate and well-designed pattern** from the OpenA
 **Problem:** Using non-existent model name
 ```python
 # Current (BROKEN)
-model="gpt-4.1"  # This model doesn't exist
+model="gpt-5"  # This model doesn't exist
 
 # Fixed (WORKING)
-model="gpt-4"    # Standard OpenAI model
+model="gpt-5"    # Standard OpenAI model
 ```
 
 ### Issue 2: Insufficient MCP Tool Instructions

@@ -151,7 +151,7 @@ class MCPEnhancedSingleAgent:
             # Create agent with custom tools and MCP servers
             self.agent = Agent[EnhancedContextData](
                 name="MCPEnhancedCodeAssistant",
-                model="gpt-4.1",  # FIXED: Use correct model name
+                model="gpt-5",  # FIXED: Use correct model name
                 instructions=self._get_enhanced_instructions(),
                 tools=self.base_tools,
                 mcp_servers=self.mcp_servers
