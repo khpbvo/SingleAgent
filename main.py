@@ -65,6 +65,30 @@ class AgentMode:
     ARCHITECT = "architect"
     MCP_ENHANCED = "mcp_enhanced"
 
+# Simple caches for status bar computations
+_working_dir_cache = {"path": None, "basename": None}
+_mcp_cache = {"servers": None, "dirs": None, "counts": (0, 0)}
+
+
+def _get_cached_basename(working_directory: str) -> str:
+    """Return cached basename for the working directory."""
+    if _working_dir_cache["path"] != working_directory:
+        _working_dir_cache["path"] = working_directory
+        _working_dir_cache["basename"] = os.path.basename(working_directory)
+    return _working_dir_cache["basename"]
+
+
+def _get_cached_mcp_counts(mcp_servers, working_dirs):
+    """Return cached counts for MCP servers and directories."""
+    servers_tuple = tuple(mcp_servers) if mcp_servers else ()
+    dirs_tuple = tuple(working_dirs) if working_dirs else ()
+    if (_mcp_cache["servers"] != servers_tuple or
+            _mcp_cache["dirs"] != dirs_tuple):
+        _mcp_cache["servers"] = servers_tuple
+        _mcp_cache["dirs"] = dirs_tuple
+        _mcp_cache["counts"] = (len(servers_tuple), len(dirs_tuple))
+    return _mcp_cache["counts"]
+
 def create_status_bar_text(current_agent, mode, shared_manager=None):
     """Enhanced status bar that shows MCP server status."""
     context = current_agent.context
@@ -108,18 +132,17 @@ def create_status_bar_text(current_agent, mode, shared_manager=None):
     # Add MCP server count and working directories if applicable
     mcp_info = ""
     if hasattr(current_agent, 'mcp_servers') and current_agent.mcp_servers:
-        mcp_count = len(current_agent.mcp_servers)
+        servers = current_agent.mcp_servers
+        dirs = getattr(current_agent, 'working_directories', [])
+        mcp_count, dir_count = _get_cached_mcp_counts(servers, dirs)
         mcp_info = f" │ 🔌 {mcp_count} MCP"
-        
-        # Add working directories count
-        if hasattr(current_agent, 'working_directories'):
-            dir_count = len(current_agent.working_directories)
+        if dir_count:
             mcp_info += f" │ 📁 {dir_count} dirs"
     
     return HTML(
         f'<{mode_style}>[{mode_display}]</{mode_style}> │ '
         f'<{token_style}>Tokens: {token_count:,}/{max_tokens:,} ({percentage:.1f}%) [{bar}]</{token_style}> │ '
-        f'<path>📁 {os.path.basename(context.working_directory)}</path>{collab_info}{mcp_info}'
+        f'<path>📁 {_get_cached_basename(context.working_directory)}</path>{collab_info}{mcp_info}'
     )
 
 @lru_cache(maxsize=None)
