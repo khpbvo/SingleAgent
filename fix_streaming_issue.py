@@ -160,8 +160,20 @@ async def handle_stream_events_improved(stream_events, context, item_helpers):
                 if item:
                     # Tool call
                     if hasattr(item, 'type') and 'tool_call' in item.type:
-                        tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', 'Unknown tool')
-                        params = getattr(item, 'params', None) or getattr(item, 'input', {})
+                        # Agents SDK may nest tool metadata under item.call.tool
+                        # See Docs/openai_agents_sdk_docs/tools.md
+                        tool_name = (
+                            getattr(item, 'name', None)
+                            or getattr(item, 'tool_name', None)
+                            or getattr(getattr(getattr(item, 'call', None), 'tool', None), 'name', None)
+                        ) or 'Unknown tool'
+                        params = (
+                            getattr(item, 'params', None)
+                            or getattr(item, 'input', None)
+                            or getattr(getattr(item, 'call', None), 'arguments', None)
+                            or getattr(getattr(item, 'call', None), 'params', None)
+                            or getattr(getattr(item, 'call', None), 'input', None)
+                        ) or {}
                         
                         print(f"\\n{YELLOW}⚙{RESET} Calling: {tool_name}", flush=True)
                         

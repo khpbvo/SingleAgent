@@ -241,9 +241,20 @@ async def process_stream_event(
         
         # Track tool calls for entity tracking
         if item.type == 'tool_call_item':
-            # Extract tool name and parameters
-            tool_name = getattr(item, 'name', None) or getattr(item, 'tool_name', None)
-            tool_params = getattr(item, 'params', None) or getattr(item, 'input', None)
+            # Extract tool name and parameters; Agents SDK may nest these under item.call
+            # See Docs/openai_agents_sdk_docs/tools.md
+            tool_name = (
+                getattr(item, 'name', None)
+                or getattr(item, 'tool_name', None)
+                or getattr(getattr(getattr(item, 'call', None), 'tool', None), 'name', None)
+            ) or 'Unknown tool'
+            tool_params = (
+                getattr(item, 'params', None)
+                or getattr(item, 'input', None)
+                or getattr(getattr(item, 'call', None), 'arguments', None)
+                or getattr(getattr(item, 'call', None), 'params', None)
+                or getattr(getattr(item, 'call', None), 'input', None)
+            ) or {}
             
             # Track entities based on tool call
             handle_entity_tracking(context, tool_name, tool_params)
