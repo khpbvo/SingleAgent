@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import asyncio
+import shlex
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple, cast
 from typing_extensions import Annotated
@@ -82,6 +83,7 @@ class RunCommandParams(BaseModel):
     """Parameters for running shell commands."""
     command: str = Field(description="The command to execute")
     working_dir: Optional[str] = Field(None, description="Directory to execute the command in")
+    stream_output: bool = Field(False, description="Stream output to caller in real time")
 
 class FileReadParams(BaseModel):
     """Parameters for reading a file."""
@@ -212,7 +214,8 @@ async def add_manual_context(wrapper: RunContextWrapper[EnhancedContextData], pa
     Returns:
         Summary of the added context
     """
-    logger.debug(json.dumps({"tool": "add_manual_context", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("add_manual_context params=%s", params.model_dump())
     
     try:
         # Use read_file to leverage caching and tracking
@@ -253,28 +256,51 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: R
     Returns:
         Command output (stdout and stderr)
     """
-    logger.debug(json.dumps({"tool": "run_command", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("run_command params=%s", params.model_dump())
     working_dir = params.working_dir if params.working_dir is not None else os.getcwd()
     try:
-        proc = await asyncio.create_subprocess_shell(
-            params.command,
+        proc = await asyncio.create_subprocess_exec(
+            *shlex.split(params.command),
             cwd=working_dir,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
-        output = stdout.decode() or ""
-        if stderr:
-            output += f"\nSTDERR:\n{stderr.decode()}"
+
+        stdout_lines: List[str] = []
+        stderr_lines: List[str] = []
+
+        async def _read_stream(stream: asyncio.StreamReader, collector: List[str]):
+            while True:
+                line = await stream.readline()
+                if not line:
+                    break
+                text = line.decode()
+                collector.append(text)
+                if params.stream_output:
+                    # Stream output incrementally to caller
+                    print(text, end="", flush=True)
+
+        stdout_task = asyncio.create_task(_read_stream(proc.stdout, stdout_lines))
+        stderr_task = asyncio.create_task(_read_stream(proc.stderr, stderr_lines))
+
+        await asyncio.gather(stdout_task, stderr_task)
+        await proc.wait()
+
+        output = "".join(stdout_lines)
+        if stderr_lines:
+            output += f"\nSTDERR:\n{''.join(stderr_lines)}"
         if not output:
             output = "Command executed successfully with no output."
-        
+
         # Track command entity in context
         track_command_entity(wrapper.context, params.command, output)
-        logger.debug(json.dumps({"tool": "run_command", "output": output}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_command output=%s", output)
         return output
     except Exception as e:
-        logger.debug(json.dumps({"tool": "run_command", "error": str(e)}))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("run_command error=%s", e)
         return f"Error executing command: {str(e)}"
 
 @function_tool
@@ -291,7 +317,8 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
     Returns:
         Dictionary containing file content and metadata
     """
-    logger.debug(json.dumps({"tool": "read_file", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("read_file params=%s", params.model_dump())
     
     try:
         # Normalize path - handle relative paths automatically
@@ -357,10 +384,32 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
 
         # Track file in context using content (cached or new)
         track_file_entity(wrapper.context, file_path, content)
+        codex/add-lru-cache-for-read_file
 
         result = {"content": content, "metadata": metadata}
 
         logger.debug(json.dumps({"tool": "read_file", "result_size": len(content), "cached": cached}))
+        
+        # Create metadata
+        metadata = {
+            "file_path": file_path,
+            "file_name": os.path.basename(file_path),
+            "file_size": file_size,
+            "file_extension": file_extension,
+            "last_modified": datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+            "token_count": wrapper.context.count_tokens(content),
+            "line_count": content.count('\n') + 1
+        }
+        
+        # Return result
+        result = {
+            "content": content,
+            "metadata": metadata
+        }
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("read_file result_size=%d", len(content))
+        main
         return result
     
     except Exception as e:
@@ -378,7 +427,8 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
     Returns:
         String summary of current context
     """
-    logger.debug(json.dumps({"tool": "get_context", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("get_context params=%s", params.model_dump())
     context = wrapper.context
     info = [
         f"Working directory: {context.working_directory}",
@@ -431,7 +481,8 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
             info.append(summary)
 
     result = "\n".join(info)
-    logger.debug(json.dumps({"tool": "get_context", "output_length": len(result)}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("get_context output_length=%d", len(result))
     return result
 
 # Cross-agent communication tools
@@ -452,7 +503,8 @@ async def request_architecture_review(wrapper: RunContextWrapper[EnhancedContext
     Returns:
         Confirmation message with task ID
     """
-    logger.debug(json.dumps({"tool": "request_architecture_review", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("request_architecture_review params=%s", params.model_dump())
     
     # Get the shared context manager from metadata
     shared_manager = wrapper.context.metadata.get("shared_manager")
@@ -490,7 +542,8 @@ async def request_implementation(wrapper: RunContextWrapper[EnhancedContextData]
     Returns:
         Confirmation message with task ID
     """
-    logger.debug(json.dumps({"tool": "request_implementation", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("request_implementation params=%s", params.model_dump())
     
     # Get the shared context manager from metadata
     shared_manager = wrapper.context.metadata.get("shared_manager")
@@ -532,7 +585,8 @@ async def share_insight(wrapper: RunContextWrapper[EnhancedContextData], params:
     Returns:
         Confirmation message with insight ID
     """
-    logger.debug(json.dumps({"tool": "share_insight", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("share_insight params=%s", params.model_dump())
     
     # Get the shared context manager from metadata
     shared_manager = wrapper.context.metadata.get("shared_manager")
@@ -570,7 +624,8 @@ async def record_architectural_decision(wrapper: RunContextWrapper[EnhancedConte
     Returns:
         Confirmation message with decision ID
     """
-    logger.debug(json.dumps({"tool": "record_architectural_decision", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("record_architectural_decision params=%s", params.model_dump())
     
     # Get the shared context manager from metadata
     shared_manager = wrapper.context.metadata.get("shared_manager")
@@ -601,7 +656,8 @@ async def get_collaboration_status(wrapper: RunContextWrapper[EnhancedContextDat
     Returns:
         Collaboration status summary
     """
-    logger.debug(json.dumps({"tool": "get_collaboration_status", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("get_collaboration_status params=%s", params.model_dump())
     
     # Get the shared context manager from metadata
     shared_manager = wrapper.context.metadata.get("shared_manager")
@@ -672,7 +728,8 @@ async def start_feature_workflow(wrapper: RunContextWrapper[EnhancedContextData]
     Returns:
         Workflow ID and confirmation message
     """
-    logger.debug(json.dumps({"tool": "start_feature_workflow", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("start_feature_workflow params=%s", params.model_dump())
     
     # Get the workflow orchestrator from metadata
     orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
@@ -702,7 +759,8 @@ async def start_bugfix_workflow(wrapper: RunContextWrapper[EnhancedContextData],
     Returns:
         Workflow ID and confirmation message
     """
-    logger.debug(json.dumps({"tool": "start_bugfix_workflow", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("start_bugfix_workflow params=%s", params.model_dump())
     
     # Get the workflow orchestrator from metadata
     orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
@@ -732,7 +790,8 @@ async def start_refactor_workflow(wrapper: RunContextWrapper[EnhancedContextData
     Returns:
         Workflow ID and confirmation message
     """
-    logger.debug(json.dumps({"tool": "start_refactor_workflow", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("start_refactor_workflow params=%s", params.model_dump())
     
     # Get the workflow orchestrator from metadata
     orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
@@ -761,7 +820,8 @@ async def get_workflow_status(wrapper: RunContextWrapper[EnhancedContextData], p
     Returns:
         Detailed workflow status
     """
-    logger.debug(json.dumps({"tool": "get_workflow_status", "params": params.model_dump()}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("get_workflow_status params=%s", params.model_dump())
     
     # Get the workflow orchestrator from metadata
     orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
@@ -813,7 +873,8 @@ async def list_active_workflows(wrapper: RunContextWrapper[EnhancedContextData])
     Returns:
         List of active workflows with their status
     """
-    logger.debug(json.dumps({"tool": "list_active_workflows"}))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("list_active_workflows")
     
     # Get the workflow orchestrator from metadata
     orchestrator = wrapper.context.metadata.get("workflow_orchestrator")
