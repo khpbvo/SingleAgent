@@ -5,6 +5,7 @@ Provides standardized formatting and display of tool calls and outputs.
 
 import asyncio
 import logging
+import json
 from typing import Any, Dict, Optional, Union, List, Callable, AsyncIterable
 
 from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
@@ -241,20 +242,44 @@ async def process_stream_event(
         
         # Track tool calls for entity tracking
         if item.type == 'tool_call_item':
-            # Extract tool name and parameters; Agents SDK may nest these under item.call
-            # See Docs/openai_agents_sdk_docs/tools.md
+            # Extract tool name and parameters; Agents SDK may nest these differently.
+            # Try multiple shapes: item.tool.name, item.name, item.tool_name, item.call.tool.name, item.call.tool_name
+            call = getattr(item, 'call', None)
+            tool_obj = (
+                getattr(item, 'tool', None)
+                or (getattr(call, 'tool', None) if call else None)
+            )
             tool_name = (
-                getattr(item, 'name', None)
+                getattr(tool_obj, 'name', None)
+                or getattr(tool_obj, 'tool_name', None)
+                or getattr(item, 'name', None)
                 or getattr(item, 'tool_name', None)
-                or getattr(getattr(getattr(item, 'call', None), 'tool', None), 'name', None)
-            ) or 'Unknown tool'
+                or (getattr(call, 'tool_name', None) if call else None)
+            )
+
+            # Extract params/arguments from multiple possible fields
             tool_params = (
                 getattr(item, 'params', None)
                 or getattr(item, 'input', None)
-                or getattr(getattr(item, 'call', None), 'arguments', None)
-                or getattr(getattr(item, 'call', None), 'params', None)
-                or getattr(getattr(item, 'call', None), 'input', None)
-            ) or {}
+                or (getattr(call, 'arguments', None) if call else None)
+                or (getattr(call, 'params', None) if call else None)
+                or (getattr(call, 'input', None) if call else None)
+                or getattr(item, 'arguments', None)
+                or getattr(item, 'arguments_json', None)
+            )
+
+            # Best-effort JSON parse if params look like JSON in a string
+            if isinstance(tool_params, str):
+                try:
+                    parsed = json.loads(tool_params)
+                    tool_params = parsed
+                except Exception:
+                    pass
+
+            if tool_params is None:
+                tool_params = {}
+            if not tool_name:
+                tool_name = 'Unknown tool'
             
             # Track entities based on tool call
             handle_entity_tracking(context, tool_name, tool_params)
