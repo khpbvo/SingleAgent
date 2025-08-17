@@ -6,9 +6,10 @@ Provides standardized formatting and display of tool calls and outputs.
 import asyncio
 import logging
 import json
-from typing import Any, Dict, Optional, Union, List, Callable, AsyncIterable
+from typing import Any, Dict, Optional, List
 
-from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
+# TODO: Import from agents.stream_events when available
+# from agents.stream_events import RunItemStreamEvent, RawResponsesStreamEvent, AgentUpdatedStreamEvent
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def format_tool_output(output: Any) -> Optional[str]:
         return f"⮑ {output_summary}"
     return None
 
-def handle_entity_tracking(context, tool_name: str, tool_params: Any) -> None:
+def handle_entity_tracking(context, tool_name: Optional[str], tool_params: Any) -> None:
     """
     Track entities based on tool calls.
     
@@ -181,18 +182,24 @@ async def process_stream_event(
     consume_event = False
     
     # Handle raw response events (token-by-token streaming)
-    if isinstance(event, RawResponsesStreamEvent):
+    # TODO: Uncomment when RawResponsesStreamEvent is available
+    # if isinstance(event, RawResponsesStreamEvent):
+    if False:  # Temporarily disabled until dependency is available
         try:
-            from openai.types.responses import (
-                ResponseTextDeltaEvent,
-                ResponseTextDoneEvent,
-                ResponseCompletedEvent,
-            )
+            # TODO: Import from openai.types.responses when available
+            # from openai.types.responses import (
+            #     ResponseTextDeltaEvent,
+            #     ResponseTextDoneEvent,
+            #     ResponseCompletedEvent,
+            # )
+            pass
             if hasattr(event, "data"):
                 data = event.data
 
                 # Handle text deltas
-                if isinstance(data, ResponseTextDeltaEvent):
+                # TODO: Uncomment when ResponseTextDeltaEvent is available
+                # if isinstance(data, ResponseTextDeltaEvent):
+                if False:  # Temporarily disabled
                     if not output_text_buffer:
                         clear_thinking_animation()
 
@@ -222,7 +229,9 @@ async def process_stream_event(
                         print(flush_output, end="", flush=True)
 
                 # Flush remaining buffer when done events occur
-                elif isinstance(data, (ResponseTextDoneEvent, ResponseCompletedEvent)):
+                # TODO: Uncomment when ResponseTextDoneEvent and ResponseCompletedEvent are available
+                # elif isinstance(data, (ResponseTextDoneEvent, ResponseCompletedEvent)):
+                elif False:  # Temporarily disabled
                     if print_buffer:
                         print("".join(print_buffer), end="", flush=True)
                         print_buffer.clear()
@@ -232,12 +241,16 @@ async def process_stream_event(
             pass
     
     # Handle agent handoff/update events
-    elif isinstance(event, AgentUpdatedStreamEvent):
+    # TODO: Uncomment when AgentUpdatedStreamEvent is available
+    # elif isinstance(event, AgentUpdatedStreamEvent):
+    elif False:  # Temporarily disabled until dependency is available
         display_agent_handoff(event.new_agent.name)
         consume_event = True
     
     # Process run item events
-    elif isinstance(event, RunItemStreamEvent):
+    # TODO: Uncomment when RunItemStreamEvent is available
+    # elif isinstance(event, RunItemStreamEvent):
+    elif False:  # Temporarily disabled until dependency is available
         item = event.item
         
         # Track tool calls for entity tracking
@@ -278,8 +291,19 @@ async def process_stream_event(
 
             if tool_params is None:
                 tool_params = {}
+            # Heuristic inference if tool name is missing
+            if not tool_name and isinstance(tool_params, dict):
+                if 'include_details' in tool_params:
+                    tool_name = 'get_context'
+                elif 'directory' in tool_params:
+                    tool_name = 'change_dir'
+                elif 'command' in tool_params:
+                    tool_name = 'run_command'
+                elif 'file_path' in tool_params:
+                    tool_name = 'read_file'
+            # Avoid noisy 'Unknown tool' label; let formatter handle empty name
             if not tool_name:
-                tool_name = 'Unknown tool'
+                tool_name = None
             
             # Track entities based on tool call
             handle_entity_tracking(context, tool_name, tool_params)
