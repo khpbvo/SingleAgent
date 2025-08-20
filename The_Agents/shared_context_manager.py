@@ -7,7 +7,7 @@ delegate tasks, and coordinate their work.
 import time
 import json
 import os
-import asyncio
+import sqlite3
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -88,49 +88,25 @@ class SharedContextManager:
     - Workflow coordination
     """
     
-    def __init__(self, persistence_path: Optional[str] = None):
-        """
-        Initialize the shared context manager.
-        
-        Args:
-            persistence_path: Optional path to persist shared context
-        """
+    def __init__(self, db_path: Optional[str] = None):
+        """Initialize the shared context manager with SQLite persistence."""
+
         self.tasks: Dict[str, AgentTask] = {}
         self.insights: Dict[str, SharedInsight] = {}
         self.architectural_decisions: Dict[str, ArchitecturalDecision] = {}
         self.active_workflows: List[Dict[str, Any]] = []
-        self.persistence_path = persistence_path or "shared_context.json"
         self._task_counter = 0
         self._insight_counter = 0
         self._decision_counter = 0
 
-        # Track dirty state for autosaving
-        self._dirty = False
-        self._last_dirty_ts = 0.0
+        self._store = _SharedContextSQLiteStore(db_path or "shared_context.db")
 
         # Load existing data if available
-        self.load_from_disk()
-
-        # Start background autosave task if an event loop is running
-        try:
-            loop = asyncio.get_running_loop()
-            self._autosave_task = loop.create_task(self._autosave_loop())
-        except RuntimeError:
-            self._autosave_task = None
-            logger.warning("No running event loop; autosave disabled")
+        self.load_from_db()
 
     def _mark_dirty(self) -> None:
-        """Mark the context as needing persistence."""
-        self._dirty = True
-        self._last_dirty_ts = time.time()
-
-    async def _autosave_loop(self) -> None:
-        """Background task that periodically saves state when dirty."""
-        while True:
-            await asyncio.sleep(1)
-            if self._dirty:
-                self.save_to_disk()
-                self._dirty = False
+        """Persist the context immediately to the SQLite store."""
+        self.save_to_db()
     
     def _get_next_task_id(self) -> str:
         """Generate unique task ID."""
@@ -388,60 +364,207 @@ class SharedContextManager:
         }
     
     # Persistence
-    def save_to_disk(self) -> None:
-        """Save shared context to disk."""
-        data = {
-            "tasks": {k: v.model_dump() for k, v in self.tasks.items()},
-            "insights": {k: v.model_dump() for k, v in self.insights.items()},
-            "architectural_decisions": {k: v.model_dump() for k, v in self.architectural_decisions.items()},
-            "active_workflows": self.active_workflows,
-            "counters": {
+    def save_to_db(self) -> None:
+        """Persist the shared context to the SQLite database."""
+        self._store.save(
+            self.tasks,
+            self.insights,
+            self.architectural_decisions,
+            self.active_workflows,
+            {
                 "task": self._task_counter,
                 "insight": self._insight_counter,
-                "decision": self._decision_counter
-            }
-        }
-        
-        with open(self.persistence_path, 'w') as f:
-            json.dump(data, f, indent=2, default=str)
-        logger.debug(f"Saved shared context to {self.persistence_path}")
-    
-    def load_from_disk(self) -> None:
-        """Load shared context from disk."""
-        if not os.path.exists(self.persistence_path):
-            logger.info("No existing shared context found, starting fresh")
-            return
-        
-        try:
-            with open(self.persistence_path, 'r') as f:
-                data = json.load(f)
-            
-            # Load tasks
-            self.tasks = {
-                k: AgentTask(**v) for k, v in data.get("tasks", {}).items()
-            }
-            
-            # Load insights
-            self.insights = {
-                k: SharedInsight(**v) for k, v in data.get("insights", {}).items()
-            }
-            
-            # Load architectural decisions
-            self.architectural_decisions = {
-                k: ArchitecturalDecision(**v) for k, v in data.get("architectural_decisions", {}).items()
-            }
-            
-            # Load workflows
-            self.active_workflows = data.get("active_workflows", [])
-            
-            # Load counters
-            counters = data.get("counters", {})
-            self._task_counter = counters.get("task", 0)
-            self._insight_counter = counters.get("insight", 0)
-            self._decision_counter = counters.get("decision", 0)
-            
-            logger.info(f"Loaded shared context from {self.persistence_path}")
-            logger.info(f"Loaded {len(self.tasks)} tasks, {len(self.insights)} insights, "
-                       f"{len(self.architectural_decisions)} decisions")
-        except Exception as e:
-            logger.error(f"Error loading shared context: {e}")
+                "decision": self._decision_counter,
+            },
+        )
+        logger.debug("Saved shared context to SQLite")
+
+    def load_from_db(self) -> None:
+        """Load shared context from the SQLite database."""
+        (
+            self.tasks,
+            self.insights,
+            self.architectural_decisions,
+            self.active_workflows,
+            counters,
+        ) = self._store.load()
+        self._task_counter = counters.get("task", 0)
+        self._insight_counter = counters.get("insight", 0)
+        self._decision_counter = counters.get("decision", 0)
+        logger.info(
+            "Loaded %d tasks, %d insights, %d decisions",
+            len(self.tasks),
+            len(self.insights),
+            len(self.architectural_decisions),
+        )
+
+
+class _SharedContextSQLiteStore:
+    """Lightweight SQLite-backed persistence layer for shared context."""
+
+    def __init__(self, path: str):
+        self.path = path
+        self.conn = sqlite3.connect(self.path)
+        self.conn.row_factory = sqlite3.Row
+        self._init_db()
+
+    def _init_db(self) -> None:
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                target_agent TEXT,
+                task TEXT,
+                priority TEXT,
+                status TEXT,
+                created_by TEXT,
+                created_at REAL,
+                context TEXT,
+                result TEXT
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS insights (
+                id TEXT PRIMARY KEY,
+                agent TEXT,
+                insight TEXT,
+                category TEXT,
+                timestamp REAL,
+                metadata TEXT,
+                related_files TEXT
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS decisions (
+                id TEXT PRIMARY KEY,
+                decision TEXT,
+                rationale TEXT,
+                timestamp REAL,
+                affected_components TEXT,
+                constraints TEXT
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+            """
+        )
+        self.conn.commit()
+
+    def load(self):
+        tasks: Dict[str, AgentTask] = {}
+        for row in self.conn.execute("SELECT * FROM tasks"):
+            tasks[row["id"]] = AgentTask(
+                id=row["id"],
+                target_agent=row["target_agent"],
+                task=row["task"],
+                priority=TaskPriority(row["priority"]),
+                status=TaskStatus(row["status"]),
+                created_by=row["created_by"],
+                created_at=row["created_at"],
+                context=json.loads(row["context"] or "{}"),
+                result=row["result"],
+            )
+
+        insights: Dict[str, SharedInsight] = {}
+        for row in self.conn.execute("SELECT * FROM insights"):
+            insights[row["id"]] = SharedInsight(
+                id=row["id"],
+                agent=row["agent"],
+                insight=row["insight"],
+                category=row["category"],
+                timestamp=row["timestamp"],
+                metadata=json.loads(row["metadata"] or "{}"),
+                related_files=json.loads(row["related_files"] or "[]"),
+            )
+
+        decisions: Dict[str, ArchitecturalDecision] = {}
+        for row in self.conn.execute("SELECT * FROM decisions"):
+            decisions[row["id"]] = ArchitecturalDecision(
+                id=row["id"],
+                decision=row["decision"],
+                rationale=row["rationale"],
+                timestamp=row["timestamp"],
+                affected_components=json.loads(row["affected_components"] or "[]"),
+                constraints=json.loads(row["constraints"] or "[]"),
+            )
+
+        meta = {r["key"]: r["value"] for r in self.conn.execute("SELECT * FROM metadata")}
+        active_workflows = json.loads(meta.get("active_workflows", "[]"))
+        counters = json.loads(meta.get("counters", "{}"))
+        return tasks, insights, decisions, active_workflows, counters
+
+    def save(
+        self,
+        tasks: Dict[str, AgentTask],
+        insights: Dict[str, SharedInsight],
+        decisions: Dict[str, ArchitecturalDecision],
+        active_workflows: List[Dict[str, Any]],
+        counters: Dict[str, int],
+    ) -> None:
+        cur = self.conn.cursor()
+        cur.executemany(
+            "INSERT OR REPLACE INTO tasks VALUES (?,?,?,?,?,?,?,?,?)",
+            [
+                (
+                    t.id,
+                    t.target_agent,
+                    t.task,
+                    t.priority.value,
+                    t.status.value,
+                    t.created_by,
+                    t.created_at,
+                    json.dumps(t.context),
+                    t.result,
+                )
+                for t in tasks.values()
+            ],
+        )
+        cur.executemany(
+            "INSERT OR REPLACE INTO insights VALUES (?,?,?,?,?,?,?)",
+            [
+                (
+                    i.id,
+                    i.agent,
+                    i.insight,
+                    i.category,
+                    i.timestamp,
+                    json.dumps(i.metadata),
+                    json.dumps(i.related_files),
+                )
+                for i in insights.values()
+            ],
+        )
+        cur.executemany(
+            "INSERT OR REPLACE INTO decisions VALUES (?,?,?,?,?,?)",
+            [
+                (
+                    d.id,
+                    d.decision,
+                    d.rationale,
+                    d.timestamp,
+                    json.dumps(d.affected_components),
+                    json.dumps(d.constraints),
+                )
+                for d in decisions.values()
+            ],
+        )
+        cur.execute(
+            "INSERT OR REPLACE INTO metadata (key, value) VALUES ('active_workflows', ?)",
+            (json.dumps(active_workflows),),
+        )
+        cur.execute(
+            "INSERT OR REPLACE INTO metadata (key, value) VALUES ('counters', ?)",
+            (json.dumps(counters),),
+        )
+        self.conn.commit()
+
