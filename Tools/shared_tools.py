@@ -16,7 +16,8 @@ from typing_extensions import Annotated
 from pydantic import BaseModel, Field
 from logging.handlers import RotatingFileHandler
 
-from agents import function_tool, RunContextWrapper
+from agents import RunContextWrapper
+from . import function_tool
 from The_Agents.context_data import EnhancedContextData
 from The_Agents.shared_context_manager import SharedContextManager, TaskPriority
 from The_Agents.workflows import WorkflowOrchestrator
@@ -164,7 +165,7 @@ class GetWorkflowStatusParams(BaseModel):
         extra = "forbid"
 
 # Shared tool implementations
-@function_tool
+@function_tool(name="get_context_response", description="Retrieve details about the current context.")
 async def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) -> GetContextResponse:
     """
     Get the current context information including:
@@ -199,7 +200,7 @@ async def get_context_response(wrapper: RunContextWrapper[EnhancedContextData]) 
         max_tokens=max_tokens
     )
 
-@function_tool
+@function_tool(name="add_manual_context", description="Add file contents to persistent manual context.")
 async def add_manual_context(wrapper: RunContextWrapper[EnhancedContextData], params: AddManualContextParams) -> str:
     """
     Add manual context from a file that will be persisted across sessions.
@@ -243,7 +244,7 @@ async def add_manual_context(wrapper: RunContextWrapper[EnhancedContextData], pa
         logger.error(f"Error adding manual context: {str(e)}", exc_info=True)
         return f"Error adding context: {str(e)}"
 
-@function_tool
+@function_tool(name="run_command", description="Run a shell command and return its output.")
 async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: RunCommandParams) -> str:
     """
     Run a shell command and return its output.
@@ -304,7 +305,7 @@ async def run_command(wrapper: RunContextWrapper[EnhancedContextData], params: R
             logger.debug("run_command error=%s", e)
         return f"Error executing command: {str(e)}"
 
-@function_tool
+@function_tool(name="read_file", description="Read a file and return its contents with metadata.")
 async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: FileReadParams) -> Dict[str, Any]:
     """
     Read a file and return its contents with metadata.
@@ -397,7 +398,7 @@ async def read_file(wrapper: RunContextWrapper[EnhancedContextData], params: Fil
         logger.error(f"Error in read_file: {str(e)}", exc_info=True)
         return {"error": f"Error reading file: {str(e)}"}
 
-@function_tool
+@function_tool(name="get_context", description="Get a summary of the current context.")
 async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: GetContextParams) -> str:
     """
     Get a human-readable summary of the current context.
@@ -467,7 +468,7 @@ async def get_context(wrapper: RunContextWrapper[EnhancedContextData], params: G
     return result
 
 # Cross-agent communication tools
-@function_tool
+@function_tool(name="request_architecture_review", description="Request an architecture review from the architect agent.")
 async def request_architecture_review(wrapper: RunContextWrapper[EnhancedContextData], params: RequestArchitectureReviewParams) -> str:
     """
     Request an architecture review from the Architect Agent.
@@ -506,7 +507,7 @@ async def request_architecture_review(wrapper: RunContextWrapper[EnhancedContext
     
     return f"Architecture review requested successfully. Task ID: {task_id}. Switch to Architect Agent (!architect) to process this request."
 
-@function_tool
+@function_tool(name="request_implementation", description="Request implementation work from the code agent.")
 async def request_implementation(wrapper: RunContextWrapper[EnhancedContextData], params: RequestImplementationParams) -> str:
     """
     Request implementation from the Code Agent.
@@ -549,7 +550,7 @@ async def request_implementation(wrapper: RunContextWrapper[EnhancedContextData]
     
     return f"Implementation task created successfully. Task ID: {task_id}. Switch to Code Agent (!code) to implement this feature."
 
-@function_tool
+@function_tool(name="share_insight", description="Share an insight with the other agent.")
 async def share_insight(wrapper: RunContextWrapper[EnhancedContextData], params: ShareInsightParams) -> str:
     """
     Share an insight or discovery with the other agent.
@@ -588,7 +589,7 @@ async def share_insight(wrapper: RunContextWrapper[EnhancedContextData], params:
     
     return f"Insight shared successfully. ID: {insight_id}. The other agent will see this insight when they check collaboration status."
 
-@function_tool
+@function_tool(name="record_architectural_decision", description="Record an architectural decision and its rationale.")
 async def record_architectural_decision(wrapper: RunContextWrapper[EnhancedContextData], params: RecordArchitecturalDecisionParams) -> str:
     """
     Record an important architectural decision.
@@ -623,7 +624,7 @@ async def record_architectural_decision(wrapper: RunContextWrapper[EnhancedConte
     
     return f"Architectural decision recorded successfully. ID: {decision_id}. This decision will guide future implementations."
 
-@function_tool
+@function_tool(name="get_collaboration_status", description="Get collaboration status between agents.")
 async def get_collaboration_status(wrapper: RunContextWrapper[EnhancedContextData], params: GetCollaborationStatusParams) -> str:
     """
     Get the current collaboration status between agents.
@@ -694,7 +695,7 @@ async def get_collaboration_status(wrapper: RunContextWrapper[EnhancedContextDat
     return "\n".join(lines)
 
 # Workflow orchestration tools
-@function_tool
+@function_tool(name="start_feature_workflow", description="Start a feature implementation workflow.")
 async def start_feature_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartFeatureWorkflowParams) -> str:
     """
     Start a feature implementation workflow.
@@ -726,7 +727,7 @@ async def start_feature_workflow(wrapper: RunContextWrapper[EnhancedContextData]
     
     return f"Feature implementation workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
 
-@function_tool
+@function_tool(name="start_bugfix_workflow", description="Start a bug fix workflow.")
 async def start_bugfix_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartBugfixWorkflowParams) -> str:
     """
     Start a bug fix workflow.
@@ -756,7 +757,7 @@ async def start_bugfix_workflow(wrapper: RunContextWrapper[EnhancedContextData],
     
     return f"Bug fix workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
 
-@function_tool
+@function_tool(name="start_refactor_workflow", description="Start a refactoring workflow.")
 async def start_refactor_workflow(wrapper: RunContextWrapper[EnhancedContextData], params: StartRefactorWorkflowParams) -> str:
     """
     Start a code refactoring workflow.
@@ -788,7 +789,7 @@ async def start_refactor_workflow(wrapper: RunContextWrapper[EnhancedContextData
     
     return f"Refactoring workflow started successfully. Workflow ID: {workflow_id}. Check !collab or get_collaboration_status to see progress."
 
-@function_tool
+@function_tool(name="get_workflow_status", description="Get the status of a workflow.")
 async def get_workflow_status(wrapper: RunContextWrapper[EnhancedContextData], params: GetWorkflowStatusParams) -> str:
     """
     Get the status of a specific workflow.
@@ -844,7 +845,7 @@ async def get_workflow_status(wrapper: RunContextWrapper[EnhancedContextData], p
     
     return "\n".join(lines)
 
-@function_tool
+@function_tool(name="list_active_workflows", description="List all active workflows.")
 async def list_active_workflows(wrapper: RunContextWrapper[EnhancedContextData]) -> str:
     """
     List all active workflows.
