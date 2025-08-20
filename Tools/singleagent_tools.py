@@ -25,7 +25,8 @@ CYAN = "\033[36m"
 RESET = "\033[0m"
 
 import os
-from agents import function_tool, RunContextWrapper
+from agents import RunContextWrapper
+from . import function_tool
 from The_Agents.context_data import EnhancedContextData
 import logging
 
@@ -91,7 +92,7 @@ class RuffParams(BaseModel):
 
 
 # Tool implementations
-@function_tool
+@function_tool(name="run_ruff", description="Run the ruff linter on the given paths.")
 async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("run_ruff params=%s", params.model_dump())
@@ -107,7 +108,7 @@ async def run_ruff(wrapper: RunContextWrapper[None], params: RuffParams) -> str:
         logger.debug("run_ruff output=%s", output)
     return output
 
-@function_tool
+@function_tool(name="run_pylint", description="Execute pylint on a file with optional arguments.")
 async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> str:
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("run_pylint params=%s", params.model_dump())
@@ -129,7 +130,7 @@ async def run_pylint(wrapper: RunContextWrapper[None], params: PylintParams) -> 
         return f"Error running pylint: {str(e)}"
 
 
-@function_tool
+@function_tool(name="run_pyright", description="Run the pyright type checker on targets.")
 async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -> str:
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("run_pyright params=%s", params.model_dump())
@@ -155,7 +156,7 @@ async def run_pyright(wrapper: RunContextWrapper[None], params: PyrightParams) -
 CommandParams = RunCommandParams
 FileParams = FileReadParams
 
-@function_tool
+@function_tool(name="create_colored_diff", description="Generate a unified diff between two text versions.")
 async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredDiffParams) -> str:
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("create_colored_diff params=%s", params.model_dump())
@@ -175,7 +176,7 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
     return result
 
 
-@function_tool
+@function_tool(name="apply_patch", description="Apply a patch to files with a colored preview.")
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
     """Apply a patch to files using the apply_patch.py script with colored diff preview."""
     if logger.isEnabledFor(logging.DEBUG):
@@ -295,7 +296,7 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
     
     return f"{GREEN}✓ Patch applied successfully!{RESET}"
 
-@function_tool
+@function_tool(name="change_dir", description="Change the agent's current working directory.")
 async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
     """
     Change the agent's working directory.
@@ -315,7 +316,7 @@ class CommandResult(TypedDict):
     returncode: int
 
 
-@function_tool
+@function_tool(name="os_command", description="Execute an operating system command.")
 async def os_command(wrapper: RunContextWrapper[None], params: OSCommandParams) -> CommandResult:
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("os_command params=%s", params.model_dump())
