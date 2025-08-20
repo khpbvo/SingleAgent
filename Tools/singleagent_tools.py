@@ -28,7 +28,6 @@ import os
 from agents import function_tool, RunContextWrapper
 from The_Agents.context_data import EnhancedContextData
 import logging
-from logging.handlers import RotatingFileHandler
 
 # Import shared tools and utilities
 from .shared_tools import (
@@ -37,17 +36,10 @@ from .shared_tools import (
     GetContextParams, GetContextResponse, AddManualContextParams, RunCommandParams, FileReadParams
 )
 
-# Configure logger for tools
-tool_logger = logging.getLogger(__name__)
-tool_logger.setLevel(logging.DEBUG)
-# rotating file handler for tools.log
-tools_handler = RotatingFileHandler('logs/tools.log', maxBytes=10*1024*1024, backupCount=3)
-tools_handler.setLevel(logging.DEBUG)
-tools_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-tool_logger.addHandler(tools_handler)
-tool_logger.propagate = False
-# alias tool_logger as logger for use in function implementations
-logger = tool_logger
+from utilities.logging_setup import setup_logging
+
+setup_logging(__name__)
+logger = logging.getLogger(__name__)
 
 # Models for tool parameters (no default values as required for Pydantic v2 compatibility)
 
