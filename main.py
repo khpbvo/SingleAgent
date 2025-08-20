@@ -11,7 +11,6 @@ import json
 import os
 from functools import lru_cache
 from datetime import datetime
-from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -48,16 +47,10 @@ BOLD  = "\033[1m"
 RESET = "\033[0m"
 
 # Configure logging
-os.makedirs("logs", exist_ok=True)
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
-# Remove default handlers
-for handler in root_logger.handlers[:]:
-    root_logger.removeHandler(handler)
-main_handler = RotatingFileHandler('logs/main.log', maxBytes=10*1024*1024, backupCount=3)
-main_handler.setLevel(logging.DEBUG)
-main_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-root_logger.addHandler(main_handler)
+from utilities.logging_setup import setup_logging
+
+setup_logging(__name__)
+logger = logging.getLogger(__name__)
 
 # Enhanced agent modes
 class AgentMode:

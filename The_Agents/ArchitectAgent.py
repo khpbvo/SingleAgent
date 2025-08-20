@@ -15,20 +15,14 @@ import logging
 import json
 import re
 import time
-from logging.handlers import RotatingFileHandler
 
 # Import tool usage utilities
 from utilities.tool_usage import handle_stream_events
 
-# Configure logger for ArchitectAgent
+from utilities.logging_setup import setup_logging
+
+setup_logging(__name__)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-os.makedirs("logs", exist_ok=True)
-architect_handler = RotatingFileHandler('logs/architectagent.log', maxBytes=10*1024*1024, backupCount=3)
-architect_handler.setLevel(logging.DEBUG)
-architect_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-logger.addHandler(architect_handler)
-logger.propagate = False
 
 # ANSI color codes for REPL
 GREEN = "\033[32m"
