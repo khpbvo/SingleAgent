@@ -511,21 +511,135 @@ def remove_file(path: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
+#  Colored diff preview functions
+# --------------------------------------------------------------------------- #
+def colorize_diff(text: str, is_addition: bool = True) -> str:
+    """Add ANSI color codes for diff output."""
+    if is_addition:
+        return f"\033[32m{text}\033[0m"  # Green for additions
+    else:
+        return f"\033[31m{text}\033[0m"  # Red for deletions
+
+def show_colored_diff_preview(patch: Patch, orig: Dict[str, str]) -> None:
+    """Show a colored preview of what the patch will do."""
+    print("\n" + "="*60)
+    print("🔍 PATCH PREVIEW")
+    print("="*60)
+    
+    for path, action in patch.actions.items():
+        print(f"\n📁 File: {path}")
+        print("-" * 40)
+        
+        if action.type == ActionType.ADD:
+            print("📄 Action: ADD FILE")
+            if action.new_file:
+                lines = action.new_file.split('\n')
+                for i, line in enumerate(lines, 1):
+                    print(f"{colorize_diff(f'+{i:3d}: {line}', True)}")
+        
+        elif action.type == ActionType.DELETE:
+            print("🗑️  Action: DELETE FILE")
+            if path in orig:
+                lines = orig[path].split('\n')
+                for i, line in enumerate(lines, 1):
+                    print(f"{colorize_diff(f'-{i:3d}: {line}', False)}")
+        
+        elif action.type == ActionType.UPDATE:
+            print("✏️  Action: UPDATE FILE")
+            if action.move_path:
+                print(f"📤 Move to: {action.move_path}")
+            
+            # Show the changes
+            orig_lines = orig[path].split('\n')
+            new_content = _get_updated_file(orig[path], action, path)
+            new_lines = new_content.split('\n')
+            
+            # Simple diff display
+            import difflib
+            diff = list(difflib.unified_diff(
+                orig_lines, new_lines, 
+                fromfile=f"a/{path}", tofile=f"b/{path}",
+                lineterm='', n=3
+            ))
+            
+            for line in diff[2:]:  # Skip the file headers
+                if line.startswith('@@'):
+                    print(f"\033[36m{line}\033[0m")  # Cyan for hunk headers
+                elif line.startswith('+'):
+                    print(colorize_diff(line, True))
+                elif line.startswith('-'):
+                    print(colorize_diff(line, False))
+                else:
+                    print(f" {line}")
+    
+    print("\n" + "="*60)
+
+# --------------------------------------------------------------------------- #
 #  CLI entry-point
 # --------------------------------------------------------------------------- #
 def main() -> None:
     import sys
+    import argparse
 
+    # Only parse args if they exist, otherwise maintain backwards compatibility
+    args = None
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(description="Apply pseudo-diff patches")
+        parser.add_argument("--preview", "-p", action="store_true", 
+                           help="Show colored preview without applying changes")
+        parser.add_argument("--no-preview", action="store_true",
+                           help="Skip preview and apply directly")
+        args = parser.parse_args()
+    else:
+        # Default behavior - create a simple namespace
+        class SimpleNamespace:
+            def __init__(self):
+                self.preview = False
+                self.no_preview = False
+        args = SimpleNamespace()
+    
     patch_text = sys.stdin.read()
     if not patch_text:
         print("Please pass patch text through stdin", file=sys.stderr)
         return
+    
     try:
-        result = process_patch(patch_text, open_file, write_file, remove_file)
+        # Parse the patch first
+        if not patch_text.startswith("*** Begin Patch"):
+            raise DiffError("Patch text must start with *** Begin Patch")
+        
+        paths = identify_files_needed(patch_text)
+        orig = load_files(paths, open_file)
+        patch, _fuzz = text_to_patch(patch_text, orig)
+        
+        # Show preview unless explicitly disabled
+        if not args.no_preview:
+            show_colored_diff_preview(patch, orig)
+            
+            if not args.preview:
+                # Ask for confirmation before applying
+                try:
+                    print("\n❓ Apply these changes? (y/N): ", end="", flush=True)
+                    response = input().strip().lower()
+                    if response not in ['y', 'yes']:
+                        print("❌ Patch application cancelled.")
+                        return
+                except (EOFError, KeyboardInterrupt):
+                    # If no input available (e.g., in a script), default to no
+                    print("\n❌ No input available. Patch application cancelled.")
+                    return
+        
+        # Apply the patch if not in preview-only mode
+        if not args.preview:
+            commit = patch_to_commit(patch, orig)
+            apply_commit(commit, write_file, remove_file)
+            print("\n✅ Done!")
+        else:
+            print("\n👁️  Preview complete. Use without --preview to apply changes.")
+            
     except DiffError as exc:
-        print(exc, file=sys.stderr)
+        print(f"❌ {exc}", file=sys.stderr)
         return
-    print(result)
 
 
 if __name__ == "__main__":

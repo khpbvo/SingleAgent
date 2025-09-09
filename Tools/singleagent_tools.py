@@ -178,91 +178,10 @@ async def create_colored_diff(wrapper: RunContextWrapper[None], params: ColoredD
 
 @function_tool(name="apply_patch", description="Apply a patch to files with a colored preview.")
 async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams) -> str:
-    """Apply a patch to files using the apply_patch.py script with colored diff preview."""
+    """Apply a patch to files using the apply_patch.py script with enhanced colored diff preview."""
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("apply_patch params=%s", params.model_dump())
     
-    # First, show the patch content for preview
-    print(f"\n{BLUE}=== Patch Preview ==={RESET}")
-    
-    # Split the patch into sections by file
-    patch_lines = params.patch_content.splitlines()
-    current_file = None
-    file_sections = {}
-    current_section = []
-    
-    for line in patch_lines:
-        if line.startswith("*** Add File:") or line.startswith("*** Update File:") or line.startswith("*** Delete File:"):
-            if current_file and current_section:
-                file_sections[current_file] = current_section
-            current_file = line
-            current_section = [line]
-        elif current_file:
-            current_section.append(line)
-    
-    # Add the last section
-    if current_file and current_section:
-        file_sections[current_file] = current_section
-    
-    # Print each section with colored formatting
-    for file_header, section in file_sections.items():
-        if "Add File" in file_header:
-            print(f"\n{GREEN}{file_header}{RESET}")
-            for line in section[1:]:  # Skip the header
-                if line.startswith("+"):
-                    print(f"{GREEN}{line}{RESET}")
-                elif line == "*** End of File":
-                    continue
-                else:
-                    print(line)
-        elif "Delete File" in file_header:
-            print(f"\n{RED}{file_header}{RESET}")
-            for line in section[1:]:  # Skip the header
-                if line.startswith("-"):
-                    print(f"{RED}{line}{RESET}")
-                elif line == "*** End of File":
-                    continue
-                else:
-                    print(line)
-        elif "Update File" in file_header:
-            print(f"\n{YELLOW}{file_header}{RESET}")
-            for line in section[1:]:  # Skip the header
-                if line.startswith("+"):
-                    print(f"{GREEN}{line}{RESET}")
-                elif line.startswith("-"):
-                    print(f"{RED}{line}{RESET}")
-                elif line == "*** End of File":
-                    continue
-                else:
-                    print(line)
-    
-    # Confirmation handling
-    if not params.auto_confirm:
-        # If in a non-interactive context, avoid blocking on input()
-        try:
-            is_tty = sys.stdin.isatty() and sys.stdout.isatty()
-        except Exception:
-            is_tty = False
-
-        if not is_tty:
-            return (
-                "Non-interactive environment detected; not applying patch. "
-                "Pass auto_confirm=true to apply without prompt."
-            )
-
-        # Interactive confirmation
-        print(f"\n{YELLOW}Apply these changes? [y/N]{RESET} ", end="", flush=True)
-        try:
-            user_input = input().strip().lower()
-        except EOFError:
-            return (
-                "Input stream closed; not applying patch. "
-                "Pass auto_confirm=true to apply without prompt."
-            )
-        if user_input != "y":
-            return "Patch application cancelled by user."
-    
-    # User confirmed, proceed with applying the patch
     # Resolve path to apply_patch.py: prefer root shim, fallback to scripts/apply_patch.py
     project_root = os.path.dirname(os.path.dirname(__file__))
     root_shim = os.path.join(project_root, "apply_patch.py")
@@ -273,9 +192,28 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
         logger.error(err)
         return f"Error applying patch: {err}"
 
-    # Create subprocess with PIPE for stdin/stdout/stderr using current interpreter
+    # Determine the command args based on auto_confirm
+    cmd_args = [sys.executable, apply_patch_path]
+    if params.auto_confirm:
+        cmd_args.append("--no-preview")  # Skip preview and apply directly
+    else:
+        # Use default behavior (show preview + ask for confirmation)
+        # But since we're in a non-interactive subprocess, we need to handle this
+        try:
+            is_tty = sys.stdin.isatty() and sys.stdout.isatty()
+        except Exception:
+            is_tty = False
+
+        if not is_tty:
+            # In non-interactive mode, show preview only
+            cmd_args.append("--preview")
+            preview_only = True
+        else:
+            preview_only = False
+
+    # Create subprocess with PIPE for stdin/stdout/stderr
     proc = await asyncio.create_subprocess_exec(
-        sys.executable, apply_patch_path,
+        *cmd_args,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
@@ -291,10 +229,22 @@ async def apply_patch(wrapper: RunContextWrapper[None], params: ApplyPatchParams
         return f"Error applying patch: {error_msg}"
     
     output = stdout.decode('utf-8').strip()
-    logger.debug(f"Apply patch output: {output}")
-    track_command_entity(wrapper.context, f"apply_patch", output) if hasattr(wrapper.context, 'track_entity') else None
     
-    return f"{GREEN}✓ Patch applied successfully!{RESET}"
+    # Print the colored output from the enhanced apply_patch script
+    print(output)
+    
+    if params.auto_confirm:
+        logger.debug(f"Apply patch output: {output}")
+        track_command_entity(wrapper.context, f"apply_patch", output) if hasattr(wrapper.context, 'track_entity') else None
+        return f"{GREEN}✓ Patch applied successfully!{RESET}"
+    else:
+        if hasattr(wrapper.context, 'track_entity'):
+            track_command_entity(wrapper.context, f"apply_patch_preview", output)
+        
+        if "Preview complete" in output:
+            return f"{YELLOW}📋 Patch preview shown above. To apply, set auto_confirm=True or run manually.{RESET}"
+        else:
+            return f"{GREEN}✓ Patch applied successfully!{RESET}"
 
 @function_tool(name="change_dir", description="Change the agent's current working directory.")
 async def change_dir(wrapper: RunContextWrapper[EnhancedContextData], params: ChangeDirParams) -> str:
