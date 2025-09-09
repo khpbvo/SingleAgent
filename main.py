@@ -52,6 +52,22 @@ from utilities.logging_setup import setup_logging
 setup_logging(__name__)
 logger = logging.getLogger(__name__)
 
+# Configure third-party loggers to avoid console output
+logging.getLogger("openai.agents").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+logging.getLogger("mcp").setLevel(logging.INFO)
+
+# Ensure no console handlers are added by third-party libraries
+def suppress_console_logging():
+    """Remove any console handlers that might be added by third-party libraries."""
+    root = logging.getLogger()
+    for handler in root.handlers[:]:
+        if isinstance(handler, logging.StreamHandler) and handler.stream.name in ('<stderr>', '<stdout>'):
+            root.removeHandler(handler)
+
+# Call it after imports to clean up any console handlers
+suppress_console_logging()
+
 # Enhanced agent modes
 class AgentMode:
     CODE = "code"
@@ -219,21 +235,23 @@ async def setup_mcp_servers() -> list:
     #     print(f"{GREEN}✓ Added Git MCP server for {current_git_repo}{RESET}")
     print(f"{YELLOW}ℹ Git MCP server disabled (was causing issues){RESET}")
     
+    # DISABLED: SQLite server removed due to npm package not found (404 error)
     # Add SQLite server if there are .db files in any directory
-    db_files = []
-    for directory in working_directories:
-        try:
-            with os.scandir(directory) as it:
-                for entry in it:
-                    if entry.is_file() and entry.name.endswith('.db'):
-                        db_files.append(entry.path)
-        except PermissionError:
-            continue
-    
-    if db_files:
-        # Use the first database found
-        mcp_configs.append(CommonMCPConfigs.sqlite_server(db_files[0]))
-        print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
+    # db_files = []
+    # for directory in working_directories:
+    #     try:
+    #         with os.scandir(directory) as it:
+    #             for entry in it:
+    #                 if entry.is_file() and entry.name.endswith('.db'):
+    #                     db_files.append(entry.path)
+    #     except PermissionError:
+    #         continue
+    # 
+    # if db_files:
+    #     # Use the first database found
+    #     mcp_configs.append(CommonMCPConfigs.sqlite_server(db_files[0]))
+    #     print(f"{GREEN}✓ Added SQLite MCP server for {db_files[0]}{RESET}")
+    print(f"{YELLOW}ℹ SQLite MCP server disabled (npm package @modelcontextprotocol/server-sqlite not found){RESET}")
     
     # Add GitHub server if token is available
     github_token = (os.getenv('GITHUB_TOKEN') or os.getenv('GITHUB_PAT') or 
@@ -382,15 +400,6 @@ async def main():
             # Use prompt_toolkit session for input with auto-suggest and status bar
             query = await session.prompt_async(HTML('<b><ansigreen>User:</ansigreen></b> '))
             logging.debug(json.dumps({"event": "user_input", "input": query, "mode": current_mode}))
-            
-            # Process input with spaCy for entity recognition
-            # This allows the agent to have entities available before processing
-            try:
-                entities = await nlp_singleton.extract_entities(query)
-                mapped_entities = await nlp_singleton.map_entity_types(entities)
-                logging.debug(json.dumps({"event": "entity_extraction", "entities": mapped_entities}))
-            except Exception as e:
-                logging.error(f"Error extracting entities: {e}", exc_info=True)
         except (EOFError, KeyboardInterrupt):
             print("\nExiting. Goodbye.")
             break
@@ -398,6 +407,15 @@ async def main():
         # Handle None or empty input safely
         if query is None or not isinstance(query, str) or not query.strip():
             continue
+            
+        # Process input with spaCy for entity recognition
+        # This allows the agent to have entities available before processing
+        try:
+            entities = await nlp_singleton.extract_entities(query)
+            mapped_entities = await nlp_singleton.map_entity_types(entities)
+            logging.debug(json.dumps({"event": "entity_extraction", "entities": mapped_entities}))
+        except Exception as e:
+            logging.error(f"Error extracting entities: {e}", exc_info=True)
             
         if query.strip().lower() in ("exit", "quit"):
             print("Goodbye.")

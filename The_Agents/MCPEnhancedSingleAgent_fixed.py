@@ -116,38 +116,49 @@ class MCPEnhancedSingleAgent:
         logger.info("MCPEnhancedSingleAgent initialized")
     
     async def initialize_mcp_servers(self):
-        """Initialize all configured MCP servers."""
+        """Initialize all configured MCP servers with proper async context management."""
         logger.info(f"Initializing {len(self.mcp_configs)} MCP servers...")
-        async def init_server(config: MCPServerConfig):
-            if config.server_type == "stdio":
-                server = MCPServerStdio(
-                    params=config.config,
-                    cache_tools_list=True  # Cache for performance
-                )
-            elif config.server_type == "sse":
-                server = MCPServerSse(
-                    params=config.config,
-                    cache_tools_list=True
-                )
-            else:
-                raise ValueError(f"Unknown MCP server type: {config.server_type}")
+        
+        for config in self.mcp_configs:
+            try:
+                logger.info(f"Initializing MCP server '{config.name}'...")
+                
+                if config.server_type == "stdio":
+                    server = MCPServerStdio(
+                        params=config.config,
+                        cache_tools_list=True  # Cache for performance
+                    )
+                elif config.server_type == "sse":
+                    server = MCPServerSse(
+                        params=config.config,
+                        cache_tools_list=True
+                    )
+                else:
+                    logger.error(f"Unknown MCP server type: {config.server_type}")
+                    continue
 
-            await server.__aenter__()
-            tools = await server.list_tools()
-            logger.info(f"MCP server '{config.name}' loaded with {len(tools)} tools")
-            return server, tools
-
-        tasks = [asyncio.create_task(init_server(config)) for config in self.mcp_configs]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for config, result in zip(self.mcp_configs, results):
-            if isinstance(result, Exception):
-                logger.error(f"Failed to initialize MCP server '{config.name}': {result}")
+                # Use proper async context management
+                try:
+                    await server.__aenter__()
+                    tools = await server.list_tools()
+                    logger.info(f"MCP server '{config.name}' loaded with {len(tools)} tools")
+                    
+                    # Store the tools list and server
+                    self.mcp_tools_list[config.name] = [tool.name for tool in tools]
+                    self.mcp_servers.append(server)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to initialize MCP server '{config.name}': {e}")
+                    # Try to cleanup if server was partially initialized
+                    try:
+                        await server.__aexit__(None, None, None)
+                    except:
+                        pass
+                    continue
+                    
+            except Exception as e:
+                logger.error(f"Error setting up MCP server '{config.name}': {e}")
                 continue
-
-            server, tools = result
-            self.mcp_tools_list[config.name] = [tool.name for tool in tools]
-            self.mcp_servers.append(server)
 
         logger.info(f"Successfully initialized {len(self.mcp_servers)} MCP servers")
     
@@ -463,17 +474,49 @@ You are an enhanced code assistant with access to both CUSTOM TOOLS and MCP (Mod
             logger.error(f"Failed to save context: {e}")
     
     async def cleanup(self):
-        """Clean up MCP servers and save context."""
+        """Cleanup MCP servers and resources."""
         logger.info("Cleaning up MCP servers...")
+        cleanup_tasks = []
         
         for server in self.mcp_servers:
             try:
-                await server.__aexit__(None, None, None)
+                # Create cleanup task for each server
+                cleanup_tasks.append(self._cleanup_server(server))
             except Exception as e:
-                logger.error(f"Error closing MCP server: {e}")
+                logger.error(f"Error creating cleanup task for server: {e}")
         
-        await self.save_context()
-        logger.info("Cleanup completed")
+        if cleanup_tasks:
+            # Wait for all cleanup tasks with timeout
+            try:
+                await asyncio.wait_for(asyncio.gather(*cleanup_tasks, return_exceptions=True), timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("MCP server cleanup timed out")
+            except Exception as e:
+                logger.error(f"Error during MCP server cleanup: {e}")
+        
+        self.mcp_servers.clear()
+        self.mcp_tools_list.clear()
+        
+        # Save context
+        try:
+            await self.save_context()
+        except Exception as e:
+            logger.error(f"Error saving context during cleanup: {e}")
+            
+        logger.info("MCP cleanup completed")
+    
+    async def _cleanup_server(self, server):
+        """Cleanup a single MCP server."""
+        try:
+            await server.__aexit__(None, None, None)
+        except Exception as e:
+            logger.error(f"Error cleaning up MCP server: {e}")
+            # Force terminate if graceful cleanup fails
+            try:
+                if hasattr(server, '_process') and server._process:
+                    server._process.terminate()
+            except:
+                pass
     
     def get_context_summary(self) -> str:
         """Return a summary of the current context."""

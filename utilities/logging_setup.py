@@ -35,8 +35,19 @@ def setup_logging(name: str, level: int = logging.DEBUG) -> logging.Logger:
     root_logger = logging.getLogger()
     if not _ROOT_CONFIGURED:
         root_logger.setLevel(level)
+        # Remove all existing handlers (including console handlers)
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
+        
+        # Add a rotating file handler to the root logger for all debug output
+        root_handler = RotatingFileHandler(
+            "logs/main.log", maxBytes=5 * 1024 * 1024, backupCount=5
+        )
+        root_handler.setLevel(level)
+        root_handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s")
+        )
+        root_logger.addHandler(root_handler)
         _ROOT_CONFIGURED = True
 
     # Create and configure the child logger
@@ -45,7 +56,7 @@ def setup_logging(name: str, level: int = logging.DEBUG) -> logging.Logger:
 
     if not logger.handlers:
         handler = RotatingFileHandler(
-            f"logs/{name}.log", maxBytes=10 * 1024 * 1024, backupCount=3
+            f"logs/{name}.log", maxBytes=5 * 1024 * 1024, backupCount=5
         )
         handler.setLevel(level)
         handler.setFormatter(
