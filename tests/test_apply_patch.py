@@ -1,51 +1,58 @@
-#!/usr/bin/env python3
+"""Tests for the patch utility using the apply_patch.py script."""
 
-"""
-Test script for the apply_patch functionality.
-Creates a simple diff and applies it to a temporary file.
-"""
+from __future__ import annotations
 
+import subprocess
 import sys
-import os
-from Tools.singleagent_tools import apply_patch
+import textwrap
+from pathlib import Path
 
-# Create a simple patch
-patch_content = """*** Begin Patch
-*** Update File: test_file.py
-- print("Hello, world!")
-+ print("Hello, patched world!")
 
+def run_patch(patch_text: str, *flags: str) -> tuple[str, str]:
+    """Run apply_patch.py with ``patch_text`` and return stdout and stderr."""
+    proc = subprocess.run(
+        [sys.executable, "apply_patch.py", *flags],
+        input=patch_text.encode(),
+        capture_output=True,
+        check=True,
+    )
+    return proc.stdout.decode(), proc.stderr.decode()
+
+
+def test_apply_patch_updates_file(tmp_path: Path) -> None:
+    """Applying a patch with ``--no-preview`` updates the target file."""
+    file_path = tmp_path / "sample.txt"
+    file_path.write_text("hello\n")
+    patch = textwrap.dedent(
+        f"""*** Begin Patch
+*** Update File: {file_path}
+@@
+-hello
++patched
 *** End Patch
 """
-
-def main():
-    # Create the test file if it doesn't exist
-    if not os.path.exists("test_file.py"):
-        with open("test_file.py", "w") as f:
-            f.write('print("Hello, world!")\n')
-        print("Created test_file.py")
-    
-    # Apply the patch
-    print("Applying patch...")
-    result = apply_patch(
-        input=patch_content,
-        interactive=True,  # Try interactive mode first
-        confirm=False      # Just preview, don't apply yet
     )
-    
-    print("\nResult from apply_patch:")
-    print(result)
-    
-    # Offer to apply the patch
-    choice = input("\nApply this patch? (y/n): ")
-    if choice.lower() == 'y':
-        result = apply_patch(
-            input=patch_content,
-            confirm=True  # Now actually apply it
-        )
-        print("Patch applied:", result)
-    else:
-        print("Patch not applied.")
+    stdout, stderr = run_patch(patch, "--no-preview")
+    assert "Done!" in stdout
+    assert stderr == ""
+    assert file_path.read_text() == "patched\n"
 
-if __name__ == "__main__":
-    main()
+
+def test_apply_patch_preview_does_not_modify_file(tmp_path: Path) -> None:
+    """Using ``--preview`` shows a diff without applying changes."""
+    file_path = tmp_path / "sample.txt"
+    file_path.write_text("hello\n")
+    patch = textwrap.dedent(
+        f"""*** Begin Patch
+*** Update File: {file_path}
+@@
+-hello
++patched
+*** End Patch
+"""
+    )
+    stdout, stderr = run_patch(patch, "--preview")
+    assert "PATCH PREVIEW" in stdout
+    assert "Preview complete" in stdout
+    assert stderr == ""
+    assert file_path.read_text() == "hello\n"
